@@ -1,0 +1,1 @@
+{"rustc":12670541614289691931,"features":"[]","target":2142494449645758643,"profile":2841749554793430327,"path":6273585783834318611,"deps":[["static_assertions v0.2.5","static_assertions",5069207941959150767]],"local":[{"Precalculated":"0.3.0"}],"rustflags":["-C","link-args=-z stack-size=65536"],"edition":"Edition2015"}

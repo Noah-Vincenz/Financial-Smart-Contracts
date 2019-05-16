@@ -1,0 +1,1 @@
+{"rustc":0,"features":"","target":0,"profile":0,"path":0,"deps":[],"local":[{"MtimeBased":[[1558028179,843297745],"/Users/noah-vincenznoeh/Desktop/Financial-Smart-Contact/target/wasm32-unknown-unknown/release/build/wee_alloc-751e1f3265781812/output"]},{"EnvBased":["WEE_ALLOC_STATIC_ARRAY_BACKEND_BYTES",null]}],"rustflags":[],"edition":"Edition2015"}

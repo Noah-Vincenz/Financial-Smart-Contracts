@@ -1,0 +1,14 @@
+{
+  "name": "test-rust",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "node ./deploy.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "web3": "^1.0.0-beta.46"
+  }
+}
