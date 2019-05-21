@@ -6,22 +6,30 @@ extern crate pwasm_std;
 extern crate pwasm_ethereum;
 extern crate pwasm_abi;
 extern crate pwasm_abi_derive;
-/// Bigint used for 256-bit arithmetic
 
 // Declares the dispatch and dispatch_ctor methods
 use pwasm_abi::eth::EndpointInterface;
+use pwasm_ethereum::{ret, input};
+
 
 #[no_mangle]
 pub fn deploy() {
 	let mut endpoint = smart_contract::SmartContractEndpoint::new(smart_contract::SmartContractInstance{});
-	endpoint.dispatch_ctor(&pwasm_ethereum::input());
+	endpoint.dispatch_ctor(&input());
 }
 
+/*
+#[no_mangle]
+pub fn call() {
+	let mut endpoint = smart_contract::SmartContractEndpoint::new(smart_contract::SmartContractInstance{});
+    ret(&endpoint.dispatch(&input()));
+}
+*/
 
 pub mod smart_contract {
 	use pwasm_std::types::{H256, Address, U256};
-	use pwasm_ethereum::{read, write, sender, value, call};
-
+	use pwasm_ethereum::{read, write, sender, value};
+	use pwasm_std::String;
 	use pwasm_abi_derive::eth_abi;
 
 	fn recipient_key() -> H256 {
@@ -35,14 +43,13 @@ pub mod smart_contract {
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self);
+		fn constructor(&mut self, input: String);
 		/// Total amount of donations
 		#[constant]
 		fn balance(&mut self) -> U256;
 		/// Donate, whatever balance you send will be the donated amount
 		fn give(&mut self);
-		/// Let the creator of the contract withdraw money
-		fn withdraw(&mut self) -> bool;
+		fn one(&mut self);
 		/// Event declaration
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
@@ -51,7 +58,7 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self) {
+		fn constructor(&mut self, input: String) {
 			write(&recipient_key(), &U256::from(0).into());
 			write(&owner_key(), &H256::from(sender().clone()).into());
 		}
@@ -60,7 +67,7 @@ pub mod smart_contract {
 			read(&recipient_key()).into()
 		}
 
-		fn give(&mut self) {
+		fn give(&mut self) { // give ONE -> owner of contract pays 1
 			let sender = sender().clone();
 			let amount = value();
 			let total: U256 = read(&recipient_key()).into();
@@ -68,16 +75,10 @@ pub mod smart_contract {
 			self.SmartContract(sender, amount);
 		}
 
-		fn withdraw(&mut self) -> bool {
-			let total = read(&recipient_key()).into();
-			let owner = address_of(&owner_key());
-
-			if sender() == owner {
-				write(&recipient_key(), &U256::from(0).into());
-				call(21000, &Address::from(owner), total, &[], &mut []).is_ok()
-			} else {
-				false
-			}
+		fn one(&mut self) {
+			let amount = 1;
+			let total: U256 = read(&owner_key()).into();
+			write(&owner_key(), &(total + amount).into());
 		}
 
 	}
@@ -87,6 +88,36 @@ pub mod smart_contract {
 		Address::from(h)
 	}
 }
+
+// DateTime Parser
+/*
+extern crate chrono;
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::format::ParseError;
+
+
+fn main() -> Result<(), ParseError> {
+    let rfc2822 = DateTime::parse_from_rfc2822("Tue, 1 Jul 2003 10:52:37 +0200")?;
+    println!("{}", rfc2822);
+
+    let rfc3339 = DateTime::parse_from_rfc3339("1996-12-19T16:39:57-08:00")?;
+    println!("{}", rfc3339);
+
+    let custom = DateTime::parse_from_str("5.8.1994 8:00 am +0000", "%d.%m.%Y %H:%M %P %z")?;
+    println!("{}", custom);
+
+    let time_only = NaiveTime::parse_from_str("23:56:04", "%H:%M:%S")?;
+    println!("{}", time_only);
+
+    let date_only = NaiveDate::parse_from_str("2015-09-05", "%Y-%m-%d")?;
+    println!("{}", date_only);
+
+    let no_timezone = NaiveDateTime::parse_from_str("2015-09-05 23:56:04", "%Y-%m-%d %H:%M:%S")?;
+    println!("{}", no_timezone);
+
+    Ok(())
+}
+*/
 
 #[cfg(test)]
 #[allow(non_snake_case)]

@@ -4,7 +4,7 @@ var fs = require('fs');
 var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 
 // Setting up default account
-web3.eth.defaultAccount = "0x004ec07d2329997267ec62b4166639513386f32e"; // account with large funds
+web3.eth.defaultAccount = '0x004ec07d2329997267ec62b4166639513386f32e'; // account with large funds
 
 web3.eth.personal.unlockAccount(web3.eth.defaultAccount, "user", web3.utils.toHex(0));
 
@@ -18,7 +18,7 @@ var codeHex = '0x' + fs.readFileSync("./target/pwasm_contract.wasm").toString('h
 
 // Creating DonationContract
 var SmartContract = new web3.eth.Contract(abi);
-var SmartContractTx = SmartContract.deploy({data: codeHex, from: web3.eth.defaultAccount, arguments: []});
+var SmartContractTx = SmartContract.deploy({data: codeHex, from: web3.eth.defaultAccount, arguments: ["String"]});
 
 SmartContractTx.estimateGas({}, (err, gas) => {
   if (gas) {
@@ -35,11 +35,67 @@ SmartContractTx.estimateGas({}, (err, gas) => {
             console.log("Contract successfully deployed.")
             console.log(newContractInstance.options.address) // instance with the new contract address
             transferEther('0x7f023262356b002a4b7deb7ce057eb8b1aabb427', "1.5")
+            /*
+            SmartContract.methods.one()
+            .call({from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'}, (error, result) => {
+              console.log(result)
+            });
+            SmartContract.methods.balance()
+            .call({from:'0x7f023262356b002a4b7deb7ce057eb8b1aabb427'}, function(error, result) {
+            console.log('error: ' + error);
+            console.log(result);
+            })
+            .then(console.log);
+            */
+            //callOne(SmartContract, newContractInstance, gas);
+            //myContract.methods.myMethod(123).call({from: '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe'}, (error, result) => {});
         });
   } else {
     console.error(err);
   }
 });
+
+function callOne(contract, newContractInstance, gas) {
+  //contract.methods.one().call({from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', value: web3.utils.toWei("5", "ether")});
+  //
+
+  var getData = contract.methods.give().encodeABI();
+  console.log("SKRT")
+  /*
+  var SmartContractTx = contract.methods.give({data: getData, from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', to: contract.options.address, arguments: []})
+  .call().then(function(res){
+    console.log(res);
+  }).catch(function(err) {
+    console.log(err);
+  });
+  SmartContractTx.estimateGas({}, (err, gas) => {
+    */
+
+  web3.eth.estimateGas({from:'0x7f023262356b002a4b7deb7ce057eb8b1aabb427', data: getData}, (err, gas) => {
+    if (gas) {
+          console.log("SKRT2")
+          gas = Math.round(gas * 1.2);
+          console.log(gas)
+
+          contract.methods.give().send({from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', gas: web3.utils.toHex(gas)})
+          .on('error', (error) => { console.log(error) })
+          .on('transactionHash', (transactionHash) => { console.log("transactionHash: " + transactionHash) })
+          .on('receipt', (receipt) => {
+             console.log("receipt.contractAddress: " + receipt.contractAddress) // contains the new contract address
+          })
+          .on('confirmation', (confirmationNumber, receipt) => {
+              console.log("confirmationNumber: " + confirmationNumber + "\nreceipt.contractAddress: " + receipt.contractAddress) })
+          .then((newContractInstance) => {
+              console.log("Contract successfully deployed.")
+              console.log(newContractInstance.options.address) // instance with the new contract address
+          });
+    } else {
+      console.error(err);
+    }
+  });
+
+  //return inst.registerPlayer(1, {from: account, value: web3.toWei(5, "ether")});
+}
 
 function transferEther(toAddress, amount) {
     web3.eth.sendTransaction( {

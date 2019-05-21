@@ -1,1 +1,0 @@
-{"rustc":12670541614289691931,"features":"[\"byteorder\", \"default\", \"pwasm-std\", \"std\"]","target":1156808705115597634,"profile":11870183705523825133,"path":17715913148180730,"deps":[["byteorder v1.3.0","byteorder",822783472963018886],["pwasm-std v0.13.0","pwasm_std",9971515746095456862]],"local":[{"Precalculated":"0.2.2"}],"rustflags":[],"edition":"Edition2015"}

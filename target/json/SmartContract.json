@@ -22,14 +22,9 @@
   },
   {
     "type": "function",
-    "name": "withdraw",
+    "name": "one",
     "inputs": [],
-    "outputs": [
-      {
-        "name": "returnValue0",
-        "type": "bool"
-      }
-    ],
+    "outputs": [],
     "constant": false,
     "payable": false
   },
@@ -51,6 +46,11 @@
   },
   {
     "type": "constructor",
-    "inputs": []
+    "inputs": [
+      {
+        "name": "input",
+        "type": "string"
+      }
+    ]
   }
 ]
