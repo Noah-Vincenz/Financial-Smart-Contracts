@@ -7,8 +7,27 @@
   "scripts": {
     "start": "node ./deploy.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "browser-resolve": "^1.11.3",
+    "env": "0.0.2",
+    "esmify": "^2.1.1",
+    "gulp": "^4.0.2",
+    "gulp-connect": "^5.7.0",
+    "preset-react": "^1.0.0",
+    "react": "^16.8.6"
+  },
   "devDependencies": {
-    "web3": "^1.0.0-beta.46"
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.4.4",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/register": "^7.4.4",
+    "babel-loader": "^8.0.6",
+    "babelify": "^10.0.0",
+    "browserify": "^16.2.3",
+    "vinyl-source-stream": "^2.0.0",
+    "web3": "1.0.0-beta.46"
   }
 }

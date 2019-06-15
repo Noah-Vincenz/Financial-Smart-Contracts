@@ -10,7 +10,8 @@ extern crate pwasm_abi_derive;
 // Declares the dispatch and dispatch_ctor methods
 use pwasm_abi::eth::EndpointInterface;
 use pwasm_ethereum::{ret, input};
-
+// mod parser; // parse = parser.rs file
+// use parser::parse();
 
 #[no_mangle]
 pub fn deploy() {
@@ -18,13 +19,11 @@ pub fn deploy() {
 	endpoint.dispatch_ctor(&input());
 }
 
-/*
 #[no_mangle]
 pub fn call() {
 	let mut endpoint = smart_contract::SmartContractEndpoint::new(smart_contract::SmartContractInstance{});
     ret(&endpoint.dispatch(&input()));
 }
-*/
 
 pub mod smart_contract {
 	use pwasm_std::types::{H256, Address, U256};
@@ -43,30 +42,73 @@ pub mod smart_contract {
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self, input: String);
+		fn constructor(&mut self, addr1: String, addr2: String);
 		/// Total amount of donations
 		#[constant]
-		fn balance(&mut self) -> U256;
-		/// Donate, whatever balance you send will be the donated amount
-		fn give(&mut self);
+		fn balanceOf(&mut self, _owner: Address) -> U256;
+		#[constant]
+		fn ownBalance(&mut self) -> U256;
+		/// Transfer the balance from owner's account to another account
+        fn give(&mut self, _to: Address, _amount: U256) -> bool;
+		//fn give(&mut self);
 		fn one(&mut self);
+		#[constant]
+		fn printLn(&mut self, input: U256) -> U256;
 		/// Event declaration
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
+		#[event]
+        fn Transfer(&mut self, indexed_from: Address, indexed_to: Address, _value: U256);
 	}
 
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, input: String) {
+		fn constructor(&mut self, addr1: String, addr2: String) { // input string MUST BE VECTOR OF INTS!!! is parsed and then give is called if input string is give
 			write(&recipient_key(), &U256::from(0).into());
-			write(&owner_key(), &H256::from(sender().clone()).into());
+			write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
+
+			/*
+			write(&owner_key(), H256::from_slice(addr1.as_bytes()));
+			write(&recipient_key(), H256::from_slice(addr2.as_bytes()));
+			*/
+
+
+			//let owner_address = Address::from("0xea674fdde714fd979de3edf0f56aa9716b898ec8");
+        	//let sam_address = Address::from("0xdb6fd484cfa46eeeb73c71edee823e4812f9e2e1");
+			// TODO: do parsing here
+			// string command = parse(input);
+			// if (command = "give") {give();}
 		}
 
-		fn balance(&mut self) -> U256 {
-			read(&recipient_key()).into()
-		}
 
+		fn balanceOf(&mut self, owner: Address) -> U256 {
+	        balance(&owner)
+	    }
+
+		fn ownBalance(&mut self) -> U256 {
+			//let sender = pwasm_ethereum::sender();
+            //balance(&sender)
+			U256::from(70000)
+	    }
+
+
+		fn give(&mut self, to: Address, amount: U256) -> bool {
+            let sender = pwasm_ethereum::sender();
+            let senderBalance = balance(&sender);
+            let recipientBalance = balance(&to);
+            if amount == 0.into() || senderBalance < amount || to == sender {
+                false
+            } else {
+                let new_sender_balance = senderBalance - amount;
+                let new_recipient_balance = recipientBalance + amount;
+                pwasm_ethereum::write(&balance_key(&sender), &new_sender_balance.into());
+                pwasm_ethereum::write(&balance_key(&to), &new_recipient_balance.into());
+                self.Transfer(sender, to, amount);
+                true
+            }
+        }
+		/*
 		fn give(&mut self) { // give ONE -> owner of contract pays 1
 			let sender = sender().clone();
 			let amount = value();
@@ -74,6 +116,7 @@ pub mod smart_contract {
 			write(&recipient_key(), &(total + amount).into());
 			self.SmartContract(sender, amount);
 		}
+		*/
 
 		fn one(&mut self) {
 			let amount = 1;
@@ -81,11 +124,27 @@ pub mod smart_contract {
 			write(&owner_key(), &(total + amount).into());
 		}
 
+		fn printLn(&mut self, input: U256) -> U256 {
+			input
+		}
+
 	}
 
 	fn address_of(key: &H256) -> Address {
 		let h: H256 = read(key).into();
 		Address::from(h)
+	}
+
+	fn balance(owner: &Address) -> U256 {
+		read(&balance_key(owner)).into()
+	}
+
+	// Generates a balance key for some address.
+	// Used to map balances with their owners.
+	fn balance_key(address: &Address) -> H256 {
+		let mut key = H256::from(*address);
+		key.as_bytes_mut()[0] = 1; // just a naive "namespace";
+		key
 	}
 }
 
