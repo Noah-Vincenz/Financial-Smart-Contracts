@@ -71,29 +71,33 @@ pub fn call() {
 pub mod smart_contract {
 	use pwasm_std::types::{H256, Address, U256};
 	use pwasm_ethereum::{read, write, sender, value};
-	use pwasm_std::String;
+	use pwasm_std::{String, Vec};
 	use pwasm_abi_derive::eth_abi;
 
-/*
+
 	fn recipient_key() -> H256 {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
 	fn owner_key() -> H256 {
-		H256::from([3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+		H256::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
-*/
+
 
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self);
+		fn constructor(&mut self, recipient_address: Vec<U256>);
 		// Total amount of donations
 
 		#[constant]
 		fn balanceOf(&mut self, _owner: Address) -> U256;
 		#[constant]
 		fn ownBalance(&mut self) -> U256;
+		#[constant]
+		fn ownerAddress(&mut self) -> H256;
+		#[constant]
+		fn callerAddress(&mut self) -> H256;
 		/// Transfer the balance from owner's account to another account
         fn give(&mut self, _to: Address, _amount: U256) -> bool;
 		//fn give(&mut self);
@@ -114,21 +118,14 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self) {
+		fn constructor(&mut self, recipient_address: Vec<U256>) {
 
 			// String addr, String addr, input string MUST BE VECTOR OF INTS!!! is parsed and then give is called if input string is give
 
 			//write(&recipient_key(), &U256::from(0).into());
-			//write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
+			write(&recipient_key(), &H256::from(recipient_address[0]).into());
+			write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
 
-			/*
-			write(&owner_key(), H256::from_slice(addr1.as_bytes()));
-			write(&recipient_key(), H256::from_slice(addr2.as_bytes()));
-			*/
-
-
-			//let owner_address = Address::from("0xea674fdde714fd979de3edf0f56aa9716b898ec8");
-        	//let sam_address = Address::from("0xdb6fd484cfa46eeeb73c71edee823e4812f9e2e1");
 			// TODO: do parsing here
 			// string command = parse(input);
 			// if (command = "give") {give();}
@@ -136,14 +133,24 @@ pub mod smart_contract {
 
 
 		fn balanceOf(&mut self, owner: Address) -> U256 {
-	        balance(&owner)
+	        //balance(&owner)
+			read(&balance_key(&owner)).into()
 	    }
 
 		fn ownBalance(&mut self) -> U256 {
 			let sender = pwasm_ethereum::sender();
-            balance(&sender)
-			//U256::from(70000)
+            balance(&sender) // returns single elem array (0)
+			//let total: U256 = read(&owner_key()).into();
+			//total // returns array of 4 elems
 	    }
+
+		fn ownerAddress(&mut self) -> H256 {
+			read(&recipient_key()).into()
+	    }
+
+		fn callerAddress(&mut self) -> H256 {
+			H256::from(sender())
+		}
 
 
 
