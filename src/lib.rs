@@ -2,6 +2,49 @@
 #![allow(non_snake_case)]
 #![feature(proc_macro_hygiene)]
 
+// Daniel Version
+/*
+extern crate pwasm_ethereum;
+extern crate pwasm_abi;
+extern crate pwasm_abi_derive;
+
+// Declares the dispatch and dispatch_ctor methods
+use pwasm_abi::eth::EndpointInterface;
+use pwasm_abi_derive::eth_abi;
+
+#[no_mangle]
+pub fn deploy() {
+	let smartcontract = SmartContractInstance { };
+    let mut endpoint = SmartContractEndpoint::new(smartcontract);
+    endpoint.dispatch_ctor(&pwasm_ethereum::input());
+}
+
+#[no_mangle]
+pub fn call() {
+	let smartcontract = SmartContractInstance { };
+    let mut endpoint = SmartContractEndpoint::new(smartcontract);
+    pwasm_ethereum::ret(&endpoint.dispatch(&pwasm_ethereum::input()));
+}
+
+#[eth_abi(SmartContractEndpoint)]
+pub trait SmartContract {
+    fn constructor(&mut self);
+}
+
+struct SmartContractInstance {
+}
+
+impl SmartContract for SmartContractInstance {
+    fn constructor(&mut self) {
+        return;
+    }
+}
+*/
+
+
+// My Version
+
+
 extern crate pwasm_std;
 extern crate pwasm_ethereum;
 extern crate pwasm_abi;
@@ -10,8 +53,8 @@ extern crate pwasm_abi_derive;
 // Declares the dispatch and dispatch_ctor methods
 use pwasm_abi::eth::EndpointInterface;
 use pwasm_ethereum::{ret, input};
-// mod parser; // parse = parser.rs file
-// use parser::parse();
+//mod parser; // parse = parser.rs file
+//use parser::parse();
 
 #[no_mangle]
 pub fn deploy() {
@@ -31,6 +74,7 @@ pub mod smart_contract {
 	use pwasm_std::String;
 	use pwasm_abi_derive::eth_abi;
 
+/*
 	fn recipient_key() -> H256 {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
@@ -38,12 +82,14 @@ pub mod smart_contract {
 	fn owner_key() -> H256 {
 		H256::from([3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
+*/
 
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self, addr1: String, addr2: String);
-		/// Total amount of donations
+		fn constructor(&mut self);
+		// Total amount of donations
+
 		#[constant]
 		fn balanceOf(&mut self, _owner: Address) -> U256;
 		#[constant]
@@ -51,22 +97,29 @@ pub mod smart_contract {
 		/// Transfer the balance from owner's account to another account
         fn give(&mut self, _to: Address, _amount: U256) -> bool;
 		//fn give(&mut self);
-		fn one(&mut self);
+		//fn one(&mut self);
 		#[constant]
 		fn printLn(&mut self, input: U256) -> U256;
 		/// Event declaration
+
+
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
 		#[event]
         fn Transfer(&mut self, indexed_from: Address, indexed_to: Address, _value: U256);
+
+
 	}
 
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, addr1: String, addr2: String) { // input string MUST BE VECTOR OF INTS!!! is parsed and then give is called if input string is give
-			write(&recipient_key(), &U256::from(0).into());
-			write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
+		fn constructor(&mut self) {
+
+			// String addr, String addr, input string MUST BE VECTOR OF INTS!!! is parsed and then give is called if input string is give
+
+			//write(&recipient_key(), &U256::from(0).into());
+			//write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
 
 			/*
 			write(&owner_key(), H256::from_slice(addr1.as_bytes()));
@@ -87,10 +140,11 @@ pub mod smart_contract {
 	    }
 
 		fn ownBalance(&mut self) -> U256 {
-			//let sender = pwasm_ethereum::sender();
-            //balance(&sender)
-			U256::from(70000)
+			let sender = pwasm_ethereum::sender();
+            balance(&sender)
+			//U256::from(70000)
 	    }
+
 
 
 		fn give(&mut self, to: Address, amount: U256) -> bool {
@@ -108,6 +162,7 @@ pub mod smart_contract {
                 true
             }
         }
+
 		/*
 		fn give(&mut self) { // give ONE -> owner of contract pays 1
 			let sender = sender().clone();
@@ -117,16 +172,18 @@ pub mod smart_contract {
 			self.SmartContract(sender, amount);
 		}
 		*/
-
+		/*
 		fn one(&mut self) {
 			let amount = 1;
 			let total: U256 = read(&owner_key()).into();
 			write(&owner_key(), &(total + amount).into());
 		}
+		*/
 
 		fn printLn(&mut self, input: U256) -> U256 {
 			input
 		}
+
 
 	}
 
@@ -146,7 +203,9 @@ pub mod smart_contract {
 		key.as_bytes_mut()[0] = 1; // just a naive "namespace";
 		key
 	}
+
 }
+
 
 // DateTime Parser
 /*
@@ -177,7 +236,7 @@ fn main() -> Result<(), ParseError> {
     Ok(())
 }
 */
-
+/*
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod tests {
@@ -239,3 +298,4 @@ mod tests {
 		assert_eq!(ext_get().logs().len(), 2);
 	}
 }
+*/

@@ -4,16 +4,16 @@
 
 /* jshint esversion: 6 */
 
-import { CODE_HEX , ABI} from "./resources.mjs";
+import { CODE_HEX , ABI} from "../../resources.mjs";
 
 var abi;
 var codeHex;
 var smartContract;
 
 // this does not exist for Kovan chain
-function unlockAccount() {
+function unlockAccount(address) {
     return new Promise (function (resolve, reject) {
-        web3.personal.unlockAccount(web3.eth.defaultAccount, "user", web3.toHex(0), function(err, result) {
+        web3.personal.unlockAccount(address, "user", web3.toHex(0), function(err, result) {
             if (err) {
               reject(err);
             } else {
@@ -30,18 +30,33 @@ function estimateGas(dataIn) {
             if (err) {
               reject(err);
             } else {
-              resolve(result * 2);
+              resolve(result * 1.2);
             }
         });
     });
 }
 
-function instantiateNew(dataIn, gasIn) {
+function getGasLimit() {
+    return new Promise (function (resolve, reject) {
+        web3.eth.getBlock("latest", function(err, block) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(block.gasLimit);
+            }
+        });
+    });
+}
+
+function instantiateNew(dataIn, gasLimit) {
     return new Promise (function (resolve, reject) {
         // web3.fromAscii
         // web3.toChecksumAddress
         // web3.toHex
-        smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gas: gasIn}, function (err, contractInstance) {
+
+        // 4000000000 = 4 GWEI per gas consumed
+        smartContract.new({data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
+        //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
             if (err) {
                 reject(err);
             } else {
@@ -54,26 +69,37 @@ function instantiateNew(dataIn, gasIn) {
 }
 
 function deployContract(smartContract) {
-    unlockAccount().then(function() { // comment for Kovan chain
-        estimateGas(codeHex).then(function(estimatedGas) {
-            console.log("Gas for deployment: " + estimatedGas);
+    //unlockAccount(web3.eth.defaultAccount).then(function() { // comment for Kovan chain
+        //estimateGas(codeHex).then(function(estimatedGas) {
+            //console.log("Gas for deployment: " + estimatedGas);
             instantiateNew(codeHex, estimatedGas).then(function(result) {
                 waitForReceipt(result[1]).then(function(receipt) {
                     console.log(receipt);
-                    console.log("RECEIPT ABOVE");
-                    console.log(receipt.contractAddress);
-                    console.log(result[0]);
                     var smartContractInstance = smartContract.at(receipt.contractAddress);
-                    console.log("new instance");
-                    console.log(smartContractInstance);
-                    smartContractInstance.ownBalance(function (err, result) {
+                    print(smartContractInstance, 7).then(function(output) {
+                        console.log("printLn");
+                        console.log(output);
+                        ownBalance(smartContractInstance).then(function(balance) {
+                            console.log("ownBalance");
+                            console.log(balance);
+                            give(smartContractInstance, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 2).then(function(outcome) {
+                                console.log("give");
+                                console.log(outcome);
+                            });
+                        });
+                    });
+
+                    /*
+                    smartContractInstance.balanceOf(web3.eth.defaultAccount, function (err, result) {
                         if(err) {
                               console.error(err);
                               return;
                         } else {
-                              console.log("3: " + result);
+                              console.log("balanceOf");
+                              console.log(result.toString(10));
                         }
                     });
+                    */
                 });
                 /*
                 waitForReceipt(result[1], function (receipt) {
@@ -96,8 +122,32 @@ function deployContract(smartContract) {
                 });
                 */
             });
+        //});
+    //}); // comment for Kovan chain
+}
+
+function print(smartContractInstance, input) {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.printLn(7, function (err, result) {
+            if(err) {
+                  reject(err);
+            } else {
+                  resolve(result.toString(10));
+            }
         });
-    }); // comment for Kovan chain
+    });
+}
+
+function ownBalance(smartContractInstance) {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.ownBalance(function (err, result) {
+            if(err) {
+                  reject(err);
+            } else {
+                  resolve(result.toString(10));
+            }
+        });
+    });
 }
 
 
@@ -110,6 +160,18 @@ function setUpFilter(contractInstance, transactionHash) {
           } else {
               filter.stopWatching();
               resolve();
+          }
+      });
+  });
+}
+
+function give(smartContractInstance, toAddress, amount) {
+  return new Promise (function (resolve, reject) {
+      smartContractInstance.give(toAddress, amount, function(err, result) {
+          if (err) {
+              reject(err);
+          } else {
+              resolve(result);
           }
       });
   });
@@ -131,7 +193,6 @@ function getTransactionReceipt(transactionHash, contractInstance) {
 function waitForReceipt(transactionHash) {
   return new Promise (function (resolve, reject) {
       web3.eth.getTransactionReceipt(transactionHash, function (err, receipt) {
-
 
             if (err) {
                 reject(err);
@@ -221,13 +282,19 @@ window.addEventListener('load', function () {
 
         console.log("Web3 Version: " + web3.version.api);
         abi = ABI; // abi needs to be JS array instead of string
-        codeHex = web3.fromAscii(CODE_HEX);
+        codeHex = web3.toHex(CODE_HEX); // or from Ascii if I am certain it is Ascii.. toHex uses String or Number as param
         smartContract = web3.eth.contract(abi);
-
         //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
         web3.eth.defaultAccount = '0x004ec07d2329997267ec62b4166639513386f32e'; // dev net account with large funds
         //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
+        console.log("Balance:");
+        web3.eth.getBalance(web3.eth.defaultAccount, function(err, result) {
+          if (!err) {
+            console.log(JSON.stringify(result));
+          }
+        });
         deployContract(smartContract);
+
 
 
 
@@ -544,10 +611,10 @@ function callOne(contract, newContractInstance, gas) {
   //return inst.registerPlayer(1, {from: account, value: web3.toWei(5, "ether")});
 }
 
-function transferEther(toAddress, amount) {
+function transferEther(fromAddress, toAddress, amount) {
     web3.eth.sendTransaction({
       to: toAddress,
-      from: web3.eth.defaultAccount,
+      from: fromAddress,
       gasPrice: "20000000000",
       gas: "210000",
       value: web3.toWei(amount, "ether")}, function(err, transactionHash) {

@@ -54,14 +54,6 @@
   },
   {
     "type": "function",
-    "name": "one",
-    "inputs": [],
-    "outputs": [],
-    "constant": false,
-    "payable": false
-  },
-  {
-    "type": "function",
     "name": "printLn",
     "inputs": [
       {
@@ -117,15 +109,6 @@
   },
   {
     "type": "constructor",
-    "inputs": [
-      {
-        "name": "addr1",
-        "type": "string"
-      },
-      {
-        "name": "addr2",
-        "type": "string"
-      }
-    ]
+    "inputs": []
   }
 ]
