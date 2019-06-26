@@ -97,7 +97,7 @@
   },
   {
     "type": "function",
-    "name": "give",
+    "name": "transfer",
     "inputs": [
       {
         "name": "_from",

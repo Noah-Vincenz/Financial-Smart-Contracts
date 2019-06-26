@@ -59,7 +59,7 @@ function instantiateNew(dataIn, gasLimit) {
             } else {
                 var transactionHash = contractInstance.transactionHash;
                 console.log("TransactionHash: " + transactionHash + " waiting to be mined...");
-                resolve([contractInstance, transactionHash]);
+                resolve(transactionHash);
             }
         });
     });
@@ -70,33 +70,32 @@ function deployContract(smartContract) {
         //estimateGas(codeHex).then(function(estimatedGas) {
             //console.log("Gas for deployment: " + estimatedGas);
             var estimatedGas = 2;
-            instantiateNew(codeHex, estimatedGas).then(function(result) {
-                waitForReceipt(result[1]).then(function(receipt) {
-                    var smartContractInstance = smartContract.at(receipt.contractAddress);
-                    ownerAddress(smartContractInstance).then(function(address) {
-                        console.log("Contract Owner: " + address);
+            instantiateNew(codeHex, estimatedGas).then(function(instantiateTxHash) {
+                waitForReceipt(instantiateTxHash).then(function(instantiationReceipt) {
+                    var smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
+                    ownerAddress(smartContractInstance).then(function(ownerAddress) {
+                        console.log("Contract Owner: " + ownerAddress);
                         ownerBalance(smartContractInstance).then(function(oBalance1) {
                             console.log("ownerBalance: " + oBalance1);
                             recipientBalance(smartContractInstance).then(function(rBalance1) {
                                 console.log("recipientBalance: " + rBalance1);
-                                depositCollateral(smartContractInstance, web3.toChecksumAddress('0x004ec07d2329997267Ec62b4166639513386F32E'), 20).then(function(res) {
-                                    waitForReceipt(res).then(function(receipt) {
-                                        console.log("Collateral Added For Owner Account");
+                                depositCollateral(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', 20).then(function(res) {
+                                    waitForReceipt(res).then(function(_) {
+                                        console.log("Collateral of 20 Ether has been added to owner account.");
                                         ownerBalance(smartContractInstance).then(function(oBalance2) {
                                             console.log("ownerBalance: " + oBalance2);
                                             recipientBalance(smartContractInstance).then(function(rBalance2) {
                                                 console.log("recipientBalance: " + rBalance2);
-                                                balanceOfAddress(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
-                                                    console.log("balanceOf");
-                                                    console.log(bal);
-                                                    /*
-                                                    give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
-                                                        console.log("give");
-                                                        console.log(outcome);
+                                                transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(giveTxHash) {
+                                                    waitForReceipt(giveTxHash).then(function(_) {
+                                                        console.log("Owner has transferred 5 Ether to recipient.");
+                                                        ownerBalance(smartContractInstance).then(function(oBalance3) {
+                                                            console.log("ownerBalance: " + oBalance3);
+                                                            recipientBalance(smartContractInstance).then(function(rBalance3) {
+                                                                console.log("recipientBalance: " + rBalance3);
+                                                            });
+                                                        });
                                                     });
-
-                                                    // add another balance of where we check both owner's and recipients balance
-                                                    */
                                                 });
                                             });
                                         });
@@ -198,12 +197,14 @@ function setUpFilter(contractInstance, transactionHash) {
   });
 }
 
-function give(smartContractInstance, toAddress, amount) {
+function transfer(smartContractInstance, fromAddress, toAddress, amount) {
   return new Promise (function (resolve, reject) {
-      smartContractInstance.give(toAddress, amount, function(err, result) {
+      smartContractInstance.transfer(fromAddress, toAddress, amount, function(err, result) {
           if (err) {
               reject(err);
           } else {
+              console.log(result.toString(10));
+              console.log(web3.toHex(result));
               resolve(result);
           }
       });

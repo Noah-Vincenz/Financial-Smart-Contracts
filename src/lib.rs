@@ -57,9 +57,8 @@ pub mod smart_contract {
 		fn recipientAddress(&mut self) -> H256;
 		#[constant]
 		fn callerAddress(&mut self) -> H256;
-		/// Transfer the balance from owner's account to another account
-        fn give(&mut self, _from: Address, _to: Address, _amount: U256) -> bool;
-		//fn one(&mut self);
+		/// Transfer between two accounts
+        fn transfer(&mut self, _from: Address, _to: Address, _amount: U256) -> bool;
 		#[constant]
 		fn printLn(&mut self, input: U256) -> U256;
 		#[payable]
@@ -116,18 +115,17 @@ pub mod smart_contract {
 			H256::from(sender())
 		}
 
-		fn give(&mut self, from: Address, to: Address, amount: U256) -> bool {
-            let sender = pwasm_ethereum::sender();
-            let senderBalance = read_balance(&sender);
+		fn transfer(&mut self, from: Address, to: Address, amount: U256) -> bool {
+            let senderBalance = read_balance(&from);
             let recipientBalance = read_balance(&to);
-            if amount == 0.into() || senderBalance < amount || to == sender {
+            if amount == 0.into() || senderBalance < amount || to == from {
                 false
             } else {
                 let new_sender_balance = senderBalance - amount;
                 let new_recipient_balance = recipientBalance + amount;
-                pwasm_ethereum::write(&balance_key(&sender), &new_sender_balance.into());
-                pwasm_ethereum::write(&balance_key(&to), &new_recipient_balance.into());
-                self.Transfer(sender, to, amount);
+                write(&balance_key(&from), &new_sender_balance.into());
+                write(&balance_key(&to), &new_recipient_balance.into());
+                self.Transfer(from, to, amount);
                 true
             }
         }
