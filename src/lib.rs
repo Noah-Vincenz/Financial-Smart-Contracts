@@ -58,7 +58,7 @@ pub mod smart_contract {
 		#[constant]
 		fn callerAddress(&mut self) -> H256;
 		/// Transfer between two accounts
-        fn transfer(&mut self, _from: Address, _to: Address, _amount: U256) -> bool;
+        fn transfer(&mut self, _from: Address, _to: Address, _amount: U256);
 		#[constant]
 		fn printLn(&mut self, input: U256) -> U256;
 		#[payable]
@@ -114,18 +114,16 @@ pub mod smart_contract {
 			H256::from(sender())
 		}
 
-		fn transfer(&mut self, from: Address, to: Address, amount: U256) -> bool {
+		fn transfer(&mut self, from: Address, to: Address, amount: U256) {
             let senderBalance = read_balance(&from);
             let recipientBalance = read_balance(&to);
             if amount == 0.into() || senderBalance < amount || to == from {
-                false
             } else {
                 let new_sender_balance = senderBalance - amount;
                 let new_recipient_balance = recipientBalance + amount;
                 write(&balance_key(&from), &new_sender_balance.into());
                 write(&balance_key(&to), &new_recipient_balance.into());
                 self.Transfer(from, to, amount);
-                true
             }
         }
 

@@ -112,12 +112,7 @@
         "type": "uint256"
       }
     ],
-    "outputs": [
-      {
-        "name": "returnValue0",
-        "type": "bool"
-      }
-    ],
+    "outputs": [],
     "constant": false,
     "payable": false
   },

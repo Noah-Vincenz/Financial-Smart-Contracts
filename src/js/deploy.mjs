@@ -242,12 +242,6 @@ window.addEventListener('load', function () {
         //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
         web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
         //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
-        console.log("Balance:");
-        web3.eth.getBalance(web3.eth.defaultAccount, function(err, result) {
-          if (!err) {
-            console.log(JSON.stringify(result));
-          }
-        });
         deployContract(smartContract);
 
         /*
@@ -262,7 +256,6 @@ window.addEventListener('load', function () {
     } else {
         console.log('No Web3 Detected... using HTTP Provider')
         window.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-
     }
 });
 
