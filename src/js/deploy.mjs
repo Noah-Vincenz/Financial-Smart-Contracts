@@ -50,9 +50,6 @@ function getGasLimit() {
 
 function instantiateNew(dataIn, gasLimit) {
     return new Promise (function (resolve, reject) {
-        // web3.fromAscii
-        // web3.toChecksumAddress
-        // web3.toHex
 
         // 4000000000 = 4 GWEI per gas consumed
         smartContract.new(['0x7f023262356b002a4b7deb7ce057eb8b1aabb427'], {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
@@ -83,20 +80,26 @@ function deployContract(smartContract) {
                             console.log("printLn");
                             console.log(output);
                             depositCollateral(smartContractInstance, web3.eth.defaultAccount, 20).then(function(res) {
-                                console.log("depositCollateral");
-                                console.log(res);
-                                ownerBalance(smartContractInstance).then(function(balance) {
-                                    console.log("ownerBalance");
-                                    console.log(balance);
-                                    balanceOf(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
-                                        console.log("balanceOf");
-                                        console.log(bal);
-                                        /*
-                                        give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
-                                            console.log("give");
-                                            console.log(outcome);
+                                waitForReceipt(res).then(function(receipt) {
+                                    console.log("Collateral Added - Receipt Below");
+                                    console.log(receipt);
+
+                                    ownerBalance(smartContractInstance).then(function(balance) {
+                                        console.log("ownerBalance");
+                                        console.log(balance);
+
+                                        balanceOf(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
+                                            console.log("balanceOf");
+                                            console.log(bal);
+                                            /*
+                                            give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
+                                                console.log("give");
+                                                console.log(outcome);
+                                            });
+
+                                            // add another balance of where we check both owner's and recipients balance
+                                            */
                                         });
-                                        */
                                     });
                                 });
                             });
@@ -251,47 +254,6 @@ window.addEventListener('load', function () {
 
     }
 });
-
-//var SmartContractTx = SmartContract.deploy({data: codeHex, from: web3.eth.defaultAccount, arguments: ["String"]});
-
-
-
-function callOne(contract, newContractInstance, gas) {
-  //contract.methods.one().call({from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', value: web3.utils.toWei("5", "ether")});
-
-  var getData = contract.methods.give().encodeABI();
-  /*
-  var SmartContractTx = contract.methods.give({data: getData, from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', to: contract.options.address, arguments: []})
-  .call().then(function(res){
-    console.log(res);
-  }).catch(function(err) {
-    console.log(err);
-  });
-  SmartContractTx.estimateGas({}, (err, gas) => {
-    */
-
-  web3.eth.estimateGas({from:'0x7f023262356b002a4b7deb7ce057eb8b1aabb427', data: getData}, (err, gas) => {
-    if (gas) {
-          gas = Math.round(gas * 1.2);
-          contract.methods.give().send({from: '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', gas: web3.utils.toHex(gas)})
-          .on('error', (error) => { console.log(error) })
-          .on('transactionHash', (transactionHash) => { console.log("transactionHash: " + transactionHash) })
-          .on('receipt', (receipt) => {
-             console.log("receipt.contractAddress: " + receipt.contractAddress) // contains the new contract address
-          })
-          .on('confirmation', (confirmationNumber, receipt) => {
-              console.log("confirmationNumber: " + confirmationNumber + "\nreceipt.contractAddress: " + receipt.contractAddress) })
-          .then((newContractInstance) => {
-              console.log("Contract successfully deployed.")
-              console.log(newContractInstance.options.address) // instance with the new contract address
-          });
-    } else {
-      console.error(err);
-    }
-  });
-
-  //return inst.registerPlayer(1, {from: account, value: web3.toWei(5, "ether")});
-}
 
 function transferEther(fromAddress, toAddress, amount) {
     web3.eth.sendTransaction({

@@ -48,11 +48,13 @@ pub mod smart_contract {
 		// Total amount of donations
 
 		#[constant]
-		fn balanceOf(&mut self, _owner: Address) -> U256;
+		fn balanceOf(&mut self, _account: Address) -> U256;
 		#[constant]
 		fn ownerBalance(&mut self) -> U256;
 		#[constant]
 		fn recipientBalance(&mut self) -> U256;
+		#[constant]
+		fn callerBalance(&mut self) -> U256;
 		#[constant]
 		fn ownerAddress(&mut self) -> H256;
 		#[constant]
@@ -96,19 +98,14 @@ pub mod smart_contract {
 		}
 
 
-		fn balanceOf(&mut self, owner: Address) -> U256 {
-	        //balance(&owner)
-			//read(&balance_key(&owner)).into()
-			//read_balance(&owner) + 7
-			read(&balance_key(&owner)).into()
-			//balance(&owner)
+		fn balanceOf(&mut self, account: Address) -> U256 {
+			read(&balance_key(&account)).into()
 	    }
 
 		fn ownerBalance(&mut self) -> U256 {
-			//let sender = sender();
-
 			read_balance(&sender())
-			//read(&balance_key(&sender())).into()
+
+			//read_balance(&owner_key())
 			//let sender = sender();
 			//read_balance(&owner_key().into())
 			//read_balance(&H256::from(sender().clone())).into() + 7 //&H256::from(sender().clone()).into()
@@ -118,20 +115,17 @@ pub mod smart_contract {
 			//read(&balance_key(owner_key())).into()
 			//let total: U256 = read(&owner_key()).into();
 			//total // returns array of 4 elems
+			//read(&balance_key(&sender())).into()
+			//read(&balance_key(&owner_key())).into()
 	    }
 
 		fn recipientBalance(&mut self) -> U256 {
 			let sender = sender();
 			read_balance(&sender)
-			//let sender = sender();
-			//read_balance(&owner_key().into())
-			//read_balance(&H256::from(sender().clone())).into() + 7 //&H256::from(sender().clone()).into()
-			//read_balance(&balance_key(&sender().clone())).into()
-			//read(&balance_key(&sender().clone())).into()
-			//balance_key(&sender()).into()
-			//read(&balance_key(owner_key())).into()
-			//let total: U256 = read(&owner_key()).into();
-			//total // returns array of 4 elems
+	    }
+
+		fn callerBalance(&mut self) -> U256 {
+			read_balance(&sender())
 	    }
 
 		fn ownerAddress(&mut self) -> H256 {
