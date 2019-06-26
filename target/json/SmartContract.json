@@ -19,7 +19,20 @@
   },
   {
     "type": "function",
-    "name": "ownBalance",
+    "name": "ownerBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "returnValue0",
+        "type": "uint256"
+      }
+    ],
+    "constant": true,
+    "payable": false
+  },
+  {
+    "type": "function",
+    "name": "recipientBalance",
     "inputs": [],
     "outputs": [
       {
@@ -33,6 +46,19 @@
   {
     "type": "function",
     "name": "ownerAddress",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "returnValue0",
+        "type": "uint256"
+      }
+    ],
+    "constant": true,
+    "payable": false
+  },
+  {
+    "type": "function",
+    "name": "recipientAddress",
     "inputs": [],
     "outputs": [
       {
@@ -60,6 +86,10 @@
     "type": "function",
     "name": "give",
     "inputs": [
+      {
+        "name": "_from",
+        "type": "address"
+      },
       {
         "name": "_to",
         "type": "address"
@@ -95,6 +125,32 @@
     ],
     "constant": true,
     "payable": false
+  },
+  {
+    "type": "function",
+    "name": "depositCollateral",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [],
+    "constant": false,
+    "payable": true
+  },
+  {
+    "type": "function",
+    "name": "val",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "returnValue0",
+        "type": "uint256"
+      }
+    ],
+    "constant": false,
+    "payable": true
   },
   {
     "type": "event",

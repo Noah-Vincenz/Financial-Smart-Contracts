@@ -2,49 +2,6 @@
 #![allow(non_snake_case)]
 #![feature(proc_macro_hygiene)]
 
-// Daniel Version
-/*
-extern crate pwasm_ethereum;
-extern crate pwasm_abi;
-extern crate pwasm_abi_derive;
-
-// Declares the dispatch and dispatch_ctor methods
-use pwasm_abi::eth::EndpointInterface;
-use pwasm_abi_derive::eth_abi;
-
-#[no_mangle]
-pub fn deploy() {
-	let smartcontract = SmartContractInstance { };
-    let mut endpoint = SmartContractEndpoint::new(smartcontract);
-    endpoint.dispatch_ctor(&pwasm_ethereum::input());
-}
-
-#[no_mangle]
-pub fn call() {
-	let smartcontract = SmartContractInstance { };
-    let mut endpoint = SmartContractEndpoint::new(smartcontract);
-    pwasm_ethereum::ret(&endpoint.dispatch(&pwasm_ethereum::input()));
-}
-
-#[eth_abi(SmartContractEndpoint)]
-pub trait SmartContract {
-    fn constructor(&mut self);
-}
-
-struct SmartContractInstance {
-}
-
-impl SmartContract for SmartContractInstance {
-    fn constructor(&mut self) {
-        return;
-    }
-}
-*/
-
-
-// My Version
-
-
 extern crate pwasm_std;
 extern crate pwasm_ethereum;
 extern crate pwasm_abi;
@@ -52,7 +9,7 @@ extern crate pwasm_abi_derive;
 
 // Declares the dispatch and dispatch_ctor methods
 use pwasm_abi::eth::EndpointInterface;
-use pwasm_ethereum::{ret, input};
+use pwasm_ethereum::{ret, input, value};
 //mod parser; // parse = parser.rs file
 //use parser::parse();
 
@@ -93,19 +50,26 @@ pub mod smart_contract {
 		#[constant]
 		fn balanceOf(&mut self, _owner: Address) -> U256;
 		#[constant]
-		fn ownBalance(&mut self) -> U256;
+		fn ownerBalance(&mut self) -> U256;
+		#[constant]
+		fn recipientBalance(&mut self) -> U256;
 		#[constant]
 		fn ownerAddress(&mut self) -> H256;
 		#[constant]
+		fn recipientAddress(&mut self) -> H256;
+		#[constant]
 		fn callerAddress(&mut self) -> H256;
 		/// Transfer the balance from owner's account to another account
-        fn give(&mut self, _to: Address, _amount: U256) -> bool;
+        fn give(&mut self, _from: Address, _to: Address, _amount: U256) -> bool;
 		//fn give(&mut self);
 		//fn one(&mut self);
 		#[constant]
 		fn printLn(&mut self, input: U256) -> U256;
+		#[payable]
+		fn depositCollateral(&mut self, amount: U256);
 		/// Event declaration
-
+		#[payable]
+		fn val(&mut self) -> U256;
 
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
@@ -134,17 +98,47 @@ pub mod smart_contract {
 
 		fn balanceOf(&mut self, owner: Address) -> U256 {
 	        //balance(&owner)
+			//read(&balance_key(&owner)).into()
+			//read_balance(&owner) + 7
 			read(&balance_key(&owner)).into()
+			//balance(&owner)
 	    }
 
-		fn ownBalance(&mut self) -> U256 {
-			let sender = pwasm_ethereum::sender();
-            balance(&sender) // returns single elem array (0)
+		fn ownerBalance(&mut self) -> U256 {
+			//let sender = sender();
+
+			read_balance(&sender())
+			//read(&balance_key(&sender())).into()
+			//let sender = sender();
+			//read_balance(&owner_key().into())
+			//read_balance(&H256::from(sender().clone())).into() + 7 //&H256::from(sender().clone()).into()
+			//read_balance(&balance_key(&sender().clone())).into()
+			//read(&balance_key(&sender().clone())).into()
+			//balance_key(&sender()).into()
+			//read(&balance_key(owner_key())).into()
+			//let total: U256 = read(&owner_key()).into();
+			//total // returns array of 4 elems
+	    }
+
+		fn recipientBalance(&mut self) -> U256 {
+			let sender = sender();
+			read_balance(&sender)
+			//let sender = sender();
+			//read_balance(&owner_key().into())
+			//read_balance(&H256::from(sender().clone())).into() + 7 //&H256::from(sender().clone()).into()
+			//read_balance(&balance_key(&sender().clone())).into()
+			//read(&balance_key(&sender().clone())).into()
+			//balance_key(&sender()).into()
+			//read(&balance_key(owner_key())).into()
 			//let total: U256 = read(&owner_key()).into();
 			//total // returns array of 4 elems
 	    }
 
 		fn ownerAddress(&mut self) -> H256 {
+			read(&owner_key()).into()
+	    }
+
+		fn recipientAddress(&mut self) -> H256 {
 			read(&recipient_key()).into()
 	    }
 
@@ -154,10 +148,10 @@ pub mod smart_contract {
 
 
 
-		fn give(&mut self, to: Address, amount: U256) -> bool {
+		fn give(&mut self, from: Address, to: Address, amount: U256) -> bool {
             let sender = pwasm_ethereum::sender();
-            let senderBalance = balance(&sender);
-            let recipientBalance = balance(&to);
+            let senderBalance = read_balance(&sender);
+            let recipientBalance = read_balance(&to);
             if amount == 0.into() || senderBalance < amount || to == sender {
                 false
             } else {
@@ -188,9 +182,33 @@ pub mod smart_contract {
 		*/
 
 		fn printLn(&mut self, input: U256) -> U256 {
-			input
+			input + 2
 		}
 
+		fn depositCollateral(&mut self, amount: U256) {
+			let sender = sender();
+			let senderBalance = read_balance(&sender);
+            let new_sender_balance = senderBalance + amount;
+			/*
+			if &owner_key() == &H256::from(sender.clone()).into() {
+				write(&owner_key(),  &new_sender_balance.into());
+			} else if &recipient_key() == &H256::from(sender.clone()).into() {
+				write(&recipient_key(),  &new_sender_balance.into());
+			}
+			*/
+
+
+			write(&balance_key(&sender), &new_sender_balance.into())
+
+
+
+
+			//write(&owner_key(),  &new_sender_balance.into());
+		}
+
+		fn val(&mut self) -> U256 {
+			pwasm_ethereum::value()
+		}
 
 	}
 
@@ -199,9 +217,12 @@ pub mod smart_contract {
 		Address::from(h)
 	}
 
-	fn balance(owner: &Address) -> U256 {
+
+	fn read_balance(owner: &Address) -> U256 {
 		read(&balance_key(owner)).into()
 	}
+
+
 
 	// Generates a balance key for some address.
 	// Used to map balances with their owners.

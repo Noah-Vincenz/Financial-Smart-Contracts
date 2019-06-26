@@ -69,7 +69,7 @@ function instantiateNew(dataIn, gasLimit) {
 }
 
 function deployContract(smartContract) {
-    //unlockAccount(web3.eth.defaultAccount).then(function() { // comment for Kovan chain
+    unlockAccount(web3.eth.defaultAccount).then(function() { // comment for Kovan chain
         //estimateGas(codeHex).then(function(estimatedGas) {
             //console.log("Gas for deployment: " + estimatedGas);
             var estimatedGas = 2;
@@ -82,15 +82,21 @@ function deployContract(smartContract) {
                         print(smartContractInstance, 7).then(function(output) {
                             console.log("printLn");
                             console.log(output);
-                            ownBalance(smartContractInstance).then(function(balance) {
-                                console.log("ownBalance");
-                                console.log(balance);
-                                balanceOf(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
-                                    console.log("balanceOf");
-                                    console.log(bal);
-                                    give(smartContractInstance, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
-                                        console.log("give");
-                                        console.log(outcome);
+                            depositCollateral(smartContractInstance, web3.eth.defaultAccount, 20).then(function(res) {
+                                console.log("depositCollateral");
+                                console.log(res);
+                                ownerBalance(smartContractInstance).then(function(balance) {
+                                    console.log("ownerBalance");
+                                    console.log(balance);
+                                    balanceOf(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
+                                        console.log("balanceOf");
+                                        console.log(bal);
+                                        /*
+                                        give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
+                                            console.log("give");
+                                            console.log(outcome);
+                                        });
+                                        */
                                     });
                                 });
                             });
@@ -99,7 +105,7 @@ function deployContract(smartContract) {
                 });
             });
         //});
-    //}); // comment for Kovan chain
+    }); // comment for Kovan chain
 }
 
 function print(smartContractInstance, input) {
@@ -114,17 +120,25 @@ function print(smartContractInstance, input) {
     });
 }
 
-function ownBalance(smartContractInstance) {
+function depositCollateral(smartContractInstance, senderAddress, amount) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.ownBalance(function (err, result) {
+        smartContractInstance.depositCollateral(amount, {from: senderAddress, value: web3.toWei(amount, "ether")}, function (err, result) {
             if(err) {
                   reject(err);
             } else {
-                  console.log(result);
-                  console.log(result.toString(10));
-                  console.log(web3.toHex(result));
-                  console.log(web3.toHex(result.toString(10)));
-                  resolve(result);
+                  resolve(result.toString(10));
+            }
+        });
+    });
+}
+
+function ownerBalance(smartContractInstance) {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.ownerBalance(function (err, result) {
+            if(err) {
+                  reject(err);
+            } else {
+                  resolve(web3.toDecimal(result));
             }
         });
     });
@@ -144,11 +158,11 @@ function ownerAddress(smartContractInstance) {
 
 function balanceOf(smartContractInstance, address) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.balanceOf(web3.fromAscii(address), function (err, result) {
+        smartContractInstance.balanceOf(web3.toChecksumAddress(address), function (err, result) {
             if(err) {
                   reject(err);
             } else {
-                  resolve(result);
+                  resolve(web3.toDecimal(result));
             }
         });
     });

@@ -8,7 +8,7 @@ start-node () {
 # Initialises an admin account on the blockchain after a delay
 init-account () {
     sleep 2
-    curl --data '{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["user", "user"],"id":0}' -H "Content-Type: application/json" -X POST localhost:8545
+    curl --data '{"method":"parity_allAccountsInfo","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
 }
 
 # Initialise the account after a delay, and start the parity node
