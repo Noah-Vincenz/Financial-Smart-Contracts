@@ -1,10 +1,10 @@
 [
   {
     "type": "function",
-    "name": "balanceOf",
+    "name": "balanceOfAddress",
     "inputs": [
       {
-        "name": "_account",
+        "name": "_address",
         "type": "address"
       }
     ],
@@ -207,7 +207,7 @@
     "inputs": [
       {
         "name": "recipient_address",
-        "type": "uint256[]"
+        "type": "address"
       }
     ]
   }

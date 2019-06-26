@@ -52,7 +52,7 @@ function instantiateNew(dataIn, gasLimit) {
     return new Promise (function (resolve, reject) {
 
         // 4000000000 = 4 GWEI per gas consumed
-        smartContract.new(['0x7f023262356b002a4b7deb7ce057eb8b1aabb427'], {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
+        smartContract.new(web3.toChecksumAddress('0x7f023262356b002a4b7deb7ce057eb8b1aabb427'), {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
         //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
             if (err) {
                 reject(err);
@@ -72,33 +72,33 @@ function deployContract(smartContract) {
             var estimatedGas = 2;
             instantiateNew(codeHex, estimatedGas).then(function(result) {
                 waitForReceipt(result[1]).then(function(receipt) {
-                    console.log(receipt);
                     var smartContractInstance = smartContract.at(receipt.contractAddress);
                     ownerAddress(smartContractInstance).then(function(address) {
                         console.log("Contract Owner: " + address);
-                        print(smartContractInstance, 7).then(function(output) {
-                            console.log("printLn");
-                            console.log(output);
-                            depositCollateral(smartContractInstance, web3.eth.defaultAccount, 20).then(function(res) {
-                                waitForReceipt(res).then(function(receipt) {
-                                    console.log("Collateral Added - Receipt Below");
-                                    console.log(receipt);
+                        ownerBalance(smartContractInstance).then(function(oBalance1) {
+                            console.log("ownerBalance: " + oBalance1);
+                            recipientBalance(smartContractInstance).then(function(rBalance1) {
+                                console.log("recipientBalance: " + rBalance1);
+                                depositCollateral(smartContractInstance, web3.toChecksumAddress('0x004ec07d2329997267Ec62b4166639513386F32E'), 20).then(function(res) {
+                                    waitForReceipt(res).then(function(receipt) {
+                                        console.log("Collateral Added For Owner Account");
+                                        ownerBalance(smartContractInstance).then(function(oBalance2) {
+                                            console.log("ownerBalance: " + oBalance2);
+                                            recipientBalance(smartContractInstance).then(function(rBalance2) {
+                                                console.log("recipientBalance: " + rBalance2);
+                                                balanceOfAddress(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
+                                                    console.log("balanceOf");
+                                                    console.log(bal);
+                                                    /*
+                                                    give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
+                                                        console.log("give");
+                                                        console.log(outcome);
+                                                    });
 
-                                    ownerBalance(smartContractInstance).then(function(balance) {
-                                        console.log("ownerBalance");
-                                        console.log(balance);
-
-                                        balanceOf(smartContractInstance, web3.eth.defaultAccount).then(function(bal) {
-                                            console.log("balanceOf");
-                                            console.log(bal);
-                                            /*
-                                            give(smartContractInstance, web3.eth.defaultAccount, '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 10).then(function(outcome) {
-                                                console.log("give");
-                                                console.log(outcome);
+                                                    // add another balance of where we check both owner's and recipients balance
+                                                    */
+                                                });
                                             });
-
-                                            // add another balance of where we check both owner's and recipients balance
-                                            */
                                         });
                                     });
                                 });
@@ -147,6 +147,18 @@ function ownerBalance(smartContractInstance) {
     });
 }
 
+function recipientBalance(smartContractInstance) {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.recipientBalance(function (err, result) {
+            if(err) {
+                  reject(err);
+            } else {
+                  resolve(web3.toDecimal(result));
+            }
+        });
+    });
+}
+
 function ownerAddress(smartContractInstance) {
     return new Promise (function (resolve, reject) {
         smartContractInstance.ownerAddress(function (err, result) {
@@ -159,9 +171,9 @@ function ownerAddress(smartContractInstance) {
     });
 }
 
-function balanceOf(smartContractInstance, address) {
+function balanceOfAddress(smartContractInstance, address) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.balanceOf(web3.toChecksumAddress(address), function (err, result) {
+        smartContractInstance.balanceOfAddress(web3.toChecksumAddress(address), function (err, result) {
             if(err) {
                   reject(err);
             } else {
@@ -229,7 +241,7 @@ window.addEventListener('load', function () {
         codeHex = web3.toHex(CODE_HEX); // or from Ascii if I am certain it is Ascii.. toHex uses String or Number as param
         smartContract = web3.eth.contract(abi);
         //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
-        web3.eth.defaultAccount = '0x004ec07d2329997267ec62b4166639513386f32e'; // dev net account with large funds
+        web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
         //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
         console.log("Balance:");
         web3.eth.getBalance(web3.eth.defaultAccount, function(err, result) {

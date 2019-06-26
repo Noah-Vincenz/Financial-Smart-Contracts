@@ -31,24 +31,20 @@ pub mod smart_contract {
 	use pwasm_std::{String, Vec};
 	use pwasm_abi_derive::eth_abi;
 
+	fn owner_key() -> H256 {
+		H256::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+	}
 
 	fn recipient_key() -> H256 {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
-	fn owner_key() -> H256 {
-		H256::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-	}
-
-
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self, recipient_address: Vec<U256>);
-		// Total amount of donations
-
+		fn constructor(&mut self, recipient_address: Address);
 		#[constant]
-		fn balanceOf(&mut self, _account: Address) -> U256;
+		fn balanceOfAddress(&mut self, _address: Address) -> U256;
 		#[constant]
 		fn ownerBalance(&mut self) -> U256;
 		#[constant]
@@ -63,33 +59,27 @@ pub mod smart_contract {
 		fn callerAddress(&mut self) -> H256;
 		/// Transfer the balance from owner's account to another account
         fn give(&mut self, _from: Address, _to: Address, _amount: U256) -> bool;
-		//fn give(&mut self);
 		//fn one(&mut self);
 		#[constant]
 		fn printLn(&mut self, input: U256) -> U256;
 		#[payable]
 		fn depositCollateral(&mut self, amount: U256);
-		/// Event declaration
 		#[payable]
 		fn val(&mut self) -> U256;
-
+		/// Event declaration
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
 		#[event]
         fn Transfer(&mut self, indexed_from: Address, indexed_to: Address, _value: U256);
-
-
 	}
 
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, recipient_address: Vec<U256>) {
+		fn constructor(&mut self, recipient_address: Address) {
 
-			// String addr, String addr, input string MUST BE VECTOR OF INTS!!! is parsed and then give is called if input string is give
-
-			//write(&recipient_key(), &U256::from(0).into());
-			write(&recipient_key(), &H256::from(recipient_address[0]).into());
+			//write(&recipient_key(), &H256::from(recipient_address[0]).into());
+			write(&recipient_key(), &H256::from(recipient_address).into());
 			write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
 
 			// TODO: do parsing here
@@ -98,30 +88,16 @@ pub mod smart_contract {
 		}
 
 
-		fn balanceOf(&mut self, account: Address) -> U256 {
-			read(&balance_key(&account)).into()
+		fn balanceOfAddress(&mut self, address: Address) -> U256 {
+			read(&balance_key(&address)).into()
 	    }
 
 		fn ownerBalance(&mut self) -> U256 {
-			read_balance(&sender())
-
-			//read_balance(&owner_key())
-			//let sender = sender();
-			//read_balance(&owner_key().into())
-			//read_balance(&H256::from(sender().clone())).into() + 7 //&H256::from(sender().clone()).into()
-			//read_balance(&balance_key(&sender().clone())).into()
-			//read(&balance_key(&sender().clone())).into()
-			//balance_key(&sender()).into()
-			//read(&balance_key(owner_key())).into()
-			//let total: U256 = read(&owner_key()).into();
-			//total // returns array of 4 elems
-			//read(&balance_key(&sender())).into()
-			//read(&balance_key(&owner_key())).into()
+			read_balance(&address_of(&owner_key())).into()
 	    }
 
 		fn recipientBalance(&mut self) -> U256 {
-			let sender = sender();
-			read_balance(&sender)
+			read_balance(&address_of(&recipient_key())).into()
 	    }
 
 		fn callerBalance(&mut self) -> U256 {
@@ -139,8 +115,6 @@ pub mod smart_contract {
 		fn callerAddress(&mut self) -> H256 {
 			H256::from(sender())
 		}
-
-
 
 		fn give(&mut self, from: Address, to: Address, amount: U256) -> bool {
             let sender = pwasm_ethereum::sender();
@@ -191,11 +165,7 @@ pub mod smart_contract {
 			}
 			*/
 
-
 			write(&balance_key(&sender), &new_sender_balance.into())
-
-
-
 
 			//write(&owner_key(),  &new_sender_balance.into());
 		}
@@ -211,12 +181,9 @@ pub mod smart_contract {
 		Address::from(h)
 	}
 
-
 	fn read_balance(owner: &Address) -> U256 {
 		read(&balance_key(owner)).into()
 	}
-
-
 
 	// Generates a balance key for some address.
 	// Used to map balances with their owners.
@@ -225,7 +192,6 @@ pub mod smart_contract {
 		key.as_bytes_mut()[0] = 1; // just a naive "namespace";
 		key
 	}
-
 }
 
 
