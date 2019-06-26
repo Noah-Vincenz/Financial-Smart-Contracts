@@ -31,11 +31,11 @@ pub mod smart_contract {
 	use pwasm_std::{String, Vec};
 	use pwasm_abi_derive::eth_abi;
 
-	fn owner_key() -> H256 {
+	fn holder_key() -> H256 {
 		H256::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
-	fn recipient_key() -> H256 {
+	fn counter_party_key() -> H256 {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
@@ -46,15 +46,15 @@ pub mod smart_contract {
 		#[constant]
 		fn balanceOfAddress(&mut self, _address: Address) -> U256;
 		#[constant]
-		fn ownerBalance(&mut self) -> U256;
+		fn holderBalance(&mut self) -> U256;
 		#[constant]
-		fn recipientBalance(&mut self) -> U256;
+		fn counterPartyBalance(&mut self) -> U256;
 		#[constant]
 		fn callerBalance(&mut self) -> U256;
 		#[constant]
-		fn ownerAddress(&mut self) -> H256;
+		fn holderAddress(&mut self) -> H256;
 		#[constant]
-		fn recipientAddress(&mut self) -> H256;
+		fn counterPartyAddress(&mut self) -> H256;
 		#[constant]
 		fn callerAddress(&mut self) -> H256;
 		/// Transfer between two accounts
@@ -75,11 +75,10 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, recipient_address: Address) {
+		fn constructor(&mut self, counter_party_address: Address) {
 
-			//write(&recipient_key(), &H256::from(recipient_address[0]).into());
-			write(&recipient_key(), &H256::from(recipient_address).into());
-			write(&owner_key(), &H256::from(sender().clone()).into()); // owner = msg.sender(); ?
+			write(&holder_key(), &H256::from(sender().clone()).into());
+			write(&counter_party_key(), &H256::from(counter_party_address).into());
 
 			// TODO: do parsing here
 			// string command = parse(input);
@@ -91,24 +90,24 @@ pub mod smart_contract {
 			read(&balance_key(&address)).into()
 	    }
 
-		fn ownerBalance(&mut self) -> U256 {
-			read_balance(&address_of(&owner_key())).into()
+		fn holderBalance(&mut self) -> U256 {
+			read_balance(&address_of(&holder_key())).into()
 	    }
 
-		fn recipientBalance(&mut self) -> U256 {
-			read_balance(&address_of(&recipient_key())).into()
+		fn counterPartyBalance(&mut self) -> U256 {
+			read_balance(&address_of(&counter_party_key())).into()
 	    }
 
 		fn callerBalance(&mut self) -> U256 {
 			read_balance(&sender())
 	    }
 
-		fn ownerAddress(&mut self) -> H256 {
-			read(&owner_key()).into()
+		fn holderAddress(&mut self) -> H256 {
+			read(&holder_key()).into()
 	    }
 
-		fn recipientAddress(&mut self) -> H256 {
-			read(&recipient_key()).into()
+		fn counterPartyAddress(&mut self) -> H256 {
+			read(&counter_party_key()).into()
 	    }
 
 		fn callerAddress(&mut self) -> H256 {
@@ -130,42 +129,15 @@ pub mod smart_contract {
             }
         }
 
-		/*
-		fn give(&mut self) { // give ONE -> owner of contract pays 1
-			let sender = sender().clone();
-			let amount = value();
-			let total: U256 = read(&recipient_key()).into();
-			write(&recipient_key(), &(total + amount).into());
-			self.SmartContract(sender, amount);
-		}
-		*/
-		/*
-		fn one(&mut self) {
-			let amount = 1;
-			let total: U256 = read(&owner_key()).into();
-			write(&owner_key(), &(total + amount).into());
-		}
-		*/
-
 		fn printLn(&mut self, input: U256) -> U256 {
-			input + 2
+			input
 		}
 
 		fn depositCollateral(&mut self, amount: U256) {
 			let sender = sender();
 			let senderBalance = read_balance(&sender);
             let new_sender_balance = senderBalance + amount;
-			/*
-			if &owner_key() == &H256::from(sender.clone()).into() {
-				write(&owner_key(),  &new_sender_balance.into());
-			} else if &recipient_key() == &H256::from(sender.clone()).into() {
-				write(&recipient_key(),  &new_sender_balance.into());
-			}
-			*/
-
 			write(&balance_key(&sender), &new_sender_balance.into())
-
-			//write(&owner_key(),  &new_sender_balance.into());
 		}
 
 		fn val(&mut self) -> U256 {

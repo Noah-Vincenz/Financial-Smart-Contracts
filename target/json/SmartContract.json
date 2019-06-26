@@ -19,7 +19,7 @@
   },
   {
     "type": "function",
-    "name": "ownerBalance",
+    "name": "holderBalance",
     "inputs": [],
     "outputs": [
       {
@@ -32,7 +32,7 @@
   },
   {
     "type": "function",
-    "name": "recipientBalance",
+    "name": "counterPartyBalance",
     "inputs": [],
     "outputs": [
       {
@@ -58,7 +58,7 @@
   },
   {
     "type": "function",
-    "name": "ownerAddress",
+    "name": "holderAddress",
     "inputs": [],
     "outputs": [
       {
@@ -71,7 +71,7 @@
   },
   {
     "type": "function",
-    "name": "recipientAddress",
+    "name": "counterPartyAddress",
     "inputs": [],
     "outputs": [
       {

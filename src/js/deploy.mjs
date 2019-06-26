@@ -73,26 +73,26 @@ function deployContract(smartContract) {
             instantiateNew(codeHex, estimatedGas).then(function(instantiateTxHash) {
                 waitForReceipt(instantiateTxHash).then(function(instantiationReceipt) {
                     var smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
-                    ownerAddress(smartContractInstance).then(function(ownerAddress) {
-                        console.log("Contract Owner: " + ownerAddress);
-                        ownerBalance(smartContractInstance).then(function(oBalance1) {
-                            console.log("ownerBalance: " + oBalance1);
-                            recipientBalance(smartContractInstance).then(function(rBalance1) {
-                                console.log("recipientBalance: " + rBalance1);
-                                depositCollateral(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', 20).then(function(res) {
-                                    waitForReceipt(res).then(function(_) {
-                                        console.log("Collateral of 20 Ether has been added to owner account.");
-                                        ownerBalance(smartContractInstance).then(function(oBalance2) {
-                                            console.log("ownerBalance: " + oBalance2);
-                                            recipientBalance(smartContractInstance).then(function(rBalance2) {
-                                                console.log("recipientBalance: " + rBalance2);
-                                                transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(giveTxHash) {
-                                                    waitForReceipt(giveTxHash).then(function(_) {
-                                                        console.log("Owner has transferred 5 Ether to recipient.");
-                                                        ownerBalance(smartContractInstance).then(function(oBalance3) {
-                                                            console.log("ownerBalance: " + oBalance3);
-                                                            recipientBalance(smartContractInstance).then(function(rBalance3) {
-                                                                console.log("recipientBalance: " + rBalance3);
+                    holderAddress(smartContractInstance).then(function(holderAddress) {
+                        console.log("Contract Holder: " + holderAddress);
+                        holderBalance(smartContractInstance).then(function(hBalance1) {
+                            console.log("holderBalance: " + hBalance1);
+                            counterPartyBalance(smartContractInstance).then(function(cBalance1) {
+                                console.log("counterPartyBalance: " + cBalance1);
+                                depositCollateral(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', 20).then(function(depositTxHash) {
+                                    waitForReceipt(depositTxHash).then(function(_) {
+                                        console.log("Collateral of 20 Ether has been added to holder account.");
+                                        holderBalance(smartContractInstance).then(function(hBalance2) {
+                                            console.log("holderBalance: " + hBalance2);
+                                            counterPartyBalance(smartContractInstance).then(function(cBalance2) {
+                                                console.log("counterPartyBalance: " + cBalance2);
+                                                transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(transferTxHash) {
+                                                    waitForReceipt(transferTxHash).then(function(_) {
+                                                        console.log("Holder has transferred 5 Ether to counter party.");
+                                                        holderBalance(smartContractInstance).then(function(hBalance3) {
+                                                            console.log("holderBalance: " + hBalance3);
+                                                            counterPartyBalance(smartContractInstance).then(function(cBalance3) {
+                                                                console.log("counterPartyBalance: " + cBalance3);
                                                             });
                                                         });
                                                     });
@@ -134,9 +134,9 @@ function depositCollateral(smartContractInstance, senderAddress, amount) {
     });
 }
 
-function ownerBalance(smartContractInstance) {
+function holderBalance(smartContractInstance) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.ownerBalance(function (err, result) {
+        smartContractInstance.holderBalance(function (err, result) {
             if(err) {
                   reject(err);
             } else {
@@ -146,9 +146,9 @@ function ownerBalance(smartContractInstance) {
     });
 }
 
-function recipientBalance(smartContractInstance) {
+function counterPartyBalance(smartContractInstance) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.recipientBalance(function (err, result) {
+        smartContractInstance.counterPartyBalance(function (err, result) {
             if(err) {
                   reject(err);
             } else {
@@ -158,9 +158,9 @@ function recipientBalance(smartContractInstance) {
     });
 }
 
-function ownerAddress(smartContractInstance) {
+function holderAddress(smartContractInstance) {
     return new Promise (function (resolve, reject) {
-        smartContractInstance.ownerAddress(function (err, result) {
+        smartContractInstance.holderAddress(function (err, result) {
             if(err) {
                   reject(err);
             } else {
@@ -203,8 +203,6 @@ function transfer(smartContractInstance, fromAddress, toAddress, amount) {
           if (err) {
               reject(err);
           } else {
-              console.log(result.toString(10));
-              console.log(web3.toHex(result));
               resolve(result);
           }
       });
