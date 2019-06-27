@@ -9,9 +9,9 @@ extern crate pwasm_abi_derive;
 
 // Declares the dispatch and dispatch_ctor methods
 use pwasm_abi::eth::EndpointInterface;
-use pwasm_ethereum::{ret, input, value};
-//mod parser; // parse = parser.rs file
-//use parser::parse();
+use pwasm_ethereum::{ret, input};
+mod parser;
+mod dec2sign;
 
 #[no_mangle]
 pub fn deploy() {
@@ -27,9 +27,11 @@ pub fn call() {
 
 pub mod smart_contract {
 	use pwasm_std::types::{H256, Address, U256};
-	use pwasm_ethereum::{read, write, sender, value};
+	use pwasm_ethereum::{read, write, sender};
 	use pwasm_std::{String, Vec};
 	use pwasm_abi_derive::eth_abi;
+	use parser;
+	use dec2sign;
 
 	fn holder_key() -> H256 {
 		H256::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
@@ -39,10 +41,18 @@ pub mod smart_contract {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
+	fn transfer_dest() -> H256 {
+		H256::from([2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+	}
+
+	fn amount_to_transfer() -> H256 {
+		H256::from([3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+	}
+
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self, recipient_address: Address);
+		fn constructor(&mut self, recipient_address: Address, input_string_vector: Vec<i64>);
 		#[constant]
 		fn balanceOfAddress(&mut self, _address: Address) -> U256;
 		#[constant]
@@ -63,8 +73,6 @@ pub mod smart_contract {
 		fn printLn(&mut self, input: U256) -> U256;
 		#[payable]
 		fn depositCollateral(&mut self, amount: U256);
-		#[payable]
-		fn val(&mut self) -> U256;
 		/// Event declaration
 		#[event]
 		fn SmartContract(&mut self, indexed_from: Address, _value: U256);
@@ -75,16 +83,18 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, counter_party_address: Address) {
-
+		fn constructor(&mut self, counter_party_address: Address, input_string_vector: Vec<i64>) {
 			write(&holder_key(), &H256::from(sender().clone()).into());
 			write(&counter_party_key(), &H256::from(counter_party_address).into());
 
-			// TODO: do parsing here
-			// string command = parse(input);
-			// if (command = "give") {give();}
-		}
+			// Parsing done here
+			let str: String = dec2sign::convert(input_string_vector);
 
+			// getting output array - index 0 stores whether standard or give transfer & index 1 stores the amount
+			let output_arr = parser::parse(str);
+			write(&transfer_dest(), &U256::from(output_arr[0]).into());
+			write(&amount_to_transfer(), &U256::from(output_arr[1]).into());
+		}
 
 		fn balanceOfAddress(&mut self, address: Address) -> U256 {
 			read(&balance_key(&address)).into()
@@ -138,10 +148,6 @@ pub mod smart_contract {
 			write(&balance_key(&sender), &new_sender_balance.into())
 		}
 
-		fn val(&mut self) -> U256 {
-			pwasm_ethereum::value()
-		}
-
 	}
 
 	fn address_of(key: &H256) -> Address {
@@ -161,97 +167,3 @@ pub mod smart_contract {
 		key
 	}
 }
-
-
-// DateTime Parser
-/*
-extern crate chrono;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
-use chrono::format::ParseError;
-
-
-fn main() -> Result<(), ParseError> {
-    let rfc2822 = DateTime::parse_from_rfc2822("Tue, 1 Jul 2003 10:52:37 +0200")?;
-    println!("{}", rfc2822);
-
-    let rfc3339 = DateTime::parse_from_rfc3339("1996-12-19T16:39:57-08:00")?;
-    println!("{}", rfc3339);
-
-    let custom = DateTime::parse_from_str("5.8.1994 8:00 am +0000", "%d.%m.%Y %H:%M %P %z")?;
-    println!("{}", custom);
-
-    let time_only = NaiveTime::parse_from_str("23:56:04", "%H:%M:%S")?;
-    println!("{}", time_only);
-
-    let date_only = NaiveDate::parse_from_str("2015-09-05", "%Y-%m-%d")?;
-    println!("{}", date_only);
-
-    let no_timezone = NaiveDateTime::parse_from_str("2015-09-05 23:56:04", "%Y-%m-%d %H:%M:%S")?;
-    println!("{}", no_timezone);
-
-    Ok(())
-}
-*/
-/*
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod tests {
-	extern crate pwasm_test;
-	extern crate pwasm_std;
-	extern crate pwasm_ethereum;
-	extern crate std;
-
-	use super::*;
-	use self::pwasm_test::{ext_reset, ext_update, ext_get};
-	use smart_contract::SmartContract;
-	use pwasm_std::types::{Address, U256};
-
-	#[test]
-	fn check_balance() {
-		ext_reset(|e| {
-			e.balance_of(
-				Address::from([
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-				]),
-				100000.into(),
-			)
-		});
-		assert_eq!(
-			U256::from(100000),
-			pwasm_ethereum::balance(&Address::from([
-				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-			]))
-		);
-	}
-
-	#[test]
-	fn give_and_update() {
-		let mut contract = smart_contract::SmartContractInstance{};
-		let sender_one = Address::from([
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-		]);
-		let sender_two = Address::from([
-			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21
-		]);
-		// Here we're creating an External context using ExternalBuilder and set the `sender` to the `owner_address`
-		// so `pwasm_ethereum::sender()` in DonationContract::constructor() will return that `owner_address`
-		ext_update(|e| e
-			.sender(sender_one.clone())
-			.value(300.into())
-		);
-		contract.constructor();
-		assert_eq!(contract.balance(), 0.into());
-		contract.give();
-		assert_eq!(contract.balance(), 300.into());
-
-		ext_update(|e| e
-			.sender(sender_two.clone())
-			.value(250.into())
-		);
-		contract.give();
-		assert_eq!(contract.balance(), 550.into());
-		// 2 log entries should be created
-		assert_eq!(ext_get().logs().len(), 2);
-	}
-}
-*/

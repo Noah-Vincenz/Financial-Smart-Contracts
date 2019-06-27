@@ -48,11 +48,11 @@ function getGasLimit() {
     });
 }
 
-function instantiateNew(dataIn, gasLimit) {
+function instantiateNew(dataIn, gasLimit, stringArr) {
     return new Promise (function (resolve, reject) {
 
         // 4000000000 = 4 GWEI per gas consumed
-        smartContract.new(web3.toChecksumAddress('0x7f023262356b002a4b7deb7ce057eb8b1aabb427'), {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
+        smartContract.new(web3.toChecksumAddress('0x7f023262356b002a4b7deb7ce057eb8b1aabb427'), stringArr, {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
         //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
             if (err) {
                 reject(err);
@@ -65,12 +65,20 @@ function instantiateNew(dataIn, gasLimit) {
     });
 }
 
+function stringToBin(str) {
+    var result = [];
+    for (var i = 0; i < str.length; i++) {
+        result.push(str.charCodeAt(i));
+    }
+    return result;
+}
+
 function deployContract(smartContract) {
     unlockAccount(web3.eth.defaultAccount).then(function() { // comment for Kovan chain
         //estimateGas(codeHex).then(function(estimatedGas) {
             //console.log("Gas for deployment: " + estimatedGas);
             var estimatedGas = 2;
-            instantiateNew(codeHex, estimatedGas).then(function(instantiateTxHash) {
+            instantiateNew(codeHex, estimatedGas, stringToBin("give one")).then(function(instantiateTxHash) {
                 waitForReceipt(instantiateTxHash).then(function(instantiationReceipt) {
                     var smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
                     holderAddress(smartContractInstance).then(function(holderAddress) {
@@ -86,6 +94,7 @@ function deployContract(smartContract) {
                                             console.log("holderBalance: " + hBalance2);
                                             counterPartyBalance(smartContractInstance).then(function(cBalance2) {
                                                 console.log("counterPartyBalance: " + cBalance2);
+                                                /*
                                                 transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(transferTxHash) {
                                                     waitForReceipt(transferTxHash).then(function(_) {
                                                         console.log("Holder has transferred 5 Ether to counter party.");
@@ -96,7 +105,7 @@ function deployContract(smartContract) {
                                                             });
                                                         });
                                                     });
-                                                });
+                                                });*/
                                             });
                                         });
                                     });
