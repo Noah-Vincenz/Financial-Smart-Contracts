@@ -6,6 +6,7 @@ pub fn convert(input_string_vector: Vec<i64>) -> String {
 	let mut string_to_return = String::from("");
 	for int in input_string_vector.iter() {
         match int {
+			&32 => string_to_return = string_to_return + " ",
             &40 => string_to_return = string_to_return + "(",
             &41 => string_to_return = string_to_return + ")",
 			&48 => string_to_return = string_to_return + "0",

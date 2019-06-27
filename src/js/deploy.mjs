@@ -48,7 +48,7 @@ function getGasLimit() {
     });
 }
 
-function instantiateNew(dataIn, gasLimit, stringArr) {
+function instantiateNew(dataIn, stringArr) {
     return new Promise (function (resolve, reject) {
 
         // 4000000000 = 4 GWEI per gas consumed
@@ -75,38 +75,34 @@ function stringToBin(str) {
 
 function deployContract(smartContract) {
     unlockAccount(web3.eth.defaultAccount).then(function() { // comment for Kovan chain
-        //estimateGas(codeHex).then(function(estimatedGas) {
-            //console.log("Gas for deployment: " + estimatedGas);
-            var estimatedGas = 2;
-            instantiateNew(codeHex, estimatedGas, stringToBin("give one")).then(function(instantiateTxHash) {
-                waitForReceipt(instantiateTxHash).then(function(instantiationReceipt) {
-                    var smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
-                    holderAddress(smartContractInstance).then(function(holderAddress) {
-                        console.log("Contract Holder: " + holderAddress);
-                        holderBalance(smartContractInstance).then(function(hBalance1) {
-                            console.log("holderBalance: " + hBalance1);
-                            counterPartyBalance(smartContractInstance).then(function(cBalance1) {
-                                console.log("counterPartyBalance: " + cBalance1);
-                                depositCollateral(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', 20).then(function(depositTxHash) {
-                                    waitForReceipt(depositTxHash).then(function(_) {
-                                        console.log("Collateral of 20 Ether has been added to holder account.");
-                                        holderBalance(smartContractInstance).then(function(hBalance2) {
-                                            console.log("holderBalance: " + hBalance2);
-                                            counterPartyBalance(smartContractInstance).then(function(cBalance2) {
-                                                console.log("counterPartyBalance: " + cBalance2);
-                                                /*
-                                                transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(transferTxHash) {
-                                                    waitForReceipt(transferTxHash).then(function(_) {
-                                                        console.log("Holder has transferred 5 Ether to counter party.");
-                                                        holderBalance(smartContractInstance).then(function(hBalance3) {
-                                                            console.log("holderBalance: " + hBalance3);
-                                                            counterPartyBalance(smartContractInstance).then(function(cBalance3) {
-                                                                console.log("counterPartyBalance: " + cBalance3);
-                                                            });
+        instantiateNew(codeHex, stringToBin("scaleK 10 give one")).then(function(instantiateTxHash) {
+            waitForReceipt(instantiateTxHash).then(function(instantiationReceipt) {
+                var smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
+                holderAddress(smartContractInstance).then(function(holderAddress) {
+                    console.log("Contract Holder: " + holderAddress);
+                    holderBalance(smartContractInstance).then(function(hBalance1) {
+                        console.log("holderBalance: " + hBalance1);
+                        counterPartyBalance(smartContractInstance).then(function(cBalance1) {
+                            console.log("counterPartyBalance: " + cBalance1);
+                            depositCollateral(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', 20).then(function(depositTxHash) {
+                                waitForReceipt(depositTxHash).then(function(_) {
+                                    console.log("Collateral of 20 Ether has been added to holder account.");
+                                    holderBalance(smartContractInstance).then(function(hBalance2) {
+                                        console.log("holderBalance: " + hBalance2);
+                                        counterPartyBalance(smartContractInstance).then(function(cBalance2) {
+                                            console.log("counterPartyBalance: " + cBalance2);
+                                            /*
+                                            transfer(smartContractInstance, '0x004ec07d2329997267Ec62b4166639513386F32E', '0x7f023262356b002a4b7deb7ce057eb8b1aabb427', 5).then(function(transferTxHash) {
+                                                waitForReceipt(transferTxHash).then(function(_) {
+                                                    console.log("Holder has transferred 5 Ether to counter party.");
+                                                    holderBalance(smartContractInstance).then(function(hBalance3) {
+                                                        console.log("holderBalance: " + hBalance3);
+                                                        counterPartyBalance(smartContractInstance).then(function(cBalance3) {
+                                                            console.log("counterPartyBalance: " + cBalance3);
                                                         });
                                                     });
-                                                });*/
-                                            });
+                                                });
+                                            });*/
                                         });
                                     });
                                 });
@@ -115,7 +111,7 @@ function deployContract(smartContract) {
                     });
                 });
             });
-        //});
+        });
     }); // comment for Kovan chain
 }
 
@@ -251,6 +247,14 @@ window.addEventListener('load', function () {
         //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
         web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
         //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
+
+
+        // TODO: read user input and deploy contract on pressing deploy button
+        // TODO: convert user's pressed boxes into contract definition
+        // TODO: add translation into English - ie Transfer 10 Eth from a to b
+        // TODO: remove parenthesis from user string
+
+
         deployContract(smartContract);
 
         /*

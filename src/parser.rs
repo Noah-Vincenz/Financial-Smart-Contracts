@@ -2,110 +2,109 @@ extern crate pwasm_std;
 
 use pwasm_std::{Vec, String};
 
-pub fn parse(inputString: String) -> Vec<i32> { //try with i32 instead of string
-	//let x: String = inputString[0];
-	//let y: String = inputString[1];
-	let mut vec = Vec::new();
-	//let ref x = &inputString[0];
-	//let ref y = &inputString[1];
-	vec.push(1);
-	vec.push(10);
+pub fn parse(input_string: String) -> Vec<i32> { //try with i32 instead of string
+
+	let mut recipient = 0;
+	let mut amount = 1;
+	let mut vec = Vec::new(); // final vector to return
+
+	let splitted_vec: Vec<_> = input_string.split_whitespace().collect();
+	//let result : Vec<_> = s.split_whitespace().collect();
+	'outer: for str in splitted_vec.iter() {
+		match str {
+			&"one" => amount = amount * 1,
+			&"zero" => amount = amount * 0,
+			&"give" => recipient = 1,
+			&"scaleK" => continue 'outer,
+			_ => amount = amount * str.parse::<i32>().unwrap(),
+		}
+	}
+	vec.push(recipient);
+	vec.push(amount);
 	vec
-
-	//let outputArr: [String; 2] = [x, y];
-	//outputArr
 }
 
-
-// DateTime Parser
 /*
-extern crate chrono;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
-use chrono::format::ParseError;
-
-
-fn main() -> Result<(), ParseError> {
-    let rfc2822 = DateTime::parse_from_rfc2822("Tue, 1 Jul 2003 10:52:37 +0200")?;
-    println!("{}", rfc2822);
-
-    let rfc3339 = DateTime::parse_from_rfc3339("1996-12-19T16:39:57-08:00")?;
-    println!("{}", rfc3339);
-
-    let custom = DateTime::parse_from_str("5.8.1994 8:00 am +0000", "%d.%m.%Y %H:%M %P %z")?;
-    println!("{}", custom);
-
-    let time_only = NaiveTime::parse_from_str("23:56:04", "%H:%M:%S")?;
-    println!("{}", time_only);
-
-    let date_only = NaiveDate::parse_from_str("2015-09-05", "%Y-%m-%d")?;
-    println!("{}", date_only);
-
-    let no_timezone = NaiveDateTime::parse_from_str("2015-09-05 23:56:04", "%Y-%m-%d %H:%M:%S")?;
-    println!("{}", no_timezone);
-
-    Ok(())
-}
+val SYM = CSET(('a' to 'z').toSet ++ ('A' to 'Z').toSet)
+val DIGIT = CSET(('0' to '9').toSet)
+val ID = SYM ~ ("_" | SYM | DIGIT).%
+val DIGIT2 = CSET(('1' to '9').toSet)
+val NUM = DIGIT | ( DIGIT2 ~ DIGIT.% )
+val KEYWORD : Rexp = "while" | "if" | "then" | "else" | "do" | "for" | "to" | "true" | "false" | "read" | "write" | "skip"
+val SEMI: Rexp = ";"
+val OP: Rexp = ":=" | "==" | "-" | "+" | "*" | "!=" | "<" | ">" | "&&" | "||" | "%" | "/"
+val WHITESPACE = (" " | "\n" | "\t") ~ (" " | "\n" | "\t").%
+val PAREN: Rexp = ")" | "{" | "}" | "("
+val STRING: Rexp = "\"" ~ SYM.% ~ "\""
 */
+
 /*
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod tests {
-	extern crate pwasm_test;
-	extern crate pwasm_std;
-	extern crate pwasm_ethereum;
-	extern crate std;
+#[derive(Debug)]
+enum GrammarItem {
+    Product,
+    Sum,
+    Number(i64),
+    Paren
+}
 
-	use super::*;
-	use self::pwasm_test::{ext_reset, ext_update, ext_get};
-	use smart_contract::SmartContract;
-	use pwasm_std::types::{Address, U256};
+#[derive(Debug, Clone)]
+enum LexItem {
+    Paren(char),
+    Op(char),
+    Num(i64),
+}
 
-	#[test]
-	fn check_balance() {
-		ext_reset(|e| {
-			e.balance_of(
-				Address::from([
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-				]),
-				100000.into(),
-			)
-		});
-		assert_eq!(
-			U256::from(100000),
-			pwasm_ethereum::balance(&Address::from([
-				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-			]))
-		);
+#[derive(Debug)]
+struct ParseNode {
+    children: Vec<ParseNode>,
+    entry: GrammarItem,
+}
+
+impl ParseNode {
+    pub fn new() -> ParseNode {
+        ParseNode {
+            children: Vec::new(),
+            entry: GrammarItem::Paren,
+        }
+    }
+}
+
+fn lex(input: &String) -> Result<Vec<LexItem>, String> {
+	let mut result = Vec::new();
+
+	let mut it = input.chars().peekable();
+	while let Some(&c) = it.peek() {
+		match c {
+			'0'...'9' => {
+				it.next();
+				let n = get_number(c, &mut it);
+				result.push(LexItem::Num(n));
+			}
+			'+' | '*' => {
+				result.push(LexItem::Op(c));
+				it.next();
+			}
+			'(' | ')' | '[' | ']' | '{' | '}' => {
+				result.push(LexItem::Paren(c));
+				it.next();
+			}
+			' ' => {
+				it.next();
+			}
+			_ => {
+				return Err(format!("unexpected character {}", c));
+			}
+		}
 	}
+	Ok(result)
+}
 
-	#[test]
-	fn give_and_update() {
-		let mut contract = smart_contract::SmartContractInstance{};
-		let sender_one = Address::from([
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-		]);
-		let sender_two = Address::from([
-			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21
-		]);
-		// Here we're creating an External context using ExternalBuilder and set the `sender` to the `owner_address`
-		// so `pwasm_ethereum::sender()` in DonationContract::constructor() will return that `owner_address`
-		ext_update(|e| e
-			.sender(sender_one.clone())
-			.value(300.into())
-		);
-		contract.constructor();
-		assert_eq!(contract.balance(), 0.into());
-		contract.give();
-		assert_eq!(contract.balance(), 300.into());
-
-		ext_update(|e| e
-			.sender(sender_two.clone())
-			.value(250.into())
-		);
-		contract.give();
-		assert_eq!(contract.balance(), 550.into());
-		// 2 log entries should be created
-		assert_eq!(ext_get().logs().len(), 2);
-	}
+fn get_number<T: Iterator<Item = char>>(c: char, iter: &mut Peekable<T>) -> i64 {
+    let mut number = c.to_string().parse::<i64>().expect("The caller should have passed a digit.");
+    while let Some(Ok(digit)) = iter.peek().map(|c| c.to_string().parse::<i64>()) {
+        number = number * 10 + digit;
+        iter.next();
+    }
+    number
 }
 */

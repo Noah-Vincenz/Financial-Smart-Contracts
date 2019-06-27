@@ -41,7 +41,7 @@ pub mod smart_contract {
 		H256::from([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
-	fn transfer_dest() -> H256 {
+	fn transfer_dest() -> H256 { // 0 = holder, 1 = counter-party
 		H256::from([2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 	}
 
@@ -90,7 +90,9 @@ pub mod smart_contract {
 			// Parsing done here
 			let str: String = dec2sign::convert(input_string_vector);
 
-			// getting output array - index 0 stores whether standard or give transfer & index 1 stores the amount
+			// getting output array:
+			// - index 0 stores whether standard or give transfer
+			// - index 1 stores amount to transfer
 			let output_arr = parser::parse(str);
 			write(&transfer_dest(), &U256::from(output_arr[0]).into());
 			write(&amount_to_transfer(), &U256::from(output_arr[1]).into());
@@ -143,9 +145,19 @@ pub mod smart_contract {
 
 		fn depositCollateral(&mut self, amount: U256) {
 			let sender = sender();
-			let senderBalance = read_balance(&sender);
-            let new_sender_balance = senderBalance + amount;
-			write(&balance_key(&sender), &new_sender_balance.into())
+			let sender_balance = read_balance(&sender);
+            let new_sender_balance = sender_balance + amount;
+			write(&balance_key(&sender), &new_sender_balance.into());
+			// check the input to make the transfer
+
+			let curr_transfer_dest: U256 = read(&transfer_dest()).into();
+			let curr_amount_to_transfer: U256 = read(&amount_to_transfer()).into();
+
+			if curr_transfer_dest == 0.into() {
+				self.transfer(address_of(&counter_party_key()), address_of(&holder_key()), curr_amount_to_transfer);
+			} else if curr_transfer_dest == 1.into() {
+				self.transfer(address_of(&holder_key()), address_of(&counter_party_key()), curr_amount_to_transfer);
+			}
 		}
 
 	}
