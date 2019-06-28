@@ -1,11 +1,16 @@
 extern crate pwasm_std;
+extern crate pwasm_ethereum;
 
 use pwasm_std::{Vec, String};
+use pwasm_ethereum::{timestamp};
 
 pub fn parse(input_string: String) -> Vec<i32> { //try with i32 instead of string
 
 	let mut recipient = 0;
 	let mut amount = 1;
+	let mut acquire_at_horizon = 0; // acquired at contract horizon - 0 or 1
+	let mut truncate_given = 0; // truncated to certain date - 0 or 1
+	let mut horizon = 0;
 	let mut vec = Vec::new(); // final vector to return
 
 	let splitted_vec: Vec<_> = input_string.split_whitespace().collect();
@@ -16,7 +21,16 @@ pub fn parse(input_string: String) -> Vec<i32> { //try with i32 instead of strin
 			&"zero" => amount = amount * 0,
 			&"give" => recipient = 1,
 			&"scaleK" => continue 'outer,
-			_ => amount = amount * str.parse::<i32>().unwrap(),
+			&"get" => acquire_at_horizon = 1,
+			&"truncate" => {
+	            truncate_given = 1;
+				continue 'outer
+        	}
+			&"\"[0-9]+\"" => {
+				let now = timestamp(); // = u64
+				horizon = str.parse::<i32>().unwrap() - now as i32; // may need to be u64
+			}
+			&_ => amount = amount * str.parse::<i32>().unwrap() // when str is number
 		}
 	}
 	vec.push(recipient);

@@ -34,7 +34,8 @@
               <option>zero</option>
           </select><br>
       </div>
-      <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction()">Make Transaction</button>
+      <input id="test" type="text" placeholder="Transaction">
+      <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction(getInputString())">Make Transaction</button>
       <p class="status" id="transaction_status"></p>
     </div>
   </div>
