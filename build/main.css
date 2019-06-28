@@ -24,32 +24,52 @@ h1 {
     margin-bottom: 0px;
 }
 
-#distribute-rewards {
-    position:inherit;
+.button {
+    color: grey;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
 }
 
-#winner-label {
-    position:inherit;
-}
-
-#outerContainer {
+#outer_container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
 }
 
-#topPlayerContainer {
+#top_container {
     text-align: center;
     border-bottom: 0.5px solid lightgray;
     margin-top: -40px;
     margin-bottom: 10px;
 }
 
-#bottomPlayerContainer {
+#top_input_container {
+    width: 100%;
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#collateral_container {
+}
+
+#bottom_container {
     width: 50%;
     text-align: center;
     margin-left: auto;
     margin-right: auto;
+}
+
+#bottom_input_container {
+    display: inline;
+}
+
+#scalek_container {
 }
 
 #lock-reveal-div {

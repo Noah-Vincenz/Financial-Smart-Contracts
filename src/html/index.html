@@ -2,27 +2,49 @@
 <html lang="en">
 <head>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <!--script src="https://rawgit.com/ethereum/web3.js/develop/dist/web3.js"></script-->
   <script src="bundle.js"></script>
   <meta charset="utf-8">
   <title>Financial Smart Contracts</title>
   <link rel="stylesheet" type="text/css" href="main.css" />
 </head>
 <body>
-  <div id="outerContainer">
+  <div id="outer_container">
     <h1>FSC</h1>
-    <div id="topPlayerContainer">
-      <input id="str2" type="text" placeholder="Random string"><br>
-      <select id="select-function" onchange="changeFunction(getSelectedFunction())">
-        <option>transfer</option>
-        <option>one</option>
-      </select>
-      <input id="str1" type="text" placeholder="Random string"><br>
-      <p class="status" id="status"></p>
-      <button class="button" id = "confirm" type="button" onclick="sendTransaction">Confirm</button>
+    <div id="top_container">
+        <div id="top_input_container">
+            <input id="holder_address" type="text" placeholder="Holder Address">
+            <div id="collateral_container">
+                <p id="collateral">Collateral</p>
+                <select id="select_collateral" class="1_100" onchange="changeCollateral(getSelectedCollateral())"></select>
+            </div>
+            <input id="counter_party_address" type="text" placeholder="Counter-Party Address"><br>
+        </div>
+        <button class="button" id = "create_contract_button" type="button" onclick="instantiateNew()">Create Contract</button>
+        <p class="status" id="contract_status"></p>
+    </div>
+    <div id="bottom_container">
+      <div id="bottom_input_container">
+          <div id="scalek_container">
+              <p id="scalek">scaleK</p>
+              <select id="select_scalek" class="1_100" onchange="changeScaleK(getSelectedScaleK())"></select>
+          </div>
+          <button class="button" id = "give_button" type="button" onclick="change_given()">give</button>
+          <select id="select_one_zero" onchange="changeSelecteOneZero(getSelectedOneZero())">
+              <option>one</option>
+              <option>zero</option>
+          </select><br>
+      </div>
+      <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction()">Make Transaction</button>
+      <p class="status" id="transaction_status"></p>
     </div>
   </div>
   <script>
+    $(function(){
+        var $select = $(".1_100");
+        for (i=1;i<=100;i++){
+            $select.append($('<option></option>').val(i).html(i))
+        }
+    });
   </script>
 
 </body>

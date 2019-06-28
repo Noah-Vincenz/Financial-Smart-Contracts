@@ -287,10 +287,10 @@ function transferEther(fromAddress, toAddress, amount) {
 
 }
 
-function changeFunction(strFunction) {
-    selectedFunction = strFunction;
+function changeCollateral(collateralIn) {
+    selectedCollateral = collateralIn;
 }
 
-function getSelectedFunction() {
-    return document.getElementById("select-function").value;
+function getSelectedCollateral() {
+    return document.getElementById("select_collateral").value;
 }
