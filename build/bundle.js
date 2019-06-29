@@ -453,23 +453,4 @@ function transferEther(fromAddress, toAddress, amount) {
   });
 }
 
-function changeCollateral(collateralIn) {
-  selectedCollateral = collateralIn;
-}
-
-function getSelectedCollateral() {
-  return document.getElementById("select_collateral").value;
-}
-
-function makeTransaction(inputString) {
-  parseInput(inputString);
-}
-
-function getInputString() {
-  return document.getElementById("test").value;
-}
-
-function parseInput(inputString) {// TODO: check for conj, keep checking, then check for truncate, then date, then get, then give, then one / zero -> extract subcontract
-}
-
 },{"../../resources.mjs":1}]},{},[2]);

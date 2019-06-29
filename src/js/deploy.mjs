@@ -286,31 +286,3 @@ function transferEther(fromAddress, toAddress, amount) {
     });
 
 }
-
-function changeCollateral(collateralIn) {
-    selectedCollateral = collateralIn;
-}
-
-function getSelectedCollateral() {
-    return document.getElementById("select_collateral").value;
-}
-
-function makeTransaction(inputString) {
-    parseInput(inputString);
-}
-
-function getInputString() {
-    return document.getElementById("transaction_input").value;
-}
-
-function parseInput(inputString) {
-  // TODO: check for conj, keep checking, then check for truncate, then date, then get, then give, then one / zero -> extract subcontract
-    var res = inputString.split("");
-    while (res[0].includes("and")) {
-        res = inputString.split("and");
-    }
-    if (inputString.includes("and")) {
-        var res = inputString.split("and");
-
-    }
-}
