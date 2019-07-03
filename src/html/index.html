@@ -40,6 +40,7 @@
     </div>
   </div>
   <script>
+    var parse = require('parenthesis');
     $(function(){
         var $select = $(".1_100");
         for (i=1;i<=100;i++){
@@ -56,22 +57,46 @@
     }
 
     function makeTransaction(inputString) {
-        parseInput(inputString, "0", [], 0, 1, 0, "");
+        parseInput(inputString, "", "", 0, 1, 0, "");
     }
 
     function getInputString() {
         return document.getElementById("transaction_input").value;
     }
 
-    function parseInput(inputString, level, remainingExpr, recipient, amount, acquireAtHorizon, horizonDate) { // level = int starting at 0
-      if (inputString.includes("and")) {
+    function parseInput(inputString, level, andOr, recipient, amount, acquireAtHorizon, horizonDate) { // level = int starting at 0
+      if (inputString.includes(") and (")) {
+          var res = inputString.split(") and (");
+          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes(") or (")) {
+          var res = inputString.split(") or (");
+          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes(") and")) {
+          var res = inputString.split(") and");
+          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes(") or")) {
+          var res = inputString.split(") or");
+          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes("and (")) {
+          var res = inputString.split("and (");
+          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes("or (")) {
+          var res = inputString.split("or (");
+          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
+      } else if (inputString.includes("and")) {
           var res = inputString.split("and");
-          parseInput(res[0], (parseInt(level) + 1).toString() + "1", res[1], recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], (parseInt(level) + 1).toString() + "2", [], recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
       } else if (inputString.includes("or")) {
           var res = inputString.split("or");
-          parseInput(res[0], (parseInt(level) + 1).toString() + "1", res[1], recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], (parseInt(level) + 1).toString() + "2", [], recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
+          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
       } else {
           var newStr = inputString.replace(/[()]/g, '');
           var strArr = newStr.split(" ");
@@ -105,7 +130,7 @@
                   acquireAtHorizon = 1;
               }
           }
-          console.log("Subcontract " + level + ": " + rTrimParen(lTrimParen(rTrimWhiteSpace(lTrimWhiteSpace(inputString)))));
+          console.log("Subcontract " + level + ": " + andOr + ": " + rTrimParen(lTrimParen(rTrimWhiteSpace(lTrimWhiteSpace(inputString)))));
       }
     }
 
