@@ -66,7 +66,8 @@
 
     function parse(inputString, level, recipient, amount, acquireAtHorizon, horizonDate) {
 
-      //TODO: add spaces before and after parenthesis
+      //TODO: add spaces wherever there is no space ie. before and after words/parenthesis
+      // TODO: add double space at end
       var stack = [];
       var currentTerm = "";
       var currentConj = "";
@@ -77,7 +78,128 @@
       for (i = 0; i < strArr.length; ++i) {
           str = strArr[i];
           console.log("iteration through array: " + i + ". Symbol: " + str);
-          if (str === " ") {
+          if (str === ")" || i === strArr.length - 1) { // i === strArr.length - 1 so that it also handles case where input does not end with ')'
+            if (i === strArr.length - 1 && str !== ")" && currentTerm !== " ") {
+                currentTerm += str;
+                console.log("Pushing last term - " + currentTerm + " - on stack.");
+                stack.push(currentTerm);
+                if (currentTerm === "and" || currentTerm === "or") {
+                    conjunctionStack.push(currentTerm);
+                }
+                currentTerm = "";
+            }
+            console.log("Closing paren");
+            // pop while items off stack until amount of discovered ')' == popped '('
+            contractString = contractString + ")";
+            while (stack.length > 0) {
+                var term = stack.pop();
+                console.log("While loop iteration - term: " + term);
+                if (term === "and" || term === "or") {
+                    //conjunctionStack.push(term);
+                    currentConj = term;
+                    ++level;
+                    console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
+                    console.log(contractString);
+                    contractsStack.push(contractString);
+                    /*
+                    if (term === "or") {
+                        createButton(contractString);
+                    }
+                    */
+                    contractString = ""; // to print out the whole contract when all its parts have been discovered
+                    currentTerm = "";
+                    recipient = 0;
+                    amount = 1;
+                    acquireAtHorizon = 0;
+                    horizonDate = "";
+                } else if (term === "give") {
+                    contractString = term + " " + contractString;
+                    recipient = 1;
+                } else if (term === "one") {
+                    contractString = term + " " + contractString;
+                    amount *= 1;
+                } else if (term === "zero") {
+                    contractString = term + " " + contractString;
+                    amount *= 0;
+                } else if (term === "get") {
+                    contractString = term + " " + contractString;
+                    acquireAtHorizon = 1;
+                } else if (term === "scaleK" || term === "truncate") {
+                    contractString = term + " " + contractString;
+                    // skip
+                } else if (Number.isInteger(parseInt(term))) {
+                    contractString = term + " " + contractString;
+                    amount *= parseInt(term);
+                } else if (term === "(") {
+                    contractString = term + " " + contractString;
+                    break;
+                } else if (date(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))) {
+                    contractString = term + " " + contractString;
+                    horizonDate = term;
+                }
+            }
+
+            console.log("Stack size: " + stack.length);
+            console.log("conjunctionStack");
+            var x1;
+            for (x1 = 0; x1 < conjunctionStack.length; ++x1) {
+                console.log(conjunctionStack[x1]);
+            }
+            console.log("contractsStack");
+            var x2;
+            for (x2 = 0; x2 < contractsStack.length; ++x2) {
+                console.log(contractsStack[x2]);
+            }
+
+            if (stack.length == 0) { // TODO: problem here
+                var conj = "";
+                if (strArr.length > i + 2 && strArr[i + 2] === "a") {
+                    conj = "and";
+                } else if (strArr.length > i + 2 && strArr[i + 2] === "o") {
+                    conj = "or";
+                    //createButton(contractString);
+                }
+                //console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
+                console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
+                console.log(contractString);
+                contractsStack.push(contractString);
+                /*
+                if (conj === "or") {
+                    createButton(contractString);
+                }
+                */
+
+                contractString = "";
+                currentTerm = "";
+                conj = "";
+                recipient = 0;
+                amount = 1;
+                acquireAtHorizon = 0;
+                horizonDate = "";
+            } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or")) {
+                var conj = conjunctionStack.pop();
+                console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
+                console.log(contractString);
+                if (contractsStack.length > 0) {
+                    var combinedContract = contractString + conj + " " + contractsStack.pop();
+                    console.log(combinedContract);
+                    contractsStack.push(combinedContract);
+                    if (conj === "or") {
+                        createButton(contractString);
+                    }
+                }
+                contractString = "";
+                currentTerm = "";
+                conj = "";
+                recipient = 0;
+                amount = 1;
+                acquireAtHorizon = 0;
+                horizonDate = "";
+
+            }
+
+
+          } else if (str === " ") {
               // push term
               console.log("Empty Space");
               if (currentTerm !== "") {
@@ -91,118 +213,41 @@
           } else if (str === "(") {
               console.log("Opening paren");
               stack.push(str);
-          } else if (str === ")") {
-              console.log("Closing paren");
-              // pop while items off stack until amount of discovered ')' == popped '('
-              contractString = contractString + ")";
-              while (stack.length > 0) {
-                  var term = stack.pop();
-                  console.log("While loop iteration - term: " + term);
-                  if (term === "and" || term === "or") {
-                      //conjunctionStack.push(term);
-                      currentConj = term;
-                      ++level;
-                      console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                      console.log(contractString);
-                      contractsStack.push(contractString);
-                      contractString = ""; // to print out the whole contract when all its parts have been discovered
-                      currentTerm = "";
-                      recipient = 0;
-                      amount = 1;
-                      acquireAtHorizon = 0;
-                      horizonDate = "";
-                  } else if (term === "give") {
-                      contractString = term + " " + contractString;
-                      recipient = 1;
-                  } else if (term === "one") {
-                      contractString = term + " " + contractString;
-                      amount *= 1;
-                  } else if (term === "zero") {
-                      contractString = term + " " + contractString;
-                      amount *= 0;
-                  } else if (term === "get") {
-                      contractString = term + " " + contractString;
-                      acquireAtHorizon = 1;
-                  } else if (term === "scaleK" || term === "truncate") {
-                      contractString = term + " " + contractString;
-                      // skip
-                  } else if (Number.isInteger(parseInt(term))) {
-                      contractString = term + " " + contractString;
-                      amount *= parseInt(term);
-                  } else if (term === "(") {
-                      contractString = term + " " + contractString;
-                      break;
-                  } else if (date(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))) {
-                      contractString = term + " " + contractString;
-                      horizonDate = term;
-                  }
-              }
-
-              console.log("Stack size: " + stack.length);
-              console.log("conjunctionStack");
-              var x1;
-              for (x1 = 0; x1 < conjunctionStack.length; ++x1) {
-                  console.log(conjunctionStack[x1]);
-              }
-              console.log("contractsStack");
-              var x2;
-              for (x2 = 0; x2 < contractsStack.length; ++x2) {
-                  console.log(contractsStack[x2]);
-              }
-
-              if (stack.length == 0) {
-                  var conj = "";
-                  if (strArr.length > i + 2 && strArr[i + 2] === "a") {
-                      //conjunctionStack.push("and");
-                      conj = "and";
-                  } else if (strArr.length > i + 2 && strArr[i + 2] === "o") {
-                      //conjunctionStack.push("or"); // this is done twice, no?
-                      conj = "or";
-                  }
-                  //console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                  console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                  console.log(contractString);
-                  contractsStack.push(contractString);
-                  contractString = "";
-                  currentTerm = "";
-                  conj = "";
-                  recipient = 0;
-                  amount = 1;
-                  acquireAtHorizon = 0;
-                  horizonDate = "";
-              } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or")) {
-                  var conj = conjunctionStack.pop();
-                  console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                  console.log(contractString);
-                  if (contractsStack.length > 0) {
-                      var combinedContract = contractString + conj + " " + contractsStack.pop();
-                      console.log(combinedContract);
-                      contractsStack.push(combinedContract);
-                  }
-                  contractString = "";
-                  currentTerm = "";
-                  conj = "";
-                  recipient = 0;
-                  amount = 1;
-                  acquireAtHorizon = 0;
-                  horizonDate = "";
-
-                  // TODO: empty contractsStack and left over conj to combine contracts
-              }
-
           } else {
              // its part of term
              currentTerm += str;
           }
     }
-    // TODO: empty contractsStack and left over conj to combine contracts
     var res = contractsStack.length / conjunctionStack.length;
+    console.log("RES");
+    console.log(res);
     while (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
         var contract2 = contractsStack.pop();
         var contract1 = contractsStack.pop();
-        console.log(contract1 + " " + conjunctionStack.pop() + " " + contract2);
+        var conj = conjunctionStack.pop();
+        console.log(contract1 + " " + conj + " " + contract2);
+        if (conj === "or") {
+            createButton(contract1);
+            createButton(contract2);
+        }
         res = contractsStack.length / conjunctionStack.length;
     }
+  }
+
+  function createButton(contractString) {
+    // 1. Create the button
+    var button = document.createElement("button");
+    button.innerHTML = contractString;
+
+    // 2. Append somewhere
+    var bottomContainer = document.getElementById("bottom_container");
+    //var body = document.getElementsByTagName("body")[0];
+    bottomContainer.appendChild(button);
+
+    // 3. Add event handler
+    button.addEventListener ("click", function() {
+        alert("did something");
+    });
   }
 
   class Contract {
@@ -225,79 +270,6 @@
       }
   }
 
-    function parseInput(inputString, level, andOr, recipient, amount, acquireAtHorizon, horizonDate) { // level = int starting at 0
-      if (inputString.includes(") and (")) {
-          var res = inputString.split(") and (");
-          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes(") or (")) {
-          var res = inputString.split(") or (");
-          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes(") and")) {
-          var res = inputString.split(") and");
-          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes(") or")) {
-          var res = inputString.split(") or");
-          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes("and (")) {
-          var res = inputString.split("and (");
-          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes("or (")) {
-          var res = inputString.split("or (");
-          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes("and")) {
-          var res = inputString.split("and");
-          parseInput(res[0], level + "1", "and", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "and", recipient, amount, acquireAtHorizon, horizonDate);
-      } else if (inputString.includes("or")) {
-          var res = inputString.split("or");
-          parseInput(res[0], level + "1", "or", recipient, amount, acquireAtHorizon, horizonDate);
-          parseInput(res[1], level + "2", "or", recipient, amount, acquireAtHorizon, horizonDate);
-      } else {
-          var newStr = inputString.replace(/[()]/g, '');
-          var strArr = newStr.split(" ");
-          var i;
-          for (i = 0; i < strArr.length; ++i) {
-              str = strArr[i];
-              if (str === "give") {
-                  recipient = 1;
-              } else if (str === "one") {
-                  amount *= 1;
-              } else if (str === "zero") {
-                  amount *= 0;
-              } else if (str === "scaleK") {
-
-                  if (strArr.length > i+1 && Number.isInteger(parseInt(strArr[i+1]))) {
-                      amount *= parseInt(strArr);
-                      ++i;
-                  } else {
-                      console.log("'scaleK' should be followed by an integer.");
-                      break;
-                  }
-              } else if (str === "truncate") {
-                  if (strArr.length > i+1 && date(lTrimDoubleQuotes(rTrimDoubleQuotes(strArr[i+1])))) {
-                      horizonDate = strArr[i+1];
-                      ++i;
-                  } else {
-                      console.log("'truncate' should be followed by a valid date in the following pattern: 'dd/mm/yyyy-hh:mm:ss'.");
-                      break;
-                  }
-              } else if (str === "get") {
-                  acquireAtHorizon = 1;
-              }
-          }
-          console.log("Subcontract " + level + ": " + andOr + ": " + rTrimParen(lTrimParen(rTrimWhiteSpace(lTrimWhiteSpace(inputString)))));
-      }
-    }
-
-    function int(stringInput) {
-
-    }
 
     function date(stringInput) {
         console.log(stringInput);
