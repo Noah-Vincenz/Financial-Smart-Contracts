@@ -57,10 +57,15 @@ h1 {
 }
 
 #bottom_container {
-    width: 50%;
+    width: 100%;
     text-align: center;
     margin-left: auto;
     margin-right: auto;
+}
+
+#transaction_input {
+    width: 600px;
+    height: 30px;
 }
 
 #bottom_input_container {

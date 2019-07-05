@@ -56,153 +56,105 @@
     }
 
     function makeTransaction(inputString) {
-        parse(inputString, 0, 0, 1, 0, "");
-        //parseInput(inputString, "", "", 0, 1, 0, "");
+        parse(inputString, 0, 1, 0, "");
     }
 
     function getInputString() {
         return document.getElementById("transaction_input").value;
     }
 
-    function parse(inputString, level, recipient, amount, acquireAtHorizon, horizonDate) {
+    function parse(inputString, recipient, amount, acquireAtHorizon, horizonDate) {
 
       //TODO: add spaces wherever there is no space ie. before and after words/parenthesis
-      // TODO: add double space at end
       var stack = [];
-      var currentTerm = "";
+      var currentTerm = ""; //keeps track of the term ie and,give,one when initially looping through input & is used to add these to stack
       var currentConj = "";
       var conjunctionStack = []; // whenever stack is empty then conjunctionStack will be popped and used
-      var contractString = "";
+      var contractString = ""; // used to accumulate the complete contract from its parts one by one when popping off the stack
       var contractsStack = [];
+      var firstPartOfConjunction = "";
       var strArr = inputString.split("");
       for (i = 0; i < strArr.length; ++i) {
           str = strArr[i];
           console.log("iteration through array: " + i + ". Symbol: " + str);
           if (str === ")" || i === strArr.length - 1) { // i === strArr.length - 1 so that it also handles case where input does not end with ')'
-            if (i === strArr.length - 1 && str !== ")" && currentTerm !== " ") {
-                currentTerm += str;
-                console.log("Pushing last term - " + currentTerm + " - on stack.");
-                stack.push(currentTerm);
-                if (currentTerm === "and" || currentTerm === "or") {
-                    conjunctionStack.push(currentTerm);
-                }
-                currentTerm = "";
-            }
-            console.log("Closing paren");
-            // pop while items off stack until amount of discovered ')' == popped '('
-            contractString = contractString + ")";
-            while (stack.length > 0) {
-                var term = stack.pop();
-                console.log("While loop iteration - term: " + term);
-                if (term === "and" || term === "or") {
-                    //conjunctionStack.push(term);
-                    currentConj = term;
-                    ++level;
-                    console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                    console.log(contractString);
-                    contractsStack.push(contractString);
-                    /*
-                    if (term === "or") {
-                        createButton(contractString);
-                    }
-                    */
-                    contractString = ""; // to print out the whole contract when all its parts have been discovered
-                    currentTerm = "";
-                    recipient = 0;
-                    amount = 1;
-                    acquireAtHorizon = 0;
-                    horizonDate = "";
-                } else if (term === "give") {
-                    contractString = term + " " + contractString;
-                    recipient = 1;
-                } else if (term === "one") {
-                    contractString = term + " " + contractString;
-                    amount *= 1;
-                } else if (term === "zero") {
-                    contractString = term + " " + contractString;
-                    amount *= 0;
-                } else if (term === "get") {
-                    contractString = term + " " + contractString;
-                    acquireAtHorizon = 1;
-                } else if (term === "scaleK" || term === "truncate") {
-                    contractString = term + " " + contractString;
-                    // skip
-                } else if (Number.isInteger(parseInt(term))) {
-                    contractString = term + " " + contractString;
-                    amount *= parseInt(term);
-                } else if (term === "(") {
-                    contractString = term + " " + contractString;
-                    break;
-                } else if (date(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))) {
-                    contractString = term + " " + contractString;
-                    horizonDate = term;
-                }
-            }
+              if (i === strArr.length - 1 && str !== ")" && currentTerm !== " ") { // for 'give one or zero' case
+                  currentTerm += str;
+                  console.log("Pushing last term - " + currentTerm + " - on stack.");
+                  stack.push(currentTerm);
+              } else {
+                  contractString = contractString + str;
+              }
+              currentTerm = "";
+              // pop while items off stack until amount of discovered ')' == popped '('
+              console.log("contractString initially: " + contractString);
 
-            console.log("Stack size: " + stack.length);
-            console.log("conjunctionStack");
-            var x1;
-            for (x1 = 0; x1 < conjunctionStack.length; ++x1) {
-                console.log(conjunctionStack[x1]);
-            }
-            console.log("contractsStack");
-            var x2;
-            for (x2 = 0; x2 < contractsStack.length; ++x2) {
-                console.log(contractsStack[x2]);
-            }
+              while (stack.length > 0) {
+                  var term = stack.pop();
+                  console.log("Stack popping 1 - term: " + term);
+                  if (term === "and" || term === "or") {
+                      // if already have first and part then add it to it, else only add this to contractsStack
+                      if (firstPartOfConjunction !== "") { //put them two together -- TODO: only do this if 'and' not 'or'
+                        currentConj = "";
+                        console.log("0.5: Pushing " + firstPartOfConjunction + " " + term + " " + contractString + " to contractsStack");
+                        contractsStack.push(firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString);
+                        contractString = "";
+                        firstPartOfConjunction = "";
+                      } else {
+                        currentConj = term;
+                        console.log("1: Pushing " + contractString + " to contractsStack");
+                        contractsStack.push(contractString);
+                        contractString = "";
+                      }
+                  } else if (term === "(") {
+                      contractString = term + " " + contractString;
+                      break;
 
-            if (stack.length == 0) { // TODO: problem here
-                var conj = "";
-                if (strArr.length > i + 2 && strArr[i + 2] === "a") {
-                    conj = "and";
-                } else if (strArr.length > i + 2 && strArr[i + 2] === "o") {
-                    conj = "or";
-                    //createButton(contractString);
-                }
-                //console.log("Subcontract: " + level + ": " + "\n currentConj: " + currentConj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                console.log(contractString);
-                contractsStack.push(contractString);
-                /*
-                if (conj === "or") {
-                    createButton(contractString);
-                }
-                */
+                  } else if (term === "zero" || term === "one") { //then add current contractString to contractsStack and start from empty contractString
+                      if (contractString.includes("zero") || contractString.includes("one")) {
+                          firstPartOfConjunction = contractString;
+                          contractString = term;
+                      } else {
+                          contractString = term + " " + contractString;
+                      }
+                  } else {
+                      contractString = term + " " + contractString;
+                  }
+              }
+              printStack(stack, "termStack");
+              printStack(conjunctionStack, "conjunctionStack");
+              printStack(contractsStack, "contractsStack");
 
-                contractString = "";
-                currentTerm = "";
-                conj = "";
-                recipient = 0;
-                amount = 1;
-                acquireAtHorizon = 0;
-                horizonDate = "";
-            } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or")) {
-                var conj = conjunctionStack.pop();
-                console.log("Subcontract: " + level + ": " + "\n currentConj: " + conj +  "\n recipient: " + recipient + "\n amount: " + amount + "\n acquireAtHorizon: " + acquireAtHorizon + "\n horizonDate: " + horizonDate);
-                console.log(contractString);
-                if (contractsStack.length > 0) {
-                    var combinedContract = contractString + conj + " " + contractsStack.pop();
-                    console.log(combinedContract);
-                    contractsStack.push(combinedContract);
-                    if (conj === "or") {
-                        createButton(contractString);
-                    }
-                }
-                contractString = "";
-                currentTerm = "";
-                conj = "";
-                recipient = 0;
-                amount = 1;
-                acquireAtHorizon = 0;
-                horizonDate = "";
+              if (stack.length == 0 && contractString !== "") {
+                  var conj = "";
+                  if (strArr.length > i + 2 && strArr[i + 2] === "a") {
+                      conj = "and";
+                  } else if (strArr.length > i + 2 && strArr[i + 2] === "o") {
+                      conj = "or";
+                  }
+                  console.log("2: Pushing " + contractString + " to contractsStack");
+                  contractsStack.push(contractString);
 
-            }
-
+                  contractString = "";
+                  conj = "";
+              } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or")) {
+                  var conj = conjunctionStack.pop();
+                  if (contractsStack.length > 0) {
+                      var combinedContract = contractString + conj + " " + contractsStack.pop();
+                      console.log("3: Pushing " + contractString + " to contractsStack");
+                      contractsStack.push(combinedContract);
+                      if (conj === "or") {
+                          createSection();
+                          createButton(contractString);
+                      }
+                  }
+                  contractString = "";
+                  conj = "";
+              }
 
           } else if (str === " ") {
               // push term
-              console.log("Empty Space");
-              if (currentTerm !== "") {
+              if (currentTerm !== "") { // not needed
                   console.log("Pushing last term - " + currentTerm + " - on stack.");
                   stack.push(currentTerm);
                   if (currentTerm === "and" || currentTerm === "or") {
@@ -211,27 +163,62 @@
                   currentTerm = "";
               }
           } else if (str === "(") {
-              console.log("Opening paren");
               stack.push(str);
           } else {
              // its part of term
              currentTerm += str;
           }
-    }
-    var res = contractsStack.length / conjunctionStack.length;
-    console.log("RES");
-    console.log(res);
-    while (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
-        var contract2 = contractsStack.pop();
-        var contract1 = contractsStack.pop();
-        var conj = conjunctionStack.pop();
-        console.log(contract1 + " " + conj + " " + contract2);
-        if (conj === "or") {
-            createButton(contract1);
-            createButton(contract2);
         }
-        res = contractsStack.length / conjunctionStack.length;
+        // while stack.length > 0 repeat
+        if (stack.length > 0) {
+            while (stack.length > 0) {
+                var term = stack.pop();
+                console.log("Stack popping 2 - term: " + term);
+                if (term === "and" || term === "or") {
+                    currentConj = term;
+                    if (contractString !== "" && contractString !== "( ") {
+                        console.log("5: Pushing " + contractString + " to contractsStack");
+                        contractsStack.push(contractString);
+                    }
+                    contractString = ""; // to print out the whole contract when all its parts have been discovered
+                } else if (term === "(") {
+                    contractString = term + " " + contractString;
+                    break;
+                } else {
+                    contractString = term + " " + contractString;
+                }
+            }
+            console.log("Contract string just before end: " + contractString);
+            if (contractString !== "") {
+                console.log("6: Pushing " + contractString + " to contractsStack");
+                contractsStack.push(contractString);
+            }
+          }
+          printStack(stack, "termStack");
+          printStack(conjunctionStack, "conjunctionStack");
+          printStack(contractsStack, "contractsStack");
+          var res = contractsStack.length / conjunctionStack.length;
+          while (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
+              var contract2 = contractsStack.pop();
+              var contract1 = contractsStack.pop();
+              var conj = conjunctionStack.pop();
+              console.log("Combining leftover contracts...");
+              console.log(contract1 + " " + conj + " " + contract2);
+              if (conj === "or") {
+                  createSection();
+                  createButton(contract1);
+                  createButton(contract2);
+              }
+              res = contractsStack.length / conjunctionStack.length;
+          }
     }
+
+  function printStack(stack, name) {
+      console.log(name + ": " + stack.length);
+      var x;
+      for (x = 0; x < stack.length; ++x) {
+          console.log(stack[x]);
+      }
   }
 
   function createButton(contractString) {
@@ -248,6 +235,15 @@
     button.addEventListener ("click", function() {
         alert("did something");
     });
+  }
+
+  function createSection() {
+      var para = document.createElement("p");
+      var node = document.createTextNode("Contract choice:");
+      para.appendChild(node);
+
+      var bottomContainer = document.getElementById("bottom_container");
+      bottomContainer.appendChild(para);
   }
 
   class Contract {
@@ -272,7 +268,6 @@
 
 
     function date(stringInput) {
-        console.log(stringInput);
 
         var matches = stringInput.match(/^((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$/);
 
