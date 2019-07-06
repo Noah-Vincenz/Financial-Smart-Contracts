@@ -35,6 +35,10 @@ h1 {
     cursor: pointer;
 }
 
+.p_small {
+    font-size: 10px;
+}
+
 #outer_container {
     width: 100%;
     margin-left: auto;
