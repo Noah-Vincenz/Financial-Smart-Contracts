@@ -73,7 +73,7 @@
       var contractString = ""; // used to accumulate the complete contract from its parts one by one when popping off the stack
       var contractsStack = [];
       var firstPartOfConjunction = "";
-      var strArr = inputString.split("");
+      var strArr = rTrimWhiteSpace(lTrimWhiteSpace(inputString)).split("");
       for (i = 0; i < strArr.length; ++i) {
             str = strArr[i];
             console.log("iteration through array: " + i + ". Symbol: " + str);
@@ -82,8 +82,8 @@
                     currentTerm += str;
                     console.log("Pushing last term - " + currentTerm + " - on stack.");
                     stack.push(currentTerm);
-                } else {
-                    contractString = contractString + str;
+                } else { // TODO: problem is here because it adds ")" to the back
+                    contractString += str; // HERE IS THE PROBLEM
                 }
                 currentTerm = "";
                 // pop while items off stack until amount of discovered ')' == popped '('
@@ -162,9 +162,11 @@
                         contractsStack.push(contractString);
                     }
                     contractString = "";
-                } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or") && contractString !== "") { // MAYBE termstack[end] == conjunctionStack[end] AND contractString !== "("
+                } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or") && contractString !== "" && contractString !== "( ") { // MAYBE termstack[end] == conjunctionStack[end] AND contractString !== "("
                     var conj = conjunctionStack.pop();
                     if (contractsStack.length > 0) {
+                        console.log("WHY");
+                        console.log(contractString);
                         var combinedContract = contractString + conj + " " + contractsStack.pop();
                         console.log("3: Pushing " + combinedContract + " to contractsStack");
                         contractsStack.push(combinedContract);
@@ -244,20 +246,8 @@
   }
 
   function createButton(contractString) {
-    if (contractString[contractString.length - 1] === "(") {
-        contractString = contractString.slice(0, -1);
-    }
-    if (contractString[0] === ")") {
-        contractString = contractString.substring(1);
-    }
     var button = document.createElement("button");
-    if (contractString.split("(").length - 1 > contractString.split(")").length - 1) {
-        button.innerHTML = lTrimParen(contractString);
-    } else if (contractString.split("(").length - 1 < contractString.split(")").length - 1) {
-        button.innerHTML = rTrimParen(contractString);
-    } else {
-        button.innerHTML = contractString;
-    }
+    button.innerHTML = cleanContractParens(contractString);
     // 2. Append somewhere
     var bottomContainer = document.getElementById("bottom_container");
     //var body = document.getElementsByTagName("body")[0];
@@ -268,6 +258,22 @@
         console.log("BUTTON PRESSED!!!");
         parse(button.innerHTML);
     });
+  }
+
+  function cleanContractParens(contractString) {
+    if (contractString[contractString.length - 1] === "(") {
+        contractString = contractString.slice(0, -1);
+    }
+    if (contractString[0] === ")") {
+        contractString = contractString.substring(1);
+    }
+    if (contractString.split("(").length - 1 > contractString.split(")").length - 1) {
+        contractString = lTrimParen(contractString);
+    } else if (contractString.split("(").length - 1 < contractString.split(")").length - 1) {
+        contractString = rTrimParen(contractString);
+    }
+    return contractString;
+
   }
 
   function createSection() {
