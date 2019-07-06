@@ -95,19 +95,35 @@
                   if (term === "and" || term === "or") {
                       // if already have first and part then add it to it, else only add this to contractsStack
                       if (firstPartOfConjunction !== "") { //put them two together -- TODO: only do this if 'and' not 'or'
-                        currentConj = "";
-                        console.log("0.5: Pushing " + firstPartOfConjunction + " " + term + " " + contractString + " to contractsStack");
-                        contractsStack.push(firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString);
-                        contractString = "";
-                        firstPartOfConjunction = "";
+                          currentConj = "";
+                          console.log("0.5: Pushing " + firstPartOfConjunction + " " + term + " " + contractString + " to contractsStack");
+                          contractsStack.push(firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString);
+                          contractString = "";
+                          firstPartOfConjunction = "";/*
+                      } else if (conjunctionStack.length !== 0 && contractsStack.length == 1 && currentConj === "") { // ( ( zero or give one ) or one ) ) case
+                          console.log("0.75: Pushing ... to contractsStack");
+                          contractsStack.push(contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString);*/
                       } else {
-                        currentConj = term;
-                        console.log("1: Pushing " + contractString + " to contractsStack");
-                        contractsStack.push(contractString);
-                        contractString = "";
+                          currentConj = term;
+                          console.log("1: Pushing " + contractString + " to contractsStack");
+                          contractsStack.push(contractString);
+                          contractString = "";
                       }
                   } else if (term === "(") {
                       contractString = term + " " + contractString;
+                      console.log("currentConj: " + currentConj);
+                      // TODO: working on this to make 'or' conjunctions work for 6th and 7th contract
+                      //----
+                      /*
+                      if (currentConj !== "") {
+                          console.log("1.5: Pushing ... to contractsStack");
+                          console.log(contractString);
+                          contractsStack.push(contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop());
+                          currentConj = "";
+                          contractString = "";
+                      }
+*/
+                      //----
                       break;
 
                   } else if (term === "zero" || term === "one") { //then add current contractString to contractsStack and start from empty contractString
@@ -143,10 +159,6 @@
                       var combinedContract = contractString + conj + " " + contractsStack.pop();
                       console.log("3: Pushing " + contractString + " to contractsStack");
                       contractsStack.push(combinedContract);
-                      if (conj === "or") {
-                          createSection();
-                          createButton(contractString);
-                      }
                   }
                   contractString = "";
                   conj = "";
@@ -199,15 +211,15 @@
           printStack(contractsStack, "contractsStack");
           var res = contractsStack.length / conjunctionStack.length;
           while (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
-              var contract2 = contractsStack.pop();
               var contract1 = contractsStack.pop();
+              var contract2 = contractsStack.pop();
               var conj = conjunctionStack.pop();
               console.log("Combining leftover contracts...");
               console.log(contract1 + " " + conj + " " + contract2);
               if (conj === "or") {
                   createSection();
-                  createButton(contract1);
                   createButton(contract2);
+                  createButton(contract1);
               }
               res = contractsStack.length / conjunctionStack.length;
           }
@@ -224,8 +236,13 @@
   function createButton(contractString) {
     // 1. Create the button
     var button = document.createElement("button");
-    button.innerHTML = contractString;
-
+    if (contractString.split("(").length - 1 > contractString.split(")").length - 1) {
+        button.innerHTML = lTrimParen(contractString);
+    } else if (contractString.split("(").length - 1 < contractString.split(")").length - 1) {
+        button.innerHTML = rTrimParen(contractString);
+    } else {
+        button.innerHTML = contractString;
+    }
     // 2. Append somewhere
     var bottomContainer = document.getElementById("bottom_container");
     //var body = document.getElementsByTagName("body")[0];
@@ -233,7 +250,7 @@
 
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        alert("did something");
+        parse(button.innerHTML);
     });
   }
 
