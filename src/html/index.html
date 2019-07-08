@@ -91,6 +91,7 @@
     }
 
     function makeTransaction(inputString) {
+        removeChildren("button_choices_container");
         parse(inputString);
         //testReachability();
     }
@@ -304,9 +305,9 @@
                 console.log(contract1 + " " + conj + " " + contract2);
                 if (conj === "or") {
                     createSection();
-                    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)));
+                    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 1);
                     createOrLabel();
-                    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)));
+                    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), 2);
                 }
                 res = contractsStack.length / conjunctionStack.length;
             }
@@ -324,8 +325,9 @@
       }
   }
 
-  function createButton(contractString) {
+  function createButton(contractString, buttonId) {
     var button = document.createElement("button");
+    button.id = "choices_button_" + buttonId;
     button.innerHTML = cleanContractParens(contractString);
     // 2. Append somewhere
     var bottomContainer = document.getElementById("button_choices_container");
@@ -335,6 +337,10 @@
     button.addEventListener ("click", function() {
         console.log("BUTTON PRESSED!!!");
         console.log(stringToAddToBeginning + button.innerHTML);
+        // disable other button
+        document.getElementById("choices_button_1").disabled = true;
+        document.getElementById("choices_button_2").disabled = true;
+
         parse(button.innerHTML);
     });
   }
