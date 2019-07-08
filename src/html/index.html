@@ -70,6 +70,16 @@
       //TODO: wait until inside parenthesis where there is or, keep track of stuff before and after and simply append
       //TODO: check if inputstring contains OR otherwise execute contract right away
 
+      // check that spacing in user input is correct
+      var matches1 = inputString.match(/^.*\S\(.*$/);
+      var matches2 = inputString.match(/^.*\(\S.*$/);
+      var matches3 = inputString.match(/^.*\S\).*$/);
+      var matches4 = inputString.match(/^.*\)\S.*$/);
+
+      if (matches1 !== null || matches2 !== null || matches3 !== null || matches4 !== null) {
+          window.alert("Please provide a single space character before and after parenthesis in your input.");
+          return;
+      }
       stringToAddToBeginning = "";
 
       // check if inputstring contains OR
