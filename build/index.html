@@ -36,6 +36,7 @@
       </div>
       <input id="transaction_input" type="text" placeholder="Transaction">
       <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction(getInputString())">Make Transaction</button>
+      <div id="button_choices_container"></div>
       <p class="status" id="transaction_status"></p>
     </div>
   </div>
@@ -55,34 +56,76 @@
         return document.getElementById("select_collateral").value;
     }
 
+    function removeChildren(containerString) {
+        var e = document.getElementById(containerString);
+        var child = e.lastElementChild;
+        while (child) {
+            e.removeChild(child);
+            child = e.lastElementChild;
+        }
+    }
+
+    function testReachability() {
+        parse("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero and truncate \"26/12/2019-23:33:33\" ( give zero ) )");
+        removeChildren("button_choices_container");
+        parse("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero or truncate \"26/12/2019-23:33:33\" ( give zero ) )");
+        removeChildren("button_choices_container");
+        parse("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or zero");
+        removeChildren("button_choices_container");
+        parse("zero or give one");
+        removeChildren("button_choices_container");
+        parse("( ( zero or give one ) or scaleK 10 ( one ) ) or zero");
+        removeChildren("button_choices_container");
+        parse("( zero or give one ) or ( scaleK 10 one or zero )");
+        removeChildren("button_choices_container");
+        parse("( zero or one ) or scaleK 10 ( one )");
+        removeChildren("button_choices_container");
+        parse("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) and give zero )");
+        removeChildren("button_choices_container");
+        parse("( zero or give one ) or ( ( scaleK 10 one ) or zero )");
+        removeChildren("button_choices_container");
+        parse("( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )");
+        removeChildren("button_choices_container");
+        parse("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) or give zero )");
+        removeChildren("button_choices_container");
+    }
+
     function makeTransaction(inputString) {
-        parse(inputString, 0, 1, 0, "");
+        parse(inputString);
+        //testReachability();
     }
 
     function getInputString() {
         return document.getElementById("transaction_input").value;
     }
-    var stringToAddToBeginning = "";
-    function parse(inputString, recipient, amount, acquireAtHorizon, horizonDate) {
 
-      //TODO: add spaces wherever there is no space ie. before and after words/parenthesis
-      // just add check if input matches nospace followed by ( then request user to add spaces before and after parenthesis
-      //TODO: wait until inside parenthesis where there is or, keep track of stuff before and after and simply append
-      //TODO: check if inputstring contains OR otherwise execute contract right away
+    var stringToAddToBeginning = "";
+
+    function checkSpacing(string) {
+        // TODO: add regex matching that replaces every match with a spaced out parenthesis
+        var matches1 = string.match(/^.*\S\(.*$/);
+        var matches2 = string.match(/^.*\(\S.*$/);
+        var matches3 = string.match(/^.*\S\).*$/);
+        var matches4 = string.match(/^.*\)\S.*$/);
+
+        if (matches1 !== null || matches2 !== null || matches3 !== null || matches4 !== null) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    function parse(inputString) {
 
       // check that spacing in user input is correct
-      var matches1 = inputString.match(/^.*\S\(.*$/);
-      var matches2 = inputString.match(/^.*\(\S.*$/);
-      var matches3 = inputString.match(/^.*\S\).*$/);
-      var matches4 = inputString.match(/^.*\)\S.*$/);
-
-      if (matches1 !== null || matches2 !== null || matches3 !== null || matches4 !== null) {
+      if (!checkSpacing(inputString)) {
           window.alert("Please provide a single space character before and after parenthesis in your input.");
           return;
       }
+
       stringToAddToBeginning = "";
 
-      // check if inputstring contains OR
+      // check if inputstring contains 'or' else execute right away
       if (inputString.includes("or")) {
         var firstOpeningParenOcc = inputString.indexOf("(");
         var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
@@ -111,15 +154,14 @@
                   } else {
 
                       if (str === ")") {
-
+                          // storing parenthesis and only appending at the end to avoid adding creating too many parenthesis in middle and leaving end one out
                           if (lastClosingParenPushedIndex !== -1
                            && openingParensAmount(inputString.slice(0, i + 1)) === closingParensAmount(inputString.slice(0, i + 1))
                            && lastClosingParenPushedIndex < strArr.length - 2
                            && (strArr[lastClosingParenPushedIndex + 2] === "a" || strArr[lastClosingParenPushedIndex + 2] === "o")) {
-                              console.log("STORING PAREN");
-                          } else {
 
-                              contractString += str;
+                          } else {
+                              contractString += " )";
                           }
                           lastClosingParenPushedIndex = i;
                       }
@@ -149,6 +191,7 @@
                               console.log("0.25: Pushing ... to contractsStack");
                               contractsStack.push(contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString);
                               contractString = "";
+
                           } else if (firstPartOfConjunction !== "") { //put them two together -- TODO: only do this if 'and' not 'or'
                               currentConj = "";
                               console.log("0.5: Pushing " + firstPartOfConjunction + " " + term + " " + contractString + " to contractsStack");
@@ -183,8 +226,6 @@
                           if (contractString.includes("zero") || contractString.includes("one")) { // for '((give one) or give zero)' case
                               firstPartOfConjunction = contractString;
                               contractString = term;
-
-                              console.log("Detected conjunction .. Contract String = " + contractString);
                           } else {
                               contractString = term + " " + contractString;
                           }
@@ -209,16 +250,6 @@
                           contractsStack.push(contractString);
                       }
                       contractString = "";
-                  } else if (stack.length == 1 && (stack[0] == "and" || stack[0] == "or") && contractString !== "" && contractString !== "( ") { // MAYBE termstack[end] == conjunctionStack[end] AND contractString !== "("
-                      var conj = conjunctionStack.pop();
-                      if (contractsStack.length > 0) {
-                          console.log(contractString);
-                          var combinedContract = contractString + conj + " " + contractsStack.pop();
-                          console.log("3: Pushing " + combinedContract + " to contractsStack");
-                          contractsStack.push(combinedContract);
-                      }
-                      contractString = "";
-                      conj = "";
                   }
 
               } else if (str === " ") {
@@ -249,7 +280,6 @@
                       currentConj = term;
                       if (contractString !== "" && contractString !== "( ") {
                           if (lastClosingParenPushedIndex !== -1) {
-                              console.log("adding ' )' to contractString.");
                               contractString += " )";
                               lastClosingParenPushedIndex = -1;
                           }
@@ -257,9 +287,6 @@
                           contractsStack.push(contractString);
                       }
                       contractString = ""; // to print out the whole contract when all its parts have been discovered
-                  } else if (term === "(") {
-                      contractString = term + " " + contractString;
-                      break;
                   } else {
                       contractString = term + " " + contractString;
                   }
@@ -308,7 +335,7 @@
     var button = document.createElement("button");
     button.innerHTML = cleanContractParens(contractString);
     // 2. Append somewhere
-    var bottomContainer = document.getElementById("bottom_container");
+    var bottomContainer = document.getElementById("button_choices_container");
     //var body = document.getElementsByTagName("body")[0];
     bottomContainer.appendChild(button);
 
@@ -349,7 +376,7 @@
       var node = document.createTextNode("Contract choice:");
       para.appendChild(node);
 
-      var bottomContainer = document.getElementById("bottom_container");
+      var bottomContainer = document.getElementById("button_choices_container");
       bottomContainer.appendChild(para);
   }
 
@@ -359,7 +386,7 @@
       var node = document.createTextNode("OR");
       para.appendChild(node);
 
-      var bottomContainer = document.getElementById("bottom_container");
+      var bottomContainer = document.getElementById("button_choices_container");
       bottomContainer.appendChild(para);
   }
 
