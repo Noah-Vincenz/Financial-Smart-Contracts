@@ -160,6 +160,7 @@ var CODE_HEX = '0x0061736d01000000014d0d60047f7f7f7f0060027f7f017f60017f017f6002
 exports.CODE_HEX = CODE_HEX;
 
 },{}],2:[function(require,module,exports){
+(function (global){
 "use strict";
 
 var _resources = require("../../resources.mjs");
@@ -173,7 +174,7 @@ var abi;
 var codeHex;
 var smartContract; // this does not exist for Kovan chain
 
-function unlockAccount(address) {
+global.unlockAccount = function (address) {
   return new Promise(function (resolve, reject) {
     web3.personal.unlockAccount(address, "user", web3.toHex(0), function (err, result) {
       if (err) {
@@ -184,9 +185,9 @@ function unlockAccount(address) {
       }
     });
   });
-}
+};
 
-function estimateGas(dataIn) {
+global.estimateGas = function (dataIn) {
   return new Promise(function (resolve, reject) {
     web3.eth.estimateGas({
       to: web3.eth.defaultAccount,
@@ -199,9 +200,9 @@ function estimateGas(dataIn) {
       }
     });
   });
-}
+};
 
-function getGasLimit() {
+global.getGasLimit = function () {
   return new Promise(function (resolve, reject) {
     web3.eth.getBlock("latest", function (err, block) {
       if (err) {
@@ -211,9 +212,9 @@ function getGasLimit() {
       }
     });
   });
-}
+};
 
-function instantiateNew(dataIn, stringArr) {
+global.instantiateNew = function (dataIn, stringArr) {
   return new Promise(function (resolve, reject) {
     // 4000000000 = 4 GWEI per gas consumed
     smartContract["new"](web3.toChecksumAddress('0x7f023262356b002a4b7deb7ce057eb8b1aabb427'), stringArr, {
@@ -230,9 +231,9 @@ function instantiateNew(dataIn, stringArr) {
       }
     });
   });
-}
+};
 
-function stringToBin(str) {
+global.stringToBin = function (str) {
   var result = [];
 
   for (var i = 0; i < str.length; i++) {
@@ -240,9 +241,9 @@ function stringToBin(str) {
   }
 
   return result;
-}
+};
 
-function deployContract(smartContract) {
+global.deployContract = function (smartContract) {
   unlockAccount(web3.eth.defaultAccount).then(function () {
     // comment for Kovan chain
     instantiateNew(codeHex, stringToBin("scaleK 10 give one")).then(function (instantiateTxHash) {
@@ -283,9 +284,9 @@ function deployContract(smartContract) {
       });
     });
   }); // comment for Kovan chain
-}
+};
 
-function print(smartContractInstance, input) {
+global.print = function (smartContractInstance, input) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.printLn(7, function (err, result) {
       if (err) {
@@ -295,9 +296,9 @@ function print(smartContractInstance, input) {
       }
     });
   });
-}
+};
 
-function depositCollateral(smartContractInstance, senderAddress, amount) {
+global.depositCollateral = function (smartContractInstance, senderAddress, amount) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.depositCollateral(amount, {
       from: senderAddress,
@@ -310,9 +311,9 @@ function depositCollateral(smartContractInstance, senderAddress, amount) {
       }
     });
   });
-}
+};
 
-function holderBalance(smartContractInstance) {
+global.holderBalance = function (smartContractInstance) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.holderBalance(function (err, result) {
       if (err) {
@@ -322,9 +323,9 @@ function holderBalance(smartContractInstance) {
       }
     });
   });
-}
+};
 
-function counterPartyBalance(smartContractInstance) {
+global.counterPartyBalance = function (smartContractInstance) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.counterPartyBalance(function (err, result) {
       if (err) {
@@ -334,9 +335,9 @@ function counterPartyBalance(smartContractInstance) {
       }
     });
   });
-}
+};
 
-function holderAddress(smartContractInstance) {
+global.holderAddress = function (smartContractInstance) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.holderAddress(function (err, result) {
       if (err) {
@@ -346,9 +347,9 @@ function holderAddress(smartContractInstance) {
       }
     });
   });
-}
+};
 
-function balanceOfAddress(smartContractInstance, address) {
+global.balanceOfAddress = function (smartContractInstance, address) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.balanceOfAddress(web3.toChecksumAddress(address), function (err, result) {
       if (err) {
@@ -358,9 +359,9 @@ function balanceOfAddress(smartContractInstance, address) {
       }
     });
   });
-}
+};
 
-function setUpFilter(contractInstance, transactionHash) {
+global.setUpFilter = function (contractInstance, transactionHash) {
   return new Promise(function (resolve, reject) {
     var filter = web3.eth.filter('latest');
     filter.watch(function (err, blockHash) {
@@ -372,9 +373,9 @@ function setUpFilter(contractInstance, transactionHash) {
       }
     });
   });
-}
+};
 
-function transfer(smartContractInstance, fromAddress, toAddress, amount) {
+global.transfer = function (smartContractInstance, fromAddress, toAddress, amount) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.transfer(fromAddress, toAddress, amount, function (err, result) {
       if (err) {
@@ -384,9 +385,9 @@ function transfer(smartContractInstance, fromAddress, toAddress, amount) {
       }
     });
   });
-}
+};
 
-function waitForReceipt(transactionHash) {
+global.waitForReceipt = function (transactionHash) {
   return new Promise(function (resolve, reject) {
     web3.eth.getTransactionReceipt(transactionHash, function (err, receipt) {
       if (err) {
@@ -404,7 +405,7 @@ function waitForReceipt(transactionHash) {
       }
     });
   });
-}
+};
 
 window.addEventListener('load', function () {
   if (typeof web3 !== 'undefined') {
@@ -438,7 +439,7 @@ window.addEventListener('load', function () {
   }
 });
 
-function transferEther(fromAddress, toAddress, amount) {
+global.transferEther = function (fromAddress, toAddress, amount) {
   web3.eth.sendTransaction({
     to: toAddress,
     from: fromAddress,
@@ -451,6 +452,7 @@ function transferEther(fromAddress, toAddress, amount) {
       console.log("TransactionHash: " + transactionHash);
     }
   });
-}
+};
 
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../../resources.mjs":1}]},{},[2]);

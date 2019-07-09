@@ -13,9 +13,9 @@
     <div id="top_container">
         <div id="top_input_container">
             <input id="holder_address" type="text" placeholder="Holder Address">
-            <div id="collateral_container">
-                <p id="collateral">Collateral</p>
-                <select id="select_collateral" class="1_100" onchange="changeCollateral(getSelectedCollateral())"></select>
+            <div id="deposit_container">
+                <p id="deposit">Deposit</p>
+                <select id="select_deposit" class="1_100" onchange="changedeposit(getSelecteddeposit())"></select>
             </div>
             <input id="counter_party_address" type="text" placeholder="Counter-Party Address"><br>
         </div>
@@ -23,17 +23,6 @@
         <p class="status" id="contract_status"></p>
     </div>
     <div id="bottom_container">
-      <div id="bottom_input_container">
-          <div id="scalek_container">
-              <p id="scalek">scaleK</p>
-              <select id="select_scalek" class="1_100" onchange="changeScaleK(getSelectedScaleK())"></select>
-          </div>
-          <button class="button" id = "give_button" type="button" onclick="change_given()">give</button>
-          <select id="select_one_zero" onchange="changeSelecteOneZero(getSelectedOneZero())">
-              <option>one</option>
-              <option>zero</option>
-          </select><br>
-      </div>
       <input id="transaction_input" type="text" placeholder="Transaction">
       <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction(getInputString())">Make Transaction</button>
       <div id="button_choices_container"></div>
@@ -48,12 +37,12 @@
         }
     });
 
-    function changeCollateral(collateralIn) {
-        selectedCollateral = collateralIn;
+    function changedeposit(depositIn) {
+        selecteddeposit = depositIn;
     }
 
-    function getSelectedCollateral() {
-        return document.getElementById("select_collateral").value;
+    function getSelecteddeposit() {
+        return document.getElementById("select_deposit").value;
     }
 
     function removeChildren(containerString) {
@@ -359,7 +348,9 @@
       }
       // TODO: handle date cases - ie can be transferred up to horizon or if get then transfer at that certain time
       // use map from time-contractstring and website continuously checks this
-      console.log(module.exports.stringToBin("Geeeeeeezah"));
+
+      //console.log(Bundle.ret());
+      console.log(stringToBin("Geeeeeeezah"));
   }
 
   function printStack(stack, name) {
@@ -388,15 +379,6 @@
         while(inp = all[i++]) {
             inp.disabled = true;
         }
-        /*
-        var child = bottomContainer.lastElementChild;
-        while (child) {
-            child.disabled = true;;
-            child = bottomContainer.lastElementChild;
-        }
-        */
-        //document.getElementById("choices_button_1").disabled = true;
-        //document.getElementById("choices_button_2").disabled = true;
 
         parse(button.innerHTML);
     });
