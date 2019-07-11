@@ -175,9 +175,12 @@ var codeHex;
 var smartContract;
 var smartContractInstance;
 
-global.createContract = function (holderAddress, counterPartyAddress) {
-  web3.eth.defaultAccount = holderAddress; // problems if address starts with 0x0.. -> zero will not be stored in rust contract.. would need to prefix wit 0s if less than certain length
+global.getSelectedMetaMaskAccount = function () {
+  return web3.eth.accounts[0];
+};
 
+global.createContract = function (holderAddress, counterPartyAddress) {
+  web3.eth.defaultAccount = holderAddress;
   instantiateNew(holderAddress, counterPartyAddress, codeHex).then(function (instantiationTxHash) {
     waitForReceipt(instantiationTxHash).then(function (instantiationReceipt) {
       smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
@@ -353,7 +356,7 @@ global.depositCollateral = function (senderAddress, amount) {
   });
 };
 
-global.holderBalance = function (smartContractInstance) {
+global.holderBalance = function () {
   return new Promise(function (resolve, reject) {
     smartContractInstance.holderBalance(function (err, result) {
       if (err) {
@@ -365,7 +368,7 @@ global.holderBalance = function (smartContractInstance) {
   });
 };
 
-global.counterPartyBalance = function (smartContractInstance) {
+global.counterPartyBalance = function () {
   return new Promise(function (resolve, reject) {
     smartContractInstance.counterPartyBalance(function (err, result) {
       if (err) {
@@ -433,7 +436,7 @@ global.setUpFilter = function (contractInstance, transactionHash) {
   });
 };
 
-global.transfer = function (smartContractInstance, fromAddress, toAddress, amount) {
+global.transfer = function (fromAddress, toAddress, amount) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.transfer(fromAddress, toAddress, amount, function (err, result) {
       if (err) {

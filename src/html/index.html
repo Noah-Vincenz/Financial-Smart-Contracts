@@ -19,8 +19,8 @@
             </div>
             <input id="counter_party_address" type="text" placeholder="Counter-Party Address"><br>
         </div>
-        <button class="button" id = "deposit_button1" type="button" onclick="deposit(1, getSelectedDeposit())">deposit</button>
-        <button class="button" id = "deposit_button2" type="button" onclick="deposit(2, getSelectedDeposit())">deposit</button>
+        <button class="button" id = "deposit_button1" type="button" onclick="callDepositFunction(1)">deposit</button>
+        <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
         <button class="button" id = "create_contract_button" type="button" onclick="createSmartContract()">Create Contract</button>
         <p class="status" id="contract_status"></p>
     </div>
@@ -46,6 +46,27 @@
             $select.append($('<option></option>').val(i).html(i))
         }
     });
+
+    function callDepositFunction(id) {
+        if (id === 1) {
+            console.log("Checking if the right account is selected in MetaMask.");
+            console.log(document.getElementById("holder_address").value);
+            console.log(getSelectedMetaMaskAccount());
+            console.log(document.getElementById("holder_address").value.toUpperCase());
+            console.log(getSelectedMetaMaskAccount().toUpperCase());
+            if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("holder_address").value.toUpperCase()) {
+                deposit(id, getSelectedDeposit());
+            } else {
+                window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
+            }
+        } else if (id === 2) {
+            if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("counter_party_address").value.toUpperCase()) {
+                deposit(id, getSelectedDeposit());
+            } else {
+                window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
+            }
+        }
+    }
 
     function createSmartContract() {
         createContract(getHolderAddress(), getCounterPartyAddress());
@@ -372,9 +393,35 @@
       }
       // TODO: handle date cases - ie can be transferred up to horizon or if get then transfer at that certain time
       // use map from time-contractstring and website continuously checks this
+      holderAddress().then(holderAddress => {
+          counterPartyAddress().then(counterPartyAddress => {
+              if (amount != 0) {
+                  if (recipient == 0) { // owner receives
+                      makeTransfer(counterPartyAddress, holderAddress, amount);
+                  } else { // counter party receives
+                      makeTransfer(holderAddress, counterPartyAddress, amount);
+                  }
+              }
+          });
+      });
+  }
 
-      //console.log(Bundle.ret());
-      console.log(stringToBin("Geeeeeeezah"));
+  function makeTransfer(fromAddress, toAddress, amount) {
+      transfer(fromAddress, toAddress, amount).then(function(transferTxHash) {
+          waitForReceipt(transferTxHash).then(_ => {
+              console.log(fromAddress + " has transferred " + amount + " Ether to " + toAddress);
+              retrieveBalances();
+          });
+      });
+  }
+
+  function retrieveBalances() {
+    holderBalance().then(function(hBalance) {
+        console.log("Holder Balance: " + hBalance);
+        counterPartyBalance().then(function(cBalance) {
+            console.log("Counter-Party Balance: " + cBalance);
+        });
+    });
   }
 
   function printStack(stack, name) {

@@ -11,6 +11,10 @@ var codeHex;
 var smartContract;
 var smartContractInstance;
 
+global.getSelectedMetaMaskAccount = function() {
+    return web3.eth.accounts[0];
+}
+
 global.createContract = function(holderAddress, counterPartyAddress) {
   web3.eth.defaultAccount = holderAddress;
   instantiateNew(holderAddress, counterPartyAddress, codeHex).then(instantiationTxHash => {
@@ -175,7 +179,7 @@ global.depositCollateral = function(senderAddress, amount) {
     });
 }
 
-global.holderBalance = function(smartContractInstance) {
+global.holderBalance = function() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderBalance(function (err, result) {
             if(err) {
@@ -187,7 +191,7 @@ global.holderBalance = function(smartContractInstance) {
     });
 }
 
-global.counterPartyBalance = function(smartContractInstance) {
+global.counterPartyBalance = function() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.counterPartyBalance(function (err, result) {
             if(err) {
@@ -256,7 +260,7 @@ global.setUpFilter = function(contractInstance, transactionHash) {
   });
 }
 
-global.transfer = function(smartContractInstance, fromAddress, toAddress, amount) {
+global.transfer = function(fromAddress, toAddress, amount) {
   return new Promise (function (resolve, reject) {
       smartContractInstance.transfer(fromAddress, toAddress, amount, function(err, result) {
           if (err) {
