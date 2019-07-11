@@ -145,7 +145,9 @@
 
     function makeTransaction(inputString) {
         removeChildren("button_choices_container");
-        parse(inputString);
+        if (inputString !== "") {
+            parse(inputString);
+        }
         //testReachability();
     }
 
@@ -414,25 +416,22 @@
       // use map from time-contractstring and website continuously checks this
       // TODO: add acquire button after final choice has been clicked - when acquire clicked we check in time map (contract to ) if it has expired -- for truncate
       // for truncate get we need another map from time
-      holderAddress().then(holderAddress => {
-          counterPartyAddress().then(counterPartyAddress => {
-              if (amount != 0) {
-                  if (recipient == 0) { // owner receives
-                      makeTransfer(counterPartyAddress, holderAddress, amount);
-                  } else { // counter party receives
-                      makeTransfer(holderAddress, counterPartyAddress, amount);
-                  }
-              }
-          });
-      });
+
       var toBeExecutedAtHorizon = "no";
       if (acquireAtHorizon === true) {
           toBeExecutedAtHorizon = "yes";
       }
-      const contract = new Contract(numberOfContracts, inputString, inputString, horizonDate, toBeExecutedAtHorizon, "-");
-      // setting the value
+      if (horizonDate === "") {
+          horizonDate = "instantaneous";
+      }
+      const contract = new Contract(numberOfContracts, amount, recipient, inputString, inputString, lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate)), toBeExecutedAtHorizon);
       contractsMap.set(numberOfContracts, contract);
       createTableRow(contract);
+      if (horizonDate === "instantaneous") {
+          if (amount !== 0) {
+              executeContract(contract);
+          }
+      }
       ++numberOfContracts;
   }
 
@@ -454,16 +453,43 @@
       var btn = document.createElement('input');
       btn.type = "button";
       btn.className = "btn";
+      btn.id = "acquire_button_" + contract.id;
       btn.value = "acquire";
-      btn.onclick = executeContract();
+      btn.onclick = function() { executeContract(contract) };
       td.appendChild(btn);
-      if (contract.horizonDate === "" || contract.acquireAtHorizon === true) {
+      if (contract.acquireAtHorizon === true || contract.amount === 0) {
+          console.log("Disabling button");
           btn.disabled = true;
       }
   }
 
-  function executeContract() {
-
+  function executeContract(contract) {
+      if (contract.horizonDate !== "instantaneous") {
+          var horizonArr = contract.horizonDate.split("-");
+          var dateArr = horizonArr[0].split("/");
+          var timeArr = horizonArr[1].split(":");
+          // +01:00 to get BST from UTC
+          var dateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2] + "+01:00";
+          var contractDate = new Date(dateString);
+          var todayDate = new Date();
+          if (todayDate.getTime() >= contractDate.getTime()) {
+              window.alert("The contract has expired.");
+              document.getElementById("acquire_button_" + contract.id).disabled = true;
+              return;
+          }
+      }
+      holderAddress().then(holderAddress => {
+          counterPartyAddress().then(counterPartyAddress => {
+              if (contract.amount != 0) {
+                  if (contract.recipient == 0) { // owner receives
+                      makeTransfer(counterPartyAddress, holderAddress, contract.amount);
+                  } else { // counter party receives
+                      makeTransfer(holderAddress, counterPartyAddress, contract.amount);
+                  }
+                  document.getElementById("acquire_button_" + contract.id).disabled = true;
+              }
+          });
+      });
   }
 
   function translateContract(contractString) {
@@ -471,11 +497,17 @@
   }
 
   function makeTransfer(fromAddress, toAddress, amount) {
-      transfer(fromAddress, toAddress, amount).then(function(transferTxHash) {
-          waitForReceipt(transferTxHash).then(_ => {
-              console.log(fromAddress + " has transferred " + amount + " Ether to " + toAddress);
-              retrieveBalances();
-          });
+      balanceOfAddress(fromAddress).then(balance => {
+          if (balance >= amount) {
+              transfer(fromAddress, toAddress, amount).then(function(transferTxHash) {
+                  waitForReceipt(transferTxHash).then(_ => {
+                      console.log(fromAddress + " has transferred " + amount + " Ether to " + toAddress);
+                      retrieveBalances();
+                  });
+              });
+          } else {
+              window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
+          }
       });
   }
 
@@ -506,7 +538,6 @@
 
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        console.log("BUTTON PRESSED!!!");
         console.log(stringToAddToBeginning + button.innerHTML);
         // disable buttons
         var all = bottomContainer.getElementsByTagName('button');
@@ -564,13 +595,14 @@
 
   class Contract {
 
-      constructor(id, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, acquire) {
+      constructor(id, amount, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon) {
           this.id = id;
+          this.amount = amount;
+          this.recipient = recipient;
           this.contractString = contractString;
           this.meaningOfContractString = meaningOfContractString;
           this.horizonDate = horizonDate;
           this.toBeExecutedAtHorizon = toBeExecutedAtHorizon;
-          this.acquire = acquire;
       }
 
       // Adding a method to the constructor

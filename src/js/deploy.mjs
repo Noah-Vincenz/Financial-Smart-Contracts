@@ -179,7 +179,7 @@ global.counterPartyAddress = function() {
     });
 }
 
-global.balanceOfAddress = function(smartContractInstance, address) {
+global.balanceOfAddress = function(address) {
     return new Promise (function (resolve, reject) {
         smartContractInstance.balanceOfAddress(web3.toChecksumAddress(address), function (err, result) {
             if(err) {
