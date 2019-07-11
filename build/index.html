@@ -12,12 +12,12 @@
     <h1>FSC</h1>
     <div id="top_container">
         <div id="top_input_container">
-            <input id="holder_address" type="text" placeholder="Holder Address">
+            <input id="holder_address" type="text" placeholder="Holder Address" value="0x004ec07d2329997267Ec62b4166639513386F32E">
             <div id="deposit_container">
                 <p id="deposit">Deposit</p>
                 <select id="select_deposit" class="1_100"></select>
             </div>
-            <input id="counter_party_address" type="text" placeholder="Counter-Party Address"><br>
+            <input id="counter_party_address" type="text" placeholder="Counter-Party Address" value="0x7f023262356b002a4b7deb7ce057eb8b1aabb427"><br>
         </div>
         <button class="button" id = "deposit_button1" type="button" onclick="callDepositFunction(1)">deposit</button>
         <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
@@ -29,11 +29,31 @@
       <button class="button" id = "send_tx_id" type="button" onclick="makeTransaction(getInputString())">Make Transaction</button>
       <div id="button_choices_container"></div>
       <p class="status" id="transaction_status"></p>
+      <div id="tableContainer">
+          <p>
+              <table id="my_table">
+                  <thead id="table_head">
+                      <tr>
+                          <th>ID</th>
+                          <th>Contract</th>
+                          <th>Meaning</th>
+                          <th>Expiry</th>
+                          <th>To Be Executed At Expiry</th>
+                          <th>Acquire</th>
+                      </tr>
+                  </thead>
+                  <tbody id="table_body">
+                  </tbody>
+              </table>
+          </p>
+      </div>
     </div>
   </div>
   <script>
 
     var selectedDeposit = 0;
+    var numberOfContracts = 0;
+    var contractsMap = new Map(); // map from contract id to contract object
 
     window.addEventListener('load', function () {
         document.getElementById("deposit_button1").disabled = true;
@@ -49,32 +69,31 @@
 
     function callDepositFunction(id) {
         if (id === 1) {
-            console.log("Checking if the right account is selected in MetaMask.");
-            console.log(document.getElementById("holder_address").value);
-            console.log(getSelectedMetaMaskAccount());
-            console.log(document.getElementById("holder_address").value.toUpperCase());
-            console.log(getSelectedMetaMaskAccount().toUpperCase());
             if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("holder_address").value.toUpperCase()) {
                 deposit(id, getSelectedDeposit());
             } else {
-                window.alert("Please change the current MetaMask account.");
+                window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
             }
         } else if (id === 2) {
             if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("counter_party_address").value.toUpperCase()) {
                 deposit(id, getSelectedDeposit());
             } else {
-                window.alert("Please change the current MetaMask account.");
+                window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
             }
         }
     }
 
     function createSmartContract() {
-        createContract(getHolderAddress(), getCounterPartyAddress());
-        document.getElementById("create_contract_button").disabled = true;
-        document.getElementById("holder_address").disabled = true;
-        document.getElementById("counter_party_address").disabled = true;
-        document.getElementById("deposit_button1").disabled = false;
-        document.getElementById("deposit_button2").disabled = false;
+        if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("holder_address").value.toUpperCase()) {
+            createContract(getHolderAddress(), getCounterPartyAddress());
+            document.getElementById("create_contract_button").disabled = true;
+            document.getElementById("holder_address").disabled = true;
+            document.getElementById("counter_party_address").disabled = true;
+            document.getElementById("deposit_button1").disabled = false;
+            document.getElementById("deposit_button2").disabled = false;
+        } else {
+            window.alert("Please change the currently selected MetaMask account to the contract holder account.");
+        }
     }
 
     // locally
@@ -393,6 +412,8 @@
       }
       // TODO: handle date cases - ie can be transferred up to horizon or if get then transfer at that certain time
       // use map from time-contractstring and website continuously checks this
+      // TODO: add acquire button after final choice has been clicked - when acquire clicked we check in time map (contract to ) if it has expired -- for truncate
+      // for truncate get we need another map from time
       holderAddress().then(holderAddress => {
           counterPartyAddress().then(counterPartyAddress => {
               if (amount != 0) {
@@ -404,6 +425,49 @@
               }
           });
       });
+      var toBeExecutedAtHorizon = "no";
+      if (acquireAtHorizon === true) {
+          toBeExecutedAtHorizon = "yes";
+      }
+      const contract = new Contract(numberOfContracts, inputString, inputString, horizonDate, toBeExecutedAtHorizon, "-");
+      // setting the value
+      contractsMap.set(numberOfContracts, contract);
+      createTableRow(contract);
+      ++numberOfContracts;
+  }
+
+  function createTableRow(contract) {
+      var table = document.getElementById("my_table");
+      tr = document.createElement("tr");
+      table.appendChild(tr);
+      tr.appendChild(td = document.createElement("td"));
+      td.innerHTML = contract.id;
+      tr.appendChild(td = document.createElement("td"));
+      td.innerHTML = contract.contractString;
+      tr.appendChild(td = document.createElement("td"));
+      td.innerHTML = contract.meaningOfContractString;
+      tr.appendChild(td = document.createElement("td"));
+      td.innerHTML = contract.horizonDate;
+      tr.appendChild(td = document.createElement("td"));
+      td.innerHTML = contract.toBeExecutedAtHorizon;
+      tr.appendChild(td = document.createElement("td"));
+      var btn = document.createElement('input');
+      btn.type = "button";
+      btn.className = "btn";
+      btn.value = "acquire";
+      btn.onclick = executeContract();
+      td.appendChild(btn);
+      if (contract.horizonDate === "" || contract.acquireAtHorizon === true) {
+          btn.disabled = true;
+      }
+  }
+
+  function executeContract() {
+
+  }
+
+  function translateContract(contractString) {
+      return contractString;
   }
 
   function makeTransfer(fromAddress, toAddress, amount) {
@@ -500,11 +564,13 @@
 
   class Contract {
 
-      constructor(recipient, amount, acquireAtHorizon, horizonDate) {
-          this.recipient = recipient;
-          this.amount = amount;
-          this.acquireAtHorizon = acquireAtHorizon;
+      constructor(id, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, acquire) {
+          this.id = id;
+          this.contractString = contractString;
+          this.meaningOfContractString = meaningOfContractString;
           this.horizonDate = horizonDate;
+          this.toBeExecutedAtHorizon = toBeExecutedAtHorizon;
+          this.acquire = acquire;
       }
 
       // Adding a method to the constructor

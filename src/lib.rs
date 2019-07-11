@@ -69,8 +69,6 @@ pub mod smart_contract {
 		fn callerAddress(&mut self) -> H256;
 		/// Transfer between two accounts
         fn transfer(&mut self, _from: Address, _to: Address, _amount: U256);
-		#[constant]
-		fn printLn(&mut self, input: U256) -> U256;
 		#[payable]
 		fn depositCollateral(&mut self, amount: U256);
 		/// Event declaration
@@ -83,7 +81,7 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, holder_address: Address, counter_party_address: Address) { 
+		fn constructor(&mut self, holder_address: Address, counter_party_address: Address) {
 			//write(&holder_key(), &H256::from(sender().clone()).into());
 			write(&holder_key(), &H256::from(holder_address).into());
 			write(&counter_party_key(), &H256::from(counter_party_address).into());
@@ -141,10 +139,6 @@ pub mod smart_contract {
                 self.Transfer(from, to, amount);
             }
         }
-
-		fn printLn(&mut self, input: U256) -> U256 {
-			input
-		}
 
 		fn depositCollateral(&mut self, amount: U256) {
 			let sender = sender();
