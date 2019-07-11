@@ -55,17 +55,55 @@
     var numberOfContracts = 0;
     var contractsMap = new Map(); // map from contract id to contract object
 
-    window.addEventListener('load', function () {
-        document.getElementById("deposit_button1").disabled = true;
-        document.getElementById("deposit_button2").disabled = true;
-    });
-
     $(function(){
         var $select = $(".1_100");
         for (i=1;i<=100;i++){
             $select.append($('<option></option>').val(i).html(i))
         }
     });
+
+    window.addEventListener('load', function () {
+        document.getElementById("deposit_button1").disabled = true;
+        document.getElementById("deposit_button2").disabled = true;
+        // start timer
+        update();
+        runClock();
+    });
+
+    function update() {
+        // loop through all contracts and check if their time == current time and if so check if get or not
+        // if get: then execute
+        // if not get then disable acquire button
+        for (var [key, value] of contractsMap) {
+            if (value.horizonDate !== "instantaneous") {
+                var horizonArr = value.horizonDate.split("-");
+                var dateArr = horizonArr[0].split("/");
+                var timeArr = horizonArr[1].split(":");
+                // +01:00 to get BST from UTC
+                var dateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2] + "+01:00";
+                var contractDate = new Date(dateString);
+                var todayDate = new Date();
+                if (contractDate.getTime() <= todayDate.getTime()) {
+                    console.log("Contract " + key + " expired.");
+                    if (value.toBeExecutedAtHorizon === "yes") { // contract contains 'get'
+                        executeContract(value);
+                    } else { // contract just contains 'truncate' and not 'get'
+                        document.getElementById("acquire_button_" + key.toString()).disabled = true;
+                        contractsMap.delete(key.toString());
+                    }
+                }
+            }
+        }
+    }
+
+    function runClock() {
+        var now = new Date();
+        var timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+        setTimeout(function() {
+            update();
+            runClock();
+        }, timeToNextTick);
+    }
 
     function callDepositFunction(id) {
         if (id === 1) {
@@ -409,7 +447,7 @@
                   break;
               }
           } else if (str === "get") {
-              acquireAtHorizon = 1;
+              acquireAtHorizon = true;
           }
       }
       // TODO: handle date cases - ie can be transferred up to horizon or if get then transfer at that certain time
@@ -418,21 +456,20 @@
       // for truncate get we need another map from time
 
       var toBeExecutedAtHorizon = "no";
-      if (acquireAtHorizon === true) {
+      if (acquireAtHorizon) {
           toBeExecutedAtHorizon = "yes";
       }
       if (horizonDate === "") {
           horizonDate = "instantaneous";
       }
       const contract = new Contract(numberOfContracts, amount, recipient, inputString, inputString, lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate)), toBeExecutedAtHorizon);
-      contractsMap.set(numberOfContracts, contract);
       createTableRow(contract);
-      if (horizonDate === "instantaneous") {
-          if (amount !== 0) {
-              executeContract(contract);
-          }
-      }
       ++numberOfContracts;
+      if (horizonDate !== "instantaneous") {
+          contractsMap.set(numberOfContracts, contract);
+      } else if (horizonDate === "instantaneous" && amount !== 0) {
+          executeContract(contract);
+      }
   }
 
   function createTableRow(contract) {
@@ -464,17 +501,21 @@
   }
 
   function executeContract(contract) {
+      console.log("executing contract");
       if (contract.horizonDate !== "instantaneous") {
           var horizonArr = contract.horizonDate.split("-");
           var dateArr = horizonArr[0].split("/");
           var timeArr = horizonArr[1].split(":");
           // +01:00 to get BST from UTC
-          var dateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2] + "+01:00";
+          var dateString = dateArr[2] + "-" + dateArr[1] + "-"
+          + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
+          + (parseInt(timeArr[2]) + 45).toString() + "+01:00"; // adding 45 seconds to the contract's expiry date to allow it to execute
           var contractDate = new Date(dateString);
           var todayDate = new Date();
           if (todayDate.getTime() >= contractDate.getTime()) {
               window.alert("The contract has expired.");
               document.getElementById("acquire_button_" + contract.id).disabled = true;
+              contractsMap.delete(contract.id);
               return;
           }
       }
@@ -487,6 +528,7 @@
                       makeTransfer(holderAddress, counterPartyAddress, contract.amount);
                   }
                   document.getElementById("acquire_button_" + contract.id).disabled = true;
+                  contractsMap.delete(contract.id);
               }
           });
       });
