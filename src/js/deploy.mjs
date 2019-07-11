@@ -9,6 +9,41 @@ import { CODE_HEX , ABI} from "../../resources.mjs";
 var abi;
 var codeHex;
 var smartContract;
+var smartContractInstance;
+
+global.createContract = function(holderAddress, counterPartyAddress) {
+  web3.eth.defaultAccount = holderAddress;
+  instantiateNew(holderAddress, counterPartyAddress, codeHex).then(instantiationTxHash => {
+      waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
+          smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
+      });
+  });
+}
+
+global.deposit = function(party, depositAmount) {
+  var partyString = "";
+  if (party === 1) {
+    partyString = "holder";
+    holderAddress().then(function(address) {
+        console.log("Contract Holder: " + address);
+        depositCollateral(address, depositAmount).then(holderDepositTxHash => {
+            waitForReceipt(holderDepositTxHash).then(_ => {
+                console.log("Deposit of " + depositAmount + " Ether has been added to " + partyString + " account.");
+            });
+        });
+    });
+  } else {
+    partyString = "counter-party";
+    counterPartyAddress().then(function(address) {
+        console.log("Contract Counter-Party: " + address);
+        depositCollateral(address, depositAmount).then(counterPartyDepositTxHash => {
+            waitForReceipt(counterPartyDepositTxHash).then(_ => {
+                console.log("Deposit of " + depositAmount + " Ether has been added to " + partyString + " account.");
+            });
+        });
+    });
+  }
+}
 
 // this does not exist for Kovan chain
 global.unlockAccount = function(address) {
@@ -48,11 +83,9 @@ global.getGasLimit = function() {
     });
 }
 
-global.instantiateNew = function(dataIn, stringArr) {
+global.instantiateNew = function(holderAddress, counterPartyAddress, dataIn) {
     return new Promise (function (resolve, reject) {
-
-        // 4000000000 = 4 GWEI per gas consumed
-        smartContract.new(web3.toChecksumAddress('0x7f023262356b002a4b7deb7ce057eb8b1aabb427'), stringArr, {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
+        smartContract.new(holderAddress, counterPartyAddress, {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
         //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
             if (err) {
                 reject(err);
@@ -127,8 +160,11 @@ global.print = function(smartContractInstance, input) {
     });
 }
 
-global.depositCollateral = function(smartContractInstance, senderAddress, amount) {
+global.depositCollateral = function(senderAddress, amount) {
     return new Promise (function (resolve, reject) {
+        console.log(senderAddress);
+        console.log(web3.toChecksumAddress(senderAddress));
+        console.log(smartContractInstance);
         smartContractInstance.depositCollateral(amount, {from: senderAddress, value: web3.toWei(amount, "ether")}, function (err, result) {
             if(err) {
                   reject(err);
@@ -163,13 +199,31 @@ global.counterPartyBalance = function(smartContractInstance) {
     });
 }
 
-global.holderAddress = function(smartContractInstance) {
+global.holderAddress = function() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderAddress(function (err, result) {
             if(err) {
                   reject(err);
             } else {
-                  resolve(web3.toHex(result.toString(10)));
+                  var unpaddedAddr = web3.toHex(result.toString(10));
+                  // pad address to length of 42
+                  var paddedAddr = unpaddedAddr.split("0x")[1].padStart(40, '0');
+                  resolve("0x" + paddedAddr);
+            }
+        });
+    });
+}
+
+global.counterPartyAddress = function() {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.counterPartyAddress(function (err, result) {
+            if(err) {
+                  reject(err);
+            } else {
+                  var unpaddedAddr = web3.toHex(result.toString(10));
+                  // pad address to length of 42
+                  var paddedAddr = unpaddedAddr.split("0x")[1].padStart(40, '0');
+                  resolve("0x" + paddedAddr);
             }
         });
     });
@@ -245,26 +299,10 @@ window.addEventListener('load', function () {
         codeHex = web3.toHex(CODE_HEX); // or from Ascii if I am certain it is Ascii.. toHex uses String or Number as param
         smartContract = web3.eth.contract(abi);
         //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
-        web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
+        //web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
         //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
 
-
-        // TODO: read user input and deploy contract on pressing deploy button
-        // TODO: convert user's pressed boxes into contract definition
-        // TODO: add translation into English - ie Transfer 10 Eth from a to b
-        // TODO: remove parenthesis from user string
-
-
-        deployContract(smartContract);
-
-        /*
-        // Subscribe to the Transfer event
-        smartContract.events.Transfer({
-            from: web3.eth.defaultAccount // Filter transactions by sender
-        }, function (err, event) {
-            console.log(event);
-        });
-        */
+        //deployContract(smartContract);
 
     } else {
         console.log('No Web3 Detected... using HTTP Provider')

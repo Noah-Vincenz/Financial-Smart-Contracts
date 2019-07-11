@@ -188,12 +188,12 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "recipient_address",
+        "name": "holder_address",
         "type": "address"
       },
       {
-        "name": "input_string_vector",
-        "type": "int64[]"
+        "name": "counter_party_address",
+        "type": "address"
       }
     ]
   }

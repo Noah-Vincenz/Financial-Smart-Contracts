@@ -52,7 +52,7 @@ pub mod smart_contract {
 	#[eth_abi(SmartContractEndpoint, SmartContractClient)]
 	pub trait SmartContract {
 		/// The constructor
-		fn constructor(&mut self, recipient_address: Address, input_string_vector: Vec<i64>);
+		fn constructor(&mut self, holder_address: Address, counter_party_address: Address);
 		#[constant]
 		fn balanceOfAddress(&mut self, _address: Address) -> U256;
 		#[constant]
@@ -83,11 +83,13 @@ pub mod smart_contract {
 	pub struct SmartContractInstance;
 
 	impl SmartContract for SmartContractInstance {
-		fn constructor(&mut self, counter_party_address: Address, input_string_vector: Vec<i64>) {
-			write(&holder_key(), &H256::from(sender().clone()).into());
+		fn constructor(&mut self, holder_address: Address, counter_party_address: Address) { 
+			//write(&holder_key(), &H256::from(sender().clone()).into());
+			write(&holder_key(), &H256::from(holder_address).into());
 			write(&counter_party_key(), &H256::from(counter_party_address).into());
 
 			// Parsing done here
+			/*
 			let str: String = dec2sign::convert(input_string_vector);
 
 			// getting output array:
@@ -96,6 +98,7 @@ pub mod smart_contract {
 			let output_arr = parser::parse(str);
 			write(&transfer_dest(), &U256::from(output_arr[0]).into());
 			write(&amount_to_transfer(), &U256::from(output_arr[1]).into());
+			*/
 		}
 
 		fn balanceOfAddress(&mut self, address: Address) -> U256 {
@@ -113,7 +116,7 @@ pub mod smart_contract {
 		fn callerBalance(&mut self) -> U256 {
 			read_balance(&sender())
 	    }
-
+		// does not work if address starts with 0x00... as 0s will be get rid of
 		fn holderAddress(&mut self) -> H256 {
 			read(&holder_key()).into()
 	    }
@@ -148,8 +151,10 @@ pub mod smart_contract {
 			let sender_balance = read_balance(&sender);
             let new_sender_balance = sender_balance + amount;
 			write(&balance_key(&sender), &new_sender_balance.into());
-			// check the input to make the transfer
 
+
+			// check the input to make the transfer
+			/*
 			let curr_transfer_dest: U256 = read(&transfer_dest()).into();
 			let curr_amount_to_transfer: U256 = read(&amount_to_transfer()).into();
 
@@ -158,6 +163,7 @@ pub mod smart_contract {
 			} else if curr_transfer_dest == 1.into() {
 				self.transfer(address_of(&holder_key()), address_of(&counter_party_key()), curr_amount_to_transfer);
 			}
+			*/
 		}
 
 	}

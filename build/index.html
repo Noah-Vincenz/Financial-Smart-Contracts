@@ -15,11 +15,13 @@
             <input id="holder_address" type="text" placeholder="Holder Address">
             <div id="deposit_container">
                 <p id="deposit">Deposit</p>
-                <select id="select_deposit" class="1_100" onchange="changedeposit(getSelecteddeposit())"></select>
+                <select id="select_deposit" class="1_100"></select>
             </div>
             <input id="counter_party_address" type="text" placeholder="Counter-Party Address"><br>
         </div>
-        <button class="button" id = "create_contract_button" type="button" onclick="instantiateNew()">Create Contract</button>
+        <button class="button" id = "deposit_button1" type="button" onclick="deposit(1, getSelectedDeposit())">deposit</button>
+        <button class="button" id = "deposit_button2" type="button" onclick="deposit(2, getSelectedDeposit())">deposit</button>
+        <button class="button" id = "create_contract_button" type="button" onclick="createSmartContract()">Create Contract</button>
         <p class="status" id="contract_status"></p>
     </div>
     <div id="bottom_container">
@@ -30,6 +32,14 @@
     </div>
   </div>
   <script>
+
+    var selectedDeposit = 0;
+
+    window.addEventListener('load', function () {
+        document.getElementById("deposit_button1").disabled = true;
+        document.getElementById("deposit_button2").disabled = true;
+    });
+
     $(function(){
         var $select = $(".1_100");
         for (i=1;i<=100;i++){
@@ -37,11 +47,25 @@
         }
     });
 
-    function changedeposit(depositIn) {
-        selecteddeposit = depositIn;
+    function createSmartContract() {
+        createContract(getHolderAddress(), getCounterPartyAddress());
+        document.getElementById("create_contract_button").disabled = true;
+        document.getElementById("holder_address").disabled = true;
+        document.getElementById("counter_party_address").disabled = true;
+        document.getElementById("deposit_button1").disabled = false;
+        document.getElementById("deposit_button2").disabled = false;
     }
 
-    function getSelecteddeposit() {
+    // locally
+    function getHolderAddress() {
+        return document.getElementById("holder_address").value;
+    }
+
+    function getCounterPartyAddress() {
+        return document.getElementById("counter_party_address").value;
+    }
+
+    function getSelectedDeposit() {
         return document.getElementById("select_deposit").value;
     }
 
