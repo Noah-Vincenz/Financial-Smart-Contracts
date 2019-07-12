@@ -70,6 +70,21 @@ div {
     font-size: 10px;
 }
 
+.choices_button {
+    color: gray;
+    background-color: white;
+    border-radius: 12px;
+    border: 1px solid #707070;
+    font-size: 14px;
+}
+
+.choices_button:hover {
+    border: 1px solid gray;
+    background-color: lightgray;
+    color: gray;
+    padding: 5px 10px;
+}
+
 #deposit {
   position: relative;
   font-family: Arial;

@@ -11,12 +11,12 @@ $(function(){
     }
 });
 
-window.addEventListener('load', function () {
+window.addEventListener('load', function () { /*
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
-    document.getElementById("transaction_input").disabled = true;
+    document.getElementById("transaction_input").disabled = true; */
     // start timer
     update();
     runClock();
@@ -97,30 +97,45 @@ function getInputString() {
     return document.getElementById("transaction_input").value;
 }
 
-function checkSpacing(string) {
-    // TODO: add regex matching that replaces every match with a spaced out parenthesis
-    var matches1 = string.match(/^.*\S\(.*$/);
-    var matches2 = string.match(/^.*\(\S.*$/);
-    var matches3 = string.match(/^.*\S\).*$/);
-    var matches4 = string.match(/^.*\)\S.*$/);
-
-    if (matches1 !== null || matches2 !== null || matches3 !== null || matches4 !== null) {
-        return false;
-    } else {
-        return true;
+function addSpacing(string) {
+    const regex1 = /(.*\S)(\()(.*)/;
+    var matchObj = regex1.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        matchObj = regex1.exec(string)
     }
+    const regex2 = /(.*\S)(\))(.*)/;
+    matchObj = regex2.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        matchObj = regex2.exec(string)
+    }
+    const regex3 = /(.*)(\()(\S.*)/;
+    matchObj = regex3.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        matchObj = regex3.exec(string)
+    }
+    const regex4 = /(.*)(\))(\S.*)/;
+    matchObj = regex4.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        matchObj = regex4.exec(string)
+    }
+    return string;
 }
+
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.split(search).join(replacement);
+};
 
 function decomposeContract(inputString) {
     // TODO: replace multiple whitespace by single to allow user to input over mutiple lines
     if (inputString === "") {
         return;
     }
-    // check that spacing in user input is correct
-    if (!checkSpacing(inputString)) {
-        window.alert("Please provide a single space character before and after parenthesis in your input.");
-        return;
-    }
+    inputString = addSpacing(inputString);
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";
     // check if inputstring contains 'or' else execute right away
@@ -477,6 +492,7 @@ function printStack(stack, name) {
 function createButton(contractString, buttonId) {
   var button = document.createElement("button");
   button.id = "choices_button_" + buttonId;
+  button.className = "choices_button";
   button.innerHTML = cleanContractParens(contractString);
   // 2. Append somewhere
   var bottomContainer = document.getElementById("button_choices_container");
