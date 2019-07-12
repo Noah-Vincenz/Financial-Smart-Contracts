@@ -10,8 +10,14 @@ var gulp = require("gulp"),
 const { series } = require('gulp');
 
 //Copy static files from html folder to build folder
-function copyStaticFiles() {
+function copyHTMLFiles() {
   return gulp.src("./src/html/*.*")
+  .pipe(gulp.dest("./build"));
+}
+
+//Copy static files from html folder to build folder
+function copyJSFiles() {
+  return gulp.src("./src/js/*.js")
   .pipe(gulp.dest("./build"));
 }
 
@@ -42,5 +48,5 @@ function startServer() {
   });
 }
 
-exports.build = series(copyStaticFiles, build, startServer);
-exports.default = series(copyStaticFiles, build, startServer);
+exports.build = series(copyHTMLFiles, copyJSFiles, build, startServer);
+exports.default = series(copyHTMLFiles, copyJSFiles, build, startServer);
