@@ -21,6 +21,12 @@ function copyJSFiles() {
   .pipe(gulp.dest("./build"));
 }
 
+//Copy static files from html folder to build folder
+function copyResources() {
+  return gulp.src("./src/js/resources.mjs")
+  .pipe(gulp.dest("./build"));
+}
+
 //Convert ES6 ode in all js files in src/js folder and copy to
 //build folder as bundle.js
 function build() {
@@ -48,5 +54,5 @@ function startServer() {
   });
 }
 
-exports.build = series(copyHTMLFiles, copyJSFiles, build, startServer);
-exports.default = series(copyHTMLFiles, copyJSFiles, build, startServer);
+exports.build = series(copyHTMLFiles, copyJSFiles, copyResources, build, startServer);
+exports.default = series(copyHTMLFiles, copyJSFiles, copyResources, build, startServer);

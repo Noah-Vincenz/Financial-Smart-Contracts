@@ -4,7 +4,7 @@
 
 /* jshint esversion: 6 */
 
-import { CODE_HEX , ABI} from "../../resources.mjs";
+import { CODE_HEX , ABI} from "./resources.mjs";
 
 var abi;
 var codeHex;
