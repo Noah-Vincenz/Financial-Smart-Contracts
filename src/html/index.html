@@ -10,23 +10,30 @@
 </head>
 <body>
   <div id="outer_container">
-    <h1>FSC</h1>
+    <h1 align="center">Financial Smart Contracts</h1>
     <div id="top_container">
         <div id="top_input_container">
-            <input id="holder_address" type="text" placeholder="Holder Address" value="0x004ec07d2329997267Ec62b4166639513386F32E">
-            <div id="deposit_container">
-                <p id="deposit">Deposit</p>
-                <select id="select_deposit" class="1_100"></select>
+            <div id="holder_container">
+                <input id="holder_address" class="address_input" type="text" placeholder="Holder Address"
+                value="0x004ec07d2329997267Ec62b4166639513386F32E" maxlength="42"><br>
+                <button class="button" id = "deposit_button1" type="button" onclick="callDepositFunction(1)">deposit</button>
             </div>
-            <input id="counter_party_address" type="text" placeholder="Counter-Party Address" value="0x7f023262356b002a4b7deb7ce057eb8b1aabb427"><br>
+
+            <div id="deposit_container">
+                <p id="deposit">Deposit:</p>
+                <select id="select_deposit" class="custom_select"></select>
+            </div>
+
+            <div id="counter_party_container">
+                <input id="counter_party_address" class="address_input" type="text" placeholder="Counter-Party Address"
+                value="0x7f023262356b002a4b7deb7ce057eb8b1aabb427" maxlength="42"><br>
+                <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
+            </div>
         </div>
-        <button class="button" id = "deposit_button1" type="button" onclick="callDepositFunction(1)">deposit</button>
-        <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
         <button class="button" id = "create_contract_button" type="button" onclick="callCreateContractFunction()">Create Contract</button>
-        <p class="status" id="contract_status"></p>
     </div>
     <div id="bottom_container">
-      <input id="transaction_input" type="text" placeholder="Transaction">
+      <textarea rows="13" cols="140" id="transaction_input" type="text" placeholder="Transaction"></textarea><br>
       <button class="button" id = "make_transaction_button" type="button" onclick="decomposeContract(getInputString())">Make Transaction</button>
       <div id="button_choices_container"></div>
       <p class="status" id="transaction_status"></p>

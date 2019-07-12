@@ -4,14 +4,15 @@ body {
     font-size: 20px;
     font-family: arial, sans-serif;
 }
+
 h1 {
-    color: black;
+    color: #707070;
     font-size: 50px;
     margin-top: 0px;
 }
 
 table {
-    margin-top: 10px;
+    color: #707070;
     padding: 10px;
     border-collapse: collapse;
     width: 100%;
@@ -22,80 +23,94 @@ td, th {
     padding: 8px;
 }
 tr:nth-child(even) {
-    background-color: #dddddd;
+    background-color: #eeeeee;
 }
 
-.wrapper {
-    text-align: center;
+button {
+  border: 1px solid #0066cc;
+  background-color: #0099cc;
+  color: #ffffff;
+  padding: 5px 10px;
+  font-size: 20px;
+  cursor: pointer;
+  margin: 10px;
 }
 
-.img {
-    margin-top: 10px;
-    margin-bottom: 10px;
+button:hover {
+  border: 1px solid #0099cc;
+  background-color: #00aacc;
+  color: #ffffff;
+  padding: 5px 10px;
 }
 
-.status {
-    margin-top: 0px;
-    margin-bottom: 0px;
+button:disabled,
+button[disabled]{
+  border: 1px solid #999999;
+  background-color: #cccccc;
+  color: #a0a0a0;
+  cursor: not-allowed;
 }
 
-.button {
-    color: grey;
-    padding: 15px 32px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
+textarea:disabled,
+textarea[disabled]{
+  cursor: not-allowed;
+}
+
+div {
+  padding: 5px 10px;
+}
+
+.address_input {
+    width: 350px;
+    height: 30px;
+    font-size: 14px;
 }
 
 .p_small {
     font-size: 10px;
 }
 
-#outer_container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+#deposit {
+  position: relative;
+  font-family: Arial;
+  color: #707070;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+#select_deposit {
+  position: relative;
+  font-family: Arial;
+  font-size: 17px;
 }
 
 #top_container {
     text-align: center;
     border-bottom: 0.5px solid lightgray;
-    margin-top: -40px;
-    margin-bottom: 10px;
+    margin-top: -20px;
+    margin-bottom: 25px;
 }
 
 #top_input_container {
-    width: 100%;
     display: flex;
+    flex-direction: row;
 }
 
-#collateral_container {
+#holder_container {
+    flex: 1;
+}
+
+#counter_party_container {
+    flex: 1;
 }
 
 #bottom_container {
-    width: 100%;
     text-align: center;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 #transaction_input {
-    width: 600px;
-    height: 30px;
-}
-
-#bottom_input_container {
-    display: inline;
-}
-
-#scalek_container {
-}
-
-#lock-reveal-div {
-  margin-bottom: 10px;
+    resize: none;
+    font-size: 20px;
 }
 
 #headerContainer {

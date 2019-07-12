@@ -5,7 +5,7 @@ var stringToAddToBeginning = ""; // string that is added to the beginning of the
 var contractsMap = new Map(); // map from contract id to contract object
 
 $(function(){
-    var $select = $(".1_100");
+    var $select = $(".custom_select");
     for (i = 1; i <= 100; ++i){
         $select.append($('<option></option>').val(i).html(i))
     }
@@ -15,6 +15,8 @@ window.addEventListener('load', function () {
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
+    document.getElementById("select_deposit").disabled = true;
+    document.getElementById("transaction_input").disabled = true;
     // start timer
     update();
     runClock();
@@ -65,6 +67,7 @@ function callDepositFunction(id) {
     if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById(addr).value.toUpperCase()) {
         deposit(id, getSelectedDeposit());
         document.getElementById("make_transaction_button").disabled = false;
+        document.getElementById("transaction_input").disabled = false;
     } else {
         window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
     }
@@ -80,6 +83,7 @@ function callCreateContractFunction() {
         document.getElementById("counter_party_address").disabled = true;
         document.getElementById("deposit_button1").disabled = false;
         document.getElementById("deposit_button2").disabled = false;
+        document.getElementById("select_deposit").disabled = false;
     } else {
         window.alert("Please change the currently selected MetaMask account to the contract holder account.");
     }
@@ -108,6 +112,7 @@ function checkSpacing(string) {
 }
 
 function decomposeContract(inputString) {
+    // TODO: replace multiple whitespace by single to allow user to input over mutiple lines
     if (inputString === "") {
         return;
     }
