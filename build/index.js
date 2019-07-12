@@ -11,12 +11,12 @@ $(function(){
     }
 });
 
-window.addEventListener('load', function () { /*
+window.addEventListener('load', function () {
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
-    document.getElementById("transaction_input").disabled = true; */
+    document.getElementById("transaction_input").disabled = true; 
     // start timer
     update();
     runClock();
@@ -125,16 +125,16 @@ function addSpacing(string) {
     return string;
 }
 
-String.prototype.replaceAll = function(search, replacement) {
-    var target = this;
-    return target.split(search).join(replacement);
-};
-
 function decomposeContract(inputString) {
     // TODO: replace multiple whitespace by single to allow user to input over mutiple lines
     if (inputString === "") {
         return;
     }
+    // remove linebreaks
+    inputString = inputString.replace(/(\r\n|\n|\r)/gm,"");
+    // remove multiple whitespaces
+    inputString = inputString.replace(/  +/g, ' ');
+    // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";

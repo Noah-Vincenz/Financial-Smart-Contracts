@@ -79,6 +79,7 @@ div {
 }
 
 .choices_button:hover {
+    border: 1px solid gray;
     background-color: lightgray;
     color: gray;
     padding: 5px 10px;
