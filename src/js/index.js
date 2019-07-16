@@ -347,7 +347,7 @@ function parse(inputString) {
             amount *= 0;
         } else if (str === "scaleK") {
             if (strArr.length > i + 1 && Number.isInteger(parseInt(strArr[i + 1]))) {
-                amount *= parseInt(strArr);
+                amount = amount * parseInt(strArr[i + 1]);
                 ++i;
             } else {
                 console.log("'scaleK' should be followed by an integer.");
@@ -365,6 +365,7 @@ function parse(inputString) {
             acquireAtHorizon = "yes";
         }
     }
+    console.log("amount: " + amount);
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
     const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
@@ -468,6 +469,7 @@ function callTransferFunction(fromAddress, toAddress, amount) {
                 });
             });
         } else {
+            // TODO: add status 'failed' label to list
             window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
         }
     });
