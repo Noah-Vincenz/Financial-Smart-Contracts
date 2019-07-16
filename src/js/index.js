@@ -126,7 +126,6 @@ function addSpacing(string) {
 }
 
 function decomposeContract(inputString) {
-    // TODO: replace multiple whitespace by single to allow user to input over mutiple lines
     if (inputString === "") {
         return;
     }
@@ -428,8 +427,10 @@ function executeContract(contract) {
         counterPartyAddress().then(counterPartyAddress => {
             if (contract.amount != 0) {
                 if (contract.recipient == 0) { // owner receives
+                    createMoveFile(counterPartyAddress, holderAddress, contract.amount);
                     callTransferFunction(counterPartyAddress, holderAddress, contract.amount);
                 } else { // counter party receives
+                    createMoveFile(holderAddress, counterPartyAddress, contract.amount);
                     callTransferFunction(holderAddress, counterPartyAddress, contract.amount);
                 }
                 document.getElementById("acquire_button_" + contract.id).disabled = true;
@@ -470,6 +471,47 @@ function callTransferFunction(fromAddress, toAddress, amount) {
             window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
         }
     });
+}
+
+function createMoveFile(sender_address, recipient_address, amount) {
+    var textToWrite = "//! no-execute\n" +
+    "import 0x0.LibraAccount;\n" +
+    "import 0x0.LibraCoin;\n \n" +
+    "main(payee: address) {\n" +
+      "\t let coin: R#LibraCoin.T;\n" +
+      "\t let account_exists: bool;\n" +
+      "\t let recipient: address;\n" +
+      "\t let sender: address;\n" +
+      "\t sender = " + sender_address + ";\n" +
+      "\t recipient = " + recipient_address + ";\n" +
+      "\t coin = LibraAccount.withdraw_from_sender(" + amount + ");\n" +
+      "\t account_exists = LibraAccount.exists(copy(recipient));\n" +
+      "\t if (!move(account_exists)) {\n" +
+      "\t \t create_account(copy(recipient));\n" +
+      "\t }\n" +
+      "\t LibraAccount.deposit(move(recipient), move(coin));\n" +
+      "\t return;\n" +
+    "}";
+
+    var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
+    var downloadLink = document.createElement("a");
+    downloadLink.download = "script.mvir";
+    downloadLink.innerHTML = "Download Move File";
+    if (window.webkitURL != null) {
+        // Chrome allows the link to be clicked
+        // without actually adding it to the DOM.
+        downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+    }
+    else {
+        // Firefox requires the link to be added to the DOM
+        // before it can be clicked.
+        downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+        downloadLink.onclick = destroyClickedElement;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+    }
+    downloadLink.click();
+    console.log("Created and downloaded .mvir file.");
 }
 
 function retrieveBalances() {
