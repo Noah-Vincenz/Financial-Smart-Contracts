@@ -1,4 +1,5 @@
 // TODO: add status of transactions ie executed, or failed
+// TODO: change contract string to be displayed with parenthesis in list
 var selectedDeposit = 0;
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
@@ -25,7 +26,7 @@ window.addEventListener('load', function () { /* // commented for testing purpos
 function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
-    // if not get then disable acquire button
+    // if not get: then disable acquire button
     for (var [key, value] of contractsMap) {
         if (value.horizonDate !== "instantaneous") {
             var horizonArr = value.horizonDate.split("-");
@@ -222,12 +223,8 @@ function decomposeContract(inputString) {
                           console.log(firstPartOfConjunction);
                           // if already have first and part then add it to it, else only add this to contractsStack
                           if (firstPartOfConjunction !== "") { //changed order -- this used to be third if clause
-
                               currentConj = "";
                               var s = stringToAddToBeginning + firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString;
-                              if (!s.includes("one") && !s.includes("zero")) {
-                                  break;
-                              }
                               console.log("0.5: Pushing " + s + " to contractsStack");
                               contractsStack.push(addParens(s)); //
                               stringToAddToBeginning = "";
@@ -238,26 +235,17 @@ function decomposeContract(inputString) {
                                   var con2 = contractsStack.pop();
                                   var con1 = contractsStack.pop();
                                   var s = con1 + " " + conjunctionStack.pop() + " " + con2;
-                                  if (!s.includes("one") && !s.includes("zero")) {
-                                      break;
-                                  }
                                   contractsStack.push(s);
                               }
 
                           } else if (i == strArr.length - 1 && stack.length == 0) {
                               currentConj = "";
-                              if (!contractString.includes("one") && !contractString.includes("zero")) {
-                                  break;
-                              }
                               console.log("0.125: Pushing " + contractString + " to contractsStack");
                               contractsStack.push(contractString);
 
                           } else if ((stack.length == 0 || (stack.length == 1 && stack[0] === "(")) && conjunctionStack.length !== 0) { // add contractString to contractsStack.pop()
                               currentConj = "";
                               var s = contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString;
-                              if (!s.includes("one") && !s.includes("zero")) {
-                                  break;
-                              }
                               console.log("0.25: Pushing " + s + " to contractsStack");
                               contractsStack.push(s);
 
@@ -269,18 +257,13 @@ function decomposeContract(inputString) {
                               console.log("1: Pushing " + contractString + " to contractsStack");
                               contractsStack.push(contractString);
                           }
-
                           contractString = "";
 
                       } else if (term === "(") { // stop popping
                           contractString = term + " " + contractString;
                           console.log("currentConj: " + currentConj);
-
                           if (stack.length !== 0 && currentConj !== "") { // contracts string should be pushed to contracts stack not the combined string
                               var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
-                              if (!s.includes("one") && !s.includes("zero")) {
-                                  break;
-                              }
                               console.log("1.5: Pushing " + s + " to contractsStack");
                               contractsStack.push(s);
                               currentConj = "";
@@ -292,9 +275,6 @@ function decomposeContract(inputString) {
                                   var con2 = contractsStack.pop();
                                   var con1 = contractsStack.pop();
                                   var s = "( " + con1 + " " + conjunctionStack.pop() + " " + con2 + " )";
-                                  if (!s.includes("one") && !s.includes("zero")) {
-                                      break;
-                                  }
                                   console.log("1.65: Pushing " + s + " to contractsStack");
                                   contractsStack.push(s);
                               }
@@ -324,29 +304,11 @@ function decomposeContract(inputString) {
                   if (stack.length == 0 && contractString !== "" && contractString !== "( ") {
                      if (currentConj !== "" && i !== strArr.length - 1) {
                           var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
-                          if (!s.includes("one") && !s.includes("zero")) {
-                              break;
-                          }
                           console.log("1.75: Pushing " + s + " to contractsStack");
                           contractsStack.push(s);
                           currentConj = "";
 
-                          if (strArr.length > i + 2
-                            && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
-                            && conjunctionStack.length !== 0) {
-                              var con2 = contractsStack.pop();
-                              var con1 = contractsStack.pop();
-                              var s = "( " + con1 + " " + conjunctionStack.pop() + " " + con2 + " )";
-                              if (!s.includes("one") && !s.includes("zero")) {
-                                  break;
-                              }
-                              console.log("1.85: Pushing " + s + " to contractsStack");
-                              contractsStack.push(s);
-                          }
                       } else { // if there is no currConj then we can just add this one
-                          if (!contractString.includes("one") && !contractString.includes("zero")) {
-                              break;
-                          }
                           console.log("2: Pushing " + contractString + " to contractsStack");
                           contractsStack.push(contractString);
                       }
@@ -361,8 +323,7 @@ function decomposeContract(inputString) {
                           if (parseInt(stack[stack.length - 1])) {
                               contractString = stack.pop() + " " + contractString;
                               contractString = stack.pop() + " " + contractString;
-                          } else if (stack[stack.length - 1] === "get") {
-                              contractString = stack.pop() + contractString;
+                              console.log("z32");
                           }
                       }
                       console.log("Pushing last term - " + currentTerm + " - on stack.");
@@ -384,14 +345,6 @@ function decomposeContract(inputString) {
                   console.log("Stack popping 2 - term: " + term);
                   if (term === "and" || term === "or") {
                       currentConj = term;
-                      if (contractString !== "" && contractString !== "( ") {
-                          if (lastClosingParenPushedIndex !== -1) {
-                              contractString += " )";
-                              lastClosingParenPushedIndex = -1;
-                          }
-                          console.log("5: Pushing " + contractString + " to contractsStack");
-                          contractsStack.push(contractString);
-                      }
                       contractString = ""; // to print out the whole contract when all its parts have been discovered
                   } else {
                       contractString = term + " " + contractString;
@@ -752,6 +705,18 @@ function testReachability() {
     decomposeContract("( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )");
     removeChildren("button_choices_container");
     decomposeContract("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) or give zero )");
+    removeChildren("button_choices_container");
+    decomposeContract("truncate \"24/12/2019-23:33:33\" ( one or give zero )");
+    removeChildren("button_choices_container");
+    decomposeContract("truncate \"24/12/2019-23:33:33\" ( one ) or truncate \"24/12/2019-23:33:33\" ( zero )");
+    removeChildren("button_choices_container");
+    decomposeContract("( scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give one ) ) ) ) or ( ( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give one ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give one ) ) ) ) )");
+    removeChildren("button_choices_container");
+    decomposeContract("( scaleK 100 one and scaleK 101 one ) or ( ( scaleK 102 one and scaleK 103 one ) or ( scaleK 104 one and scaleK 105 one ) )");
+    removeChildren("button_choices_container");
+    decomposeContract("( one and give one ) or ( ( zero and give zero ) or ( give one and give zero ) )");
+    removeChildren("button_choices_container");
+    decomposeContract("( zero or give one ) or ( scaleK 10 ( one ) or zero )");
     removeChildren("button_choices_container");
 }
 
