@@ -6,7 +6,7 @@ var contractsMap = new Map(); // map from contract id to contract object
 
 $(function(){
     var $select = $(".custom_select");
-    for (i = 1; i <= 100; ++i){
+    for (var i = 1; i <= 100; ++i){
         $select.append($('<option></option>').val(i).html(i))
     }
 });
@@ -125,6 +125,34 @@ function addSpacing(string) {
     return string;
 }
 
+function furtherCleanUp(string) {
+    const regex1 = /(.*)(\( one \))(.*)/;
+    var matchObj = regex1.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + "one" + matchObj[3];
+        matchObj = regex1.exec(string)
+    }
+    const regex2 = /(.*)(\( give one \))(.*)/;
+    matchObj = regex2.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + "give one" + matchObj[3];
+        matchObj = regex2.exec(string)
+    }
+    const regex3 = /(.*)(\( zero \))(.*)/;
+    matchObj = regex3.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + "zero" + matchObj[3];
+        matchObj = regex3.exec(string)
+    }
+    const regex4 = /(.*)(\( give zero \))(.*)/;
+    matchObj = regex4.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + "give zero" + matchObj[3];
+        matchObj = regex4.exec(string)
+    }
+    return string;
+}
+
 function decomposeContract(inputString) {
     if (inputString === "") {
         return;
@@ -135,6 +163,7 @@ function decomposeContract(inputString) {
     inputString = inputString.replace(/  +/g, ' ');
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
+    inputString = furtherCleanUp(inputString); // to be able to handle '( scaleK 10 ( one ) or zero )'
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";
     // check if inputstring contains 'or' else execute right away
@@ -154,7 +183,7 @@ function decomposeContract(inputString) {
         var firstPartOfConjunction = "";
         var lastClosingParenPushedIndex = -1;
         var strArr = rTrimWhiteSpace(lTrimWhiteSpace(inputString)).split("");
-        for (i = 0; i < strArr.length; ++i) {
+        for (var i = 0; i < strArr.length; ++i) {
               console.log("ContractString = " + contractString);
               str = strArr[i];
               console.log("iteration through array: " + i + ". Symbol: " + str);
@@ -169,9 +198,11 @@ function decomposeContract(inputString) {
                        && openingParensAmount(inputString.slice(0, i + 1)) === closingParensAmount(inputString.slice(0, i + 1))
                        && lastClosingParenPushedIndex < strArr.length - 2
                        && (strArr[lastClosingParenPushedIndex + 2] === "a" || strArr[lastClosingParenPushedIndex + 2] === "o")) {
-
                       } else {
-                          contractString += " )";
+                          if (contractString !== "( ") {
+                              contractString += " )";
+                              console.log("contractString now: " + contractString);
+                          }
                       }
                       lastClosingParenPushedIndex = i;
                   }
@@ -179,63 +210,109 @@ function decomposeContract(inputString) {
                   // pop while items off stack until discovered |)| == popped |(|
                   console.log("contractString initially: " + contractString);
 
+                  if (contractString === "( ") {
+                      contractString = ")";
+                  }
                   while (stack.length > 0) {
 
                       var term = stack.pop();
                       console.log("Stack popping 1 - term: " + term);
                       if (term === "and" || term === "or") {
+                          console.log("And / Or is being popped");
+                          console.log(firstPartOfConjunction);
                           // if already have first and part then add it to it, else only add this to contractsStack
-                          if (i == strArr.length - 1 && stack.length == 0) {
+                          if (firstPartOfConjunction !== "") { //changed order -- this used to be third if clause
+
                               currentConj = "";
+                              var s = stringToAddToBeginning + firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString;
+                              if (!s.includes("one") && !s.includes("zero")) {
+                                  break;
+                              }
+                              console.log("0.5: Pushing " + s + " to contractsStack");
+                              contractsStack.push(addParens(s)); //
+                              stringToAddToBeginning = "";
+                              firstPartOfConjunction = "";
+                              if (strArr.length > i + 2
+                                && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
+                                && conjunctionStack.length !== 0) {
+                                  var con2 = contractsStack.pop();
+                                  var con1 = contractsStack.pop();
+                                  var s = con1 + " " + conjunctionStack.pop() + " " + con2;
+                                  if (!s.includes("one") && !s.includes("zero")) {
+                                      break;
+                                  }
+                                  contractsStack.push(s);
+                              }
+
+                          } else if (i == strArr.length - 1 && stack.length == 0) {
+                              currentConj = "";
+                              if (!contractString.includes("one") && !contractString.includes("zero")) {
+                                  break;
+                              }
                               console.log("0.125: Pushing " + contractString + " to contractsStack");
                               contractsStack.push(contractString);
-                              contractString = "";
-                          }
-                          else if ((stack.length == 0 || (stack.length == 1 && stack[0] === "(")) && conjunctionStack.length !== 0) { // add contractString to contractsStack.pop()
-                              currentConj = "";
-                              console.log("0.25: Pushing ... to contractsStack");
-                              contractsStack.push(contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString);
-                              contractString = "";
 
-                          } else if (firstPartOfConjunction !== "") {
+                          } else if ((stack.length == 0 || (stack.length == 1 && stack[0] === "(")) && conjunctionStack.length !== 0) { // add contractString to contractsStack.pop()
                               currentConj = "";
-                              console.log("0.5: Pushing " + firstPartOfConjunction + " " + term + " " + contractString + " to contractsStack");
-                              contractsStack.push(firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString);
-                              contractString = "";
-                              firstPartOfConjunction = "";
+                              var s = contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString;
+                              if (!s.includes("one") && !s.includes("zero")) {
+                                  break;
+                              }
+                              console.log("0.25: Pushing " + s + " to contractsStack");
+                              contractsStack.push(s);
 
                           } else {
                               currentConj = term;
-                              console.log(stack.length);
-                              console.log(stack[0]);
-                              console.log(conjunctionStack.length);
+                              if (!contractString.includes("one") && !contractString.includes("zero")) {
+                                  break;
+                              }
                               console.log("1: Pushing " + contractString + " to contractsStack");
                               contractsStack.push(contractString);
-                              contractString = "";
                           }
-                      } else if (term === "(") {
+
+                          contractString = "";
+
+                      } else if (term === "(") { // stop popping
                           contractString = term + " " + contractString;
                           console.log("currentConj: " + currentConj);
 
                           if (stack.length !== 0 && currentConj !== "") { // contracts string should be pushed to contracts stack not the combined string
-                              console.log("1.5: Pushing ... to contractsStack");
-                              console.log(contractString);
-                              console.log(currentConj);
-                              contractsStack.push(contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop());
+                              var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
+                              if (!s.includes("one") && !s.includes("zero")) {
+                                  break;
+                              }
+                              console.log("1.5: Pushing " + s + " to contractsStack");
+                              contractsStack.push(s);
                               currentConj = "";
                               contractString = "";
+
+                              if (strArr.length > (i + 2)
+                                && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
+                                && conjunctionStack.length !== 0) {
+                                  var con2 = contractsStack.pop();
+                                  var con1 = contractsStack.pop();
+                                  var s = "( " + con1 + " " + conjunctionStack.pop() + " " + con2 + " )";
+                                  if (!s.includes("one") && !s.includes("zero")) {
+                                      break;
+                                  }
+                                  console.log("1.65: Pushing " + s + " to contractsStack");
+                                  contractsStack.push(s);
+                              }
                           }
-                          break;
+                          console.log("Current contractString: " + contractString);
+                          break; //stop popping
 
                       } else if (term === "zero" || term === "one") { //then add current contractString to contractsStack and start from empty contractString
                           if (contractString.includes("zero") || contractString.includes("one")) { // for '((give one) or give zero)' case
-                              firstPartOfConjunction = contractString;
-                              contractString = term;
+                              firstPartOfConjunction = rTrimParen(contractString);
+                              contractString = term + " )";
+                              console.log("ContractString already includes zero / one");
+                              console.log(firstPartOfConjunction);
+                              console.log(contractString);
                           } else {
                               contractString = term + " " + contractString;
                           }
                       } else {
-                          console.log("In here baby 2");
                           contractString = term + " " + contractString;
                       }
                   }
@@ -245,12 +322,31 @@ function decomposeContract(inputString) {
                   printStack(contractsStack, "contractsStack");
 
                   if (stack.length == 0 && contractString !== "" && contractString !== "( ") {
-
-                      if (currentConj !== "" && i !== strArr.length - 1) {
-                          console.log("1.75: Pushing ... to contractsStack");
-                          contractsStack.push(contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop());
+                     if (currentConj !== "" && i !== strArr.length - 1) {
+                          var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
+                          if (!s.includes("one") && !s.includes("zero")) {
+                              break;
+                          }
+                          console.log("1.75: Pushing " + s + " to contractsStack");
+                          contractsStack.push(s);
                           currentConj = "";
+
+                          if (strArr.length > i + 2
+                            && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
+                            && conjunctionStack.length !== 0) {
+                              var con2 = contractsStack.pop();
+                              var con1 = contractsStack.pop();
+                              var s = "( " + con1 + " " + conjunctionStack.pop() + " " + con2 + " )";
+                              if (!s.includes("one") && !s.includes("zero")) {
+                                  break;
+                              }
+                              console.log("1.85: Pushing " + s + " to contractsStack");
+                              contractsStack.push(s);
+                          }
                       } else { // if there is no currConj then we can just add this one
+                          if (!contractString.includes("one") && !contractString.includes("zero")) {
+                              break;
+                          }
                           console.log("2: Pushing " + contractString + " to contractsStack");
                           contractsStack.push(contractString);
                       }
@@ -260,11 +356,17 @@ function decomposeContract(inputString) {
               } else if (str === " ") {
                   // push term
                   if (currentTerm !== "") { // not needed
-                      console.log("Pushing last term - " + currentTerm + " - on stack.");
-                      stack.push(currentTerm);
                       if (currentTerm === "and" || currentTerm === "or") {
                           conjunctionStack.push(currentTerm);
+                          if (parseInt(stack[stack.length - 1])) {
+                              contractString = stack.pop() + " " + contractString;
+                              contractString = stack.pop() + " " + contractString;
+                          } else if (stack[stack.length - 1] === "get") {
+                              contractString = stack.pop() + contractString;
+                          }
                       }
+                      console.log("Pushing last term - " + currentTerm + " - on stack.");
+                      stack.push(currentTerm);
                       currentTerm = "";
                   }
               } else if (str === "(") {
@@ -275,8 +377,8 @@ function decomposeContract(inputString) {
               }
               console.log("contractString now 2 = " + contractString);
           }
-          // while stack.length > 0 repeat
-          if (stack.length > 0) {
+
+          if (stack.length > 0 && (stack.includes("one") || stack.includes("zero"))) {
               while (stack.length > 0) {
                   var term = stack.pop();
                   console.log("Stack popping 2 - term: " + term);
@@ -305,28 +407,36 @@ function decomposeContract(inputString) {
         printStack(conjunctionStack, "conjunctionStack");
         printStack(contractsStack, "contractsStack");
         var res = contractsStack.length / conjunctionStack.length;
-
-        while (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
-            var contract1 = contractsStack.pop();
-            var contract2 = contractsStack.pop();
-            var conj = conjunctionStack.pop();
-            console.log("Combining leftover contracts...");
-            console.log(contract1 + " " + conj + " " + contract2);
-            if (conj === "or") {
-                createSection();
-                createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 1);
-                createOrLabel();
-                createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), 2);
-            }
-            res = contractsStack.length / conjunctionStack.length;
+        if (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
+            combineContracts(contractsStack, conjunctionStack);
         }
     }
     else {
         // String does not include "or" -> execute right away
         var outputStrings = inputString.split("and");
-        for (i = 0; i < outputStrings.length; ++i) {
+        for (var i = 0; i < outputStrings.length; ++i) {
             parse(outputStrings[i]);
         }
+    }
+    // TODO: get rid of this
+    if (conjunctionStack.length == 0 && contractsStack.length === 1 && (!stack.includes("zero") || !stack.includes("one"))) {
+        newContractsStack = contractsStack[0].split("or");
+        combineContracts(newContractsStack, ["or"]);
+    }
+
+}
+
+function combineContracts(contractsStack, conjunctionStack) {
+    var contract1 = contractsStack.pop();
+    var contract2 = contractsStack.pop();
+    var conj = conjunctionStack.pop();
+    console.log("Combining leftover contracts...");
+    console.log(contract1 + " " + conj + " " + contract2);
+    if (conj === "or") {
+        createSection();
+        createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 1);
+        createOrLabel();
+        createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), 2);
     }
 }
 
@@ -337,7 +447,7 @@ function parse(inputString) {
     var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
-    for (i = 0; i < strArr.length; ++i) {
+    for (var i = 0; i < strArr.length; ++i) {
         str = strArr[i];
         if (str === "give") {
             recipient = 1;
@@ -346,7 +456,7 @@ function parse(inputString) {
         } else if (str === "zero") {
             amount *= 0;
         } else if (str === "scaleK") {
-            if (strArr.length > i + 1 && Number.isInteger(parseInt(strArr[i + 1]))) {
+            if (strArr.length > i + 1 && (parseInt(strArr[i + 1]))) {
                 amount = amount * parseInt(strArr[i + 1]);
                 ++i;
             } else {
@@ -367,7 +477,7 @@ function parse(inputString) {
     }
     console.log("amount: " + amount);
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
-    const contract = new Contract(numberOfContracts, amount, recipient, inputString,
+    const contract = new Contract(numberOfContracts, amount, recipient, newStr,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon);
 
@@ -381,6 +491,8 @@ function parse(inputString) {
 }
 
 function createTableRow(contract) {
+    console.log("Creating row:");
+    console.log(contract.contractString);
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
     tr.appendChild(td = document.createElement("td"));
@@ -528,8 +640,8 @@ function retrieveBalances() {
 function printStack(stack, name) {
     console.log(name + ": " + stack.length);
     var x;
-    for (x = 0; x < stack.length; ++x) {
-        console.log(stack[x]);
+    for (var x = 0; x < stack.length; ++x) {
+        console.log(name + " - " + x + ": " + stack[x]);
     }
 }
 
@@ -537,12 +649,13 @@ function createButton(contractString, buttonId) {
   var button = document.createElement("button");
   button.id = "choices_button_" + buttonId;
   button.className = "choices_button";
-  button.innerHTML = cleanContractParens(contractString);
+  button.innerHTML = cleanContractParens(contractString); // cleanContractParens(cleanDoubleLeadingOrEndingParens(contractString));
   // 2. Append somewhere
   var bottomContainer = document.getElementById("button_choices_container");
   bottomContainer.appendChild(button);
   // 3. Add event handler
   button.addEventListener ("click", function() {
+      console.log("Pressed button");
       console.log(stringToAddToBeginning + button.innerHTML);
       // disable buttons
       var allButtons = bottomContainer.getElementsByTagName('button');
@@ -550,7 +663,7 @@ function createButton(contractString, buttonId) {
       while(inp = allButtons[++i]) {
           inp.disabled = true;
       }
-      decomposeContract(button.innerHTML);
+      decomposeContract(stringToAddToBeginning + button.innerHTML);
   });
 }
 
@@ -566,6 +679,19 @@ function cleanContractParens(contractString) {
     } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
         contractString = rTrimParen(contractString);
     }
+    return contractString;
+}
+
+function addParens(contractString) {
+    console.log("ADDING PARENS");
+    if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+        console.log("more opening");
+        contractString = contractString + " )";
+    } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+        console.log("more closing");
+        contractString = "( " + contractString;
+    }
+    console.log("After: " + contractString);
     return contractString;
 }
 
