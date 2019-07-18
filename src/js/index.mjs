@@ -4,12 +4,22 @@
 
 /* jshint esversion: 6 */
 
-import { hello } from "./stringManipulation.mjs"; // or './module'
+import {
+  cleanParens, furtherCleanUp, addSpacing, addParens, openingParensAmount,
+  closingParensAmount, lTrimWhiteSpace, rTrimWhiteSpace, rTrimParen,
+  lTrimDoubleQuotes, rTrimDoubleQuotes
+} from "./stringmanipulation.mjs";
+
+import {Contract, translateContract} from "./contract.mjs";
+
+import {createContract, deposit, getSelectedMetaMaskAccount, holderBalance,
+  counterPartyBalance, holderAddress, counterPartyAddress, balanceOfAddress,
+  transfer, waitForReceipt
+} from "./deploy/deploy.mjs"
 
 // TODO: add status of transactions ie executed, or failed
 // TODO: change contract string to be displayed with parenthesis in list
 
-var selectedDeposit = 0;
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
 var contractsMap = new Map(); // map from contract id to contract object
@@ -17,7 +27,7 @@ var contractsMap = new Map(); // map from contract id to contract object
 $(function(){
     var $select = $(".custom_select");
     for (var i = 1; i <= 100; ++i){
-        $select.append($('<option></option>').val(i).html(i))
+        $select.append($('<option></option>').val(i).html(i));
     }
 });
 
@@ -28,14 +38,11 @@ window.addEventListener('load', function() { /* // commented for testing purpose
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input").disabled = true; */
     // start timer
-    console.log("hi");
-    console.log(hello());
-    console.log("hi");
     update();
     runClock();
 });
 
-global.update = function() {
+function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
@@ -61,7 +68,7 @@ global.update = function() {
     }
 }
 
-global.runClock = function() {
+function runClock() {
     var now = new Date();
     var timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
     setTimeout(function() {
@@ -102,68 +109,12 @@ global.callCreateContractFunction = function() {
     }
 }
 
-global.getSelectedDeposit = function() {
+function getSelectedDeposit() {
     return document.getElementById("select_deposit").value;
 }
 
 global.getInputString = function() {
     return document.getElementById("transaction_input").value;
-}
-
-global.addSpacing = function(string) {
-    const regex1 = /(.*\S)(\()(.*)/;
-    var matchObj = regex1.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
-        matchObj = regex1.exec(string)
-    }
-    const regex2 = /(.*\S)(\))(.*)/;
-    matchObj = regex2.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
-        matchObj = regex2.exec(string)
-    }
-    const regex3 = /(.*)(\()(\S.*)/;
-    matchObj = regex3.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
-        matchObj = regex3.exec(string)
-    }
-    const regex4 = /(.*)(\))(\S.*)/;
-    matchObj = regex4.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
-        matchObj = regex4.exec(string)
-    }
-    return string;
-}
-
-global.furtherCleanUp = function(string) {
-    const regex1 = /(.*)(\( one \))(.*)/;
-    var matchObj = regex1.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "one" + matchObj[3];
-        matchObj = regex1.exec(string)
-    }
-    const regex2 = /(.*)(\( give one \))(.*)/;
-    matchObj = regex2.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "give one" + matchObj[3];
-        matchObj = regex2.exec(string)
-    }
-    const regex3 = /(.*)(\( zero \))(.*)/;
-    matchObj = regex3.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "zero" + matchObj[3];
-        matchObj = regex3.exec(string)
-    }
-    const regex4 = /(.*)(\( give zero \))(.*)/;
-    matchObj = regex4.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "give zero" + matchObj[3];
-        matchObj = regex4.exec(string)
-    }
-    return string;
 }
 
 global.decomposeContract = function(inputString) {
@@ -194,40 +145,28 @@ global.decomposeContract = function(inputString) {
         var contractString = ""; // used to accumulate the complete contract from its parts one by one when popping off the stack
         var contractsStack = [];
         var firstPartOfConjunction = "";
-        var lastClosingParenPushedIndex = -1;
         var strArr = rTrimWhiteSpace(lTrimWhiteSpace(inputString)).split("");
         for (var i = 0; i < strArr.length; ++i) {
               console.log("ContractString = " + contractString);
               var str = strArr[i];
               console.log("iteration through array: " + i + ". Symbol: " + str);
               if (str === ")" || i === strArr.length - 1) { // i === strArr.length - 1 so that it also handles case where input does not end with ')'
-                  if (i === strArr.length - 1 && str !== ")" && currentTerm !== " ") { // for 'give one or zero' case, ie when input does not end with closing paren
+                  if (str !== ")" && currentTerm !== " ") { // for 'give one or zero' case, ie when input does not end with closing paren
                       currentTerm += str;
                       console.log("Pushing last term - " + currentTerm + " - on stack.");
                       stack.push(currentTerm);
-                  } else if (str === ")") {
-                      // storing parenthesis and only appending at the end to avoid adding creating too many parenthesis in middle and leaving end one out
-                      if (lastClosingParenPushedIndex !== -1
-                       && openingParensAmount(inputString.slice(0, i + 1)) === closingParensAmount(inputString.slice(0, i + 1))
-                       && lastClosingParenPushedIndex < strArr.length - 2
-                       && (strArr[lastClosingParenPushedIndex + 2] === "a" || strArr[lastClosingParenPushedIndex + 2] === "o")) {
-                      } else {
-                          if (contractString !== "( ") {
-                              contractString += " )";
-                              console.log("contractString now: " + contractString);
-                          }
-                      }
-                      lastClosingParenPushedIndex = i;
+                  } else if (str === ")" && contractString !== "( ") {
+                      contractString += " )";
+                      console.log("contractString now: " + contractString);
                   }
                   currentTerm = "";
-                  // pop while items off stack until discovered |)| == popped |(|
                   console.log("contractString initially: " + contractString);
 
                   if (contractString === "( ") {
                       contractString = ")";
                   }
+                  // pop while items off stack until discovered |)| == popped |(|
                   while (stack.length > 0) {
-
                       var term = stack.pop();
                       console.log("Stack popping 1 - term: " + term);
                       if (term === "and" || term === "or") {
@@ -335,7 +274,6 @@ global.decomposeContract = function(inputString) {
                           if (parseInt(stack[stack.length - 1])) {
                               contractString = stack.pop() + " " + contractString;
                               contractString = stack.pop() + " " + contractString;
-                              console.log("z32");
                           }
                       }
                       console.log("Pushing last term - " + currentTerm + " - on stack.");
@@ -389,9 +327,9 @@ global.decomposeContract = function(inputString) {
             parse(outputStrings[i]);
         }
     }
-}
+};
 
-global.combineContracts = function(contractsStack, conjunctionStack) {
+function combineContracts(contractsStack, conjunctionStack) {
     var contract1 = contractsStack.pop();
     var contract2 = contractsStack.pop();
     var conj = conjunctionStack.pop();
@@ -405,7 +343,7 @@ global.combineContracts = function(contractsStack, conjunctionStack) {
     }
 }
 
-global.parse = function(inputString) {
+function parse(inputString) {
     var recipient = 0; // by default the contract holder is the recipient
     var amount = 1;
     var horizonDate = "instantaneous";
@@ -429,7 +367,7 @@ global.parse = function(inputString) {
                 break;
             }
         } else if (str === "truncate") {
-            if (strArr.length > i + 1 && date(lTrimDoubleQuotes(rTrimDoubleQuotes(strArr[i + 1])))) {
+            if (strArr.length > i + 1 && isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(strArr[i + 1])))) {
                 horizonDate = strArr[i + 1];
                 ++i;
             } else {
@@ -447,6 +385,10 @@ global.parse = function(inputString) {
        horizonDate, acquireAtHorizon);
 
     createTableRow(contract);
+
+    // TODO: check if horizonDate is smaller then currentDate -- most exernal if clause\
+    // if so then add 'expired' label & disable acquire button
+    // if not then go inside next if checks
     if (horizonDate !== "instantaneous") {
         contractsMap.set(numberOfContracts, contract);
     } else if (horizonDate === "instantaneous" && amount !== 0) {
@@ -455,36 +397,7 @@ global.parse = function(inputString) {
     ++numberOfContracts;
 }
 
-global.createTableRow = function(contract) {
-    console.log("Creating row:");
-    console.log(contract.contractString);
-    var table = document.getElementById("my_table");
-    let tr = table.insertRow(1);
-    var td;
-    tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.id;
-    tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.contractString;
-    tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.meaningOfContractString;
-    tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.horizonDate;
-    tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.toBeExecutedAtHorizon;
-    tr.appendChild(td = document.createElement("td"));
-    var btn = document.createElement('input');
-    btn.type = "button";
-    btn.className = "acquire_button";
-    btn.id = "acquire_button_" + contract.id;
-    btn.value = "acquire";
-    btn.onclick = function() { executeContract(contract) }; // try _ =>
-    td.appendChild(btn);
-    if (contract.toBeExecutedAtHorizon === "yes" || contract.amount === 0) {
-        btn.disabled = true;
-    }
-}
-
-global.executeContract = function(contract) {
+function executeContract(contract) {
     if (contract.horizonDate !== "instantaneous") {
         var horizonArr = contract.horizonDate.split("-");
         var dateArr = horizonArr[0].split("/");
@@ -507,42 +420,23 @@ global.executeContract = function(contract) {
             if (contract.amount != 0) {
                 if (contract.recipient == 0) { // owner receives
                     createMoveFile(counterPartyAddress, holderAddress, contract.amount);
-                    callTransferFunction(counterPartyAddress, holderAddress, contract.amount);
+                    callTransferFunction(contract, counterPartyAddress, holderAddress);
                 } else { // counter party receives
                     createMoveFile(holderAddress, counterPartyAddress, contract.amount);
-                    callTransferFunction(holderAddress, counterPartyAddress, contract.amount);
+                    callTransferFunction(contract, holderAddress, counterPartyAddress);
                 }
-                document.getElementById("acquire_button_" + contract.id).disabled = true;
                 contractsMap.delete(contract.id);
             }
         });
     });
 }
 
-global.translateContract = function(recipient, amount, horizonDate, acquireAtHorizon) {
-    var to = " owner ";
-    var from = " counter-party ";
-    var hDate = " instantaneously ";
-    if (recipient === 1) {
-        to = " counter-party ";
-        from = " owner ";
-    }
-    if (horizonDate !== "instantaneous") {
-        if (acquireAtHorizon === "yes") {
-            hDate = " at " + horizonDate;
-        } else {
-            hDate = " before " + horizonDate;
-        }
-    }
-    return amount + " Ether are transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
-}
-
-global.callTransferFunction = function(fromAddress, toAddress, amount) {
+function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
-        if (balance >= amount) {
-            transfer(fromAddress, toAddress, amount).then(transferTxHash => {
+        if (balance >= contract.amount) {
+            transfer(fromAddress, toAddress, contract.amount).then(transferTxHash => {
                 waitForReceipt(transferTxHash).then(_ => {
-                    console.log(fromAddress + " has transferred " + amount + " Ether to " + toAddress);
+                    console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
                     retrieveBalances();
                 });
             });
@@ -553,7 +447,7 @@ global.callTransferFunction = function(fromAddress, toAddress, amount) {
     });
 }
 
-global.createMoveFile = function(sender_address, recipient_address, amount) {
+function createMoveFile(sender_address, recipient_address, amount) {
     var textToWrite = "//! no-execute\n" +
     "import 0x0.LibraAccount;\n" +
     "import 0x0.LibraCoin;\n \n" +
@@ -590,11 +484,11 @@ global.createMoveFile = function(sender_address, recipient_address, amount) {
         downloadLink.style.display = "none";
         document.body.appendChild(downloadLink);
     }
-    downloadLink.click();
+    // downloadLink.click(); // commented for testing purposes
     console.log("Created and downloaded .mvir file.");
 }
 
-global.retrieveBalances = function() {
+function retrieveBalances() {
     holderBalance().then(function(hBalance) {
         console.log("Holder Balance: " + hBalance);
         counterPartyBalance().then(function(cBalance) {
@@ -603,7 +497,7 @@ global.retrieveBalances = function() {
     });
 }
 
-global.printStack = function(stack, name) {
+function printStack(stack, name) {
     console.log(name + ": " + stack.length);
     var x;
     for (var x = 0; x < stack.length; ++x) {
@@ -611,11 +505,39 @@ global.printStack = function(stack, name) {
     }
 }
 
-global.createButton = function(contractString, buttonId) {
+function createTableRow(contract) {
+
+    var table = document.getElementById("my_table");
+    let tr = table.insertRow(1);
+    var td;
+    tr.appendChild(td = document.createElement("td"));
+    td.innerHTML = contract.id;
+    tr.appendChild(td = document.createElement("td"));
+    td.innerHTML = contract.contractString;
+    tr.appendChild(td = document.createElement("td"));
+    td.innerHTML = contract.meaningOfContractString;
+    tr.appendChild(td = document.createElement("td"));
+    td.innerHTML = contract.horizonDate;
+    tr.appendChild(td = document.createElement("td"));
+    td.innerHTML = contract.toBeExecutedAtHorizon;
+    tr.appendChild(td = document.createElement("td"));
+    var btn = document.createElement('input');
+    btn.type = "button";
+    btn.className = "acquire_button";
+    btn.id = "acquire_button_" + contract.id;
+    btn.value = "acquire";
+    btn.onclick = _ => { executeContract(contract); };
+    td.appendChild(btn);
+    if (contract.toBeExecutedAtHorizon === "yes" || contract.amount === 0 || contract.horizonDate === "instantaneous") {
+        btn.disabled = true;
+    }
+}
+
+function createButton (contractString, buttonId) {
   var button = document.createElement("button");
   button.id = "choices_button_" + buttonId;
   button.className = "choices_button";
-  button.innerHTML = cleanContractParens(contractString); // cleanContractParens(cleanDoubleLeadingOrEndingParens(contractString));
+  button.innerHTML = cleanParens(contractString);
   // 2. Append somewhere
   var bottomContainer = document.getElementById("button_choices_container");
   bottomContainer.appendChild(button);
@@ -623,53 +545,11 @@ global.createButton = function(contractString, buttonId) {
   button.addEventListener ("click", function() {
       console.log("Pressed button");
       console.log(stringToAddToBeginning + button.innerHTML);
-      // disable buttons
-      var allButtons = bottomContainer.getElementsByTagName('button');
-      var inp, i = 0;
-      while(inp = allButtons[++i]) {
-          inp.disabled = true;
-      }
       decomposeContract(stringToAddToBeginning + button.innerHTML);
   });
 }
 
-global.cleanContractParens = function(contractString) {
-    if (contractString[contractString.length - 1] === "(") {
-        contractString = contractString.slice(0, -1);
-    }
-    if (contractString[0] === ")") {
-        contractString = contractString.substring(1);
-    }
-    if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
-        contractString = lTrimParen(contractString);
-    } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
-        contractString = rTrimParen(contractString);
-    }
-    return contractString;
-}
-
-global.addParens = function(contractString) {
-    console.log("ADDING PARENS");
-    if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
-        console.log("more opening");
-        contractString = contractString + " )";
-    } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
-        console.log("more closing");
-        contractString = "( " + contractString;
-    }
-    console.log("After: " + contractString);
-    return contractString;
-}
-
-global.openingParensAmount = function(string) {
-    return string.split("(").length - 1;
-}
-
-global.closingParensAmount = function(string) {
-    return string.split(")").length - 1;
-}
-
-global.createSection = function() {
+function createSection() {
     var para = document.createElement("p");
     var node = document.createTextNode("Contract choice:");
     para.appendChild(node);
@@ -677,22 +557,32 @@ global.createSection = function() {
     bottomContainer.appendChild(para);
 }
 
-global.createOrLabel = function() {
+function createOrLabel() {
     var para = document.createElement("p");
     para.className = "p_small";
     var node = document.createTextNode("OR");
     para.appendChild(node);
-
     var bottomContainer = document.getElementById("button_choices_container");
     bottomContainer.appendChild(para);
 }
 
-global.removeChildren = function(containerString) {
+function removeChildren(containerString) {
     var e = document.getElementById(containerString);
     var child = e.lastElementChild;
     while (child) {
         e.removeChild(child);
         child = e.lastElementChild;
+    }
+}
+
+function isDate(stringInput) {
+    var matches = stringInput.match(/^((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$/);
+    if (matches === null) {
+        return false;
+    } else if (matches[0] === stringInput) {
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -731,57 +621,4 @@ global.testReachability = function() {
     removeChildren("button_choices_container");
     decomposeContract("( zero or give one ) or ( scaleK 10 ( one ) or zero )");
     removeChildren("button_choices_container");
-}
-
-class Contract {
-    constructor(id, amount, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon) {
-        this.id = id;
-        this.amount = amount;
-        this.recipient = recipient;
-        this.contractString = contractString;
-        this.meaningOfContractString = meaningOfContractString;
-        this.horizonDate = horizonDate;
-        this.toBeExecutedAtHorizon = toBeExecutedAtHorizon;
-    }
-}
-
-global.date = function(stringInput) {
-    var matches = stringInput.match(/^((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$/);
-    if (matches === null) {
-        return false;
-    } else if (matches[0] === stringInput) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-global.lTrimWhiteSpace = function(str) {
-  if (str == null) return str;
-  return str.replace(/^\s+/g, '');
-}
-
-global.rTrimWhiteSpace = function(str) {
-  if (str == null) return str;
-  return str.replace(/\s$/g, '');
-}
-
-global.lTrimParen = function(str) {
-  if (str == null) return str;
-  return str.replace(/^\(+/g, '');
-}
-
-global.rTrimParen = function(str) {
-  if (str == null) return str;
-  return str.replace(/\)$/g, '');
-}
-
-global.lTrimDoubleQuotes = function(str) {
-  if (str == null) return str;
-  return str.replace(/^\"+/g, '');
-}
-
-global.rTrimDoubleQuotes = function(str) {
-  if (str == null) return str;
-  return str.replace(/\"$/g, '');
-}
+};

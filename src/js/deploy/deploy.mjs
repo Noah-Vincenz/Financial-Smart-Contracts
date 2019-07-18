@@ -4,18 +4,33 @@
 
 /* jshint esversion: 6 */
 
-import { CODE_HEX , ABI} from "./resources.mjs";
+import {CODE_HEX, ABI} from "./resources.mjs";
 
 var abi;
 var codeHex;
 var smartContract;
 var smartContractInstance;
 
-global.getSelectedMetaMaskAccount = function() {
+window.addEventListener('load', function () {
+    if (typeof web3 !== 'undefined') {
+
+        console.log('Web3 Detected! ' + web3.currentProvider.constructor.name);
+        console.log("Web3 Version: " + web3.version.api);
+        abi = ABI;
+        codeHex = web3.toHex(CODE_HEX);
+        smartContract = web3.eth.contract(abi);
+
+    } else {
+        console.log('No Web3 Detected... using HTTP Provider')
+        window.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+    }
+});
+
+export function getSelectedMetaMaskAccount() {
     return web3.eth.accounts[0];
 }
 
-global.createContract = function(holderAddress, counterPartyAddress) {
+export function createContract(holderAddress, counterPartyAddress) {
   web3.eth.defaultAccount = holderAddress;
   instantiateNew(holderAddress, counterPartyAddress, codeHex).then(instantiationTxHash => {
       waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
@@ -24,7 +39,7 @@ global.createContract = function(holderAddress, counterPartyAddress) {
   });
 }
 
-global.deposit = function(party, depositAmount) {
+export function deposit(party, depositAmount) {
   var partyString = "";
   if (party === 1) {
     partyString = "holder";
@@ -50,7 +65,7 @@ global.deposit = function(party, depositAmount) {
 }
 
 // this does not exist for Kovan chain
-global.unlockAccount = function(address) {
+function unlockAccount(address) {
     return new Promise (function (resolve, reject) {
         web3.personal.unlockAccount(address, "user", web3.toHex(0), function(err, result) {
             if (err) {
@@ -63,7 +78,7 @@ global.unlockAccount = function(address) {
     });
 }
 
-global.estimateGas = function(dataIn) {
+function estimateGas(dataIn) {
     return new Promise (function (resolve, reject) {
         web3.eth.estimateGas({to: web3.eth.defaultAccount, data: dataIn}, function(err, result) {
             if (err) {
@@ -75,7 +90,7 @@ global.estimateGas = function(dataIn) {
     });
 }
 
-global.getGasLimit = function() {
+function getGasLimit() {
     return new Promise (function (resolve, reject) {
         web3.eth.getBlock("latest", function(err, block) {
             if (err) {
@@ -87,7 +102,7 @@ global.getGasLimit = function() {
     });
 }
 
-global.instantiateNew = function(holderAddress, counterPartyAddress, dataIn) {
+function instantiateNew (holderAddress, counterPartyAddress, dataIn) {
     return new Promise (function (resolve, reject) {
         smartContract.new(holderAddress, counterPartyAddress, {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
         //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
@@ -102,7 +117,7 @@ global.instantiateNew = function(holderAddress, counterPartyAddress, dataIn) {
     });
 }
 
-global.stringToBin = function(str) {
+function stringToBin(str) {
     var result = [];
     for (var i = 0; i < str.length; i++) {
         result.push(str.charCodeAt(i));
@@ -110,7 +125,7 @@ global.stringToBin = function(str) {
     return result;
 }
 
-global.depositCollateral = function(senderAddress, amount) {
+function depositCollateral(senderAddress, amount) {
     return new Promise (function (resolve, reject) {
         console.log(senderAddress);
         console.log(web3.toChecksumAddress(senderAddress));
@@ -125,7 +140,7 @@ global.depositCollateral = function(senderAddress, amount) {
     });
 }
 
-global.holderBalance = function() {
+export function holderBalance() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderBalance(function (err, result) {
             if(err) {
@@ -137,7 +152,7 @@ global.holderBalance = function() {
     });
 }
 
-global.counterPartyBalance = function() {
+export function counterPartyBalance() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.counterPartyBalance(function (err, result) {
             if(err) {
@@ -149,7 +164,7 @@ global.counterPartyBalance = function() {
     });
 }
 
-global.holderAddress = function() {
+export function holderAddress() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderAddress(function (err, result) {
             if(err) {
@@ -164,7 +179,7 @@ global.holderAddress = function() {
     });
 }
 
-global.counterPartyAddress = function() {
+export function counterPartyAddress() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.counterPartyAddress(function (err, result) {
             if(err) {
@@ -179,7 +194,7 @@ global.counterPartyAddress = function() {
     });
 }
 
-global.balanceOfAddress = function(address) {
+export function balanceOfAddress(address) {
     return new Promise (function (resolve, reject) {
         smartContractInstance.balanceOfAddress(web3.toChecksumAddress(address), function (err, result) {
             if(err) {
@@ -192,21 +207,7 @@ global.balanceOfAddress = function(address) {
 }
 
 
-global.setUpFilter = function(contractInstance, transactionHash) {
-  return new Promise (function (resolve, reject) {
-      var filter = web3.eth.filter('latest');
-      filter.watch(function(err, blockHash) {
-          if (err) {
-              reject(err);
-          } else {
-              filter.stopWatching();
-              resolve();
-          }
-      });
-  });
-}
-
-global.transfer = function(fromAddress, toAddress, amount) {
+export function transfer(fromAddress, toAddress, amount) {
   return new Promise (function (resolve, reject) {
       smartContractInstance.transfer(fromAddress, toAddress, amount, function(err, result) {
           if (err) {
@@ -218,7 +219,7 @@ global.transfer = function(fromAddress, toAddress, amount) {
   });
 }
 
-global.waitForReceipt = function(transactionHash) {
+export function waitForReceipt(transactionHash) {
   return new Promise (function (resolve, reject) {
       web3.eth.getTransactionReceipt(transactionHash, function (err, receipt) {
 
@@ -239,28 +240,7 @@ global.waitForReceipt = function(transactionHash) {
   });
 }
 
-window.addEventListener('load', function () {
-    if (typeof web3 !== 'undefined') {
-
-        console.log('Web3 Detected! ' + web3.currentProvider.constructor.name);
-
-        console.log("Web3 Version: " + web3.version.api);
-        abi = ABI; // abi needs to be JS array instead of string
-        codeHex = web3.toHex(CODE_HEX); // or from Ascii if I am certain it is Ascii.. toHex uses String or Number as param
-        smartContract = web3.eth.contract(abi);
-        //web3.eth.defaultAccount = '0x7f023262356b002a4b7deb7ce057eb8b1aabb427'; // dev net account
-        //web3.eth.defaultAccount = '0x004ec07d2329997267Ec62b4166639513386F32E'; // dev net account with large funds
-        //web3.eth.defaultAccount = '0x8ce40D9956E7B8A89A1D73f4D4850c760EA20A56'; // Kovan account
-
-        //deployContract(smartContract);
-
-    } else {
-        console.log('No Web3 Detected... using HTTP Provider')
-        window.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-    }
-});
-
-global.transferEther = function(fromAddress, toAddress, amount) {
+function transferEther(fromAddress, toAddress, amount) {
     web3.eth.sendTransaction({
       to: toAddress,
       from: fromAddress,
@@ -272,5 +252,4 @@ global.transferEther = function(fromAddress, toAddress, amount) {
           console.log("TransactionHash: " + transactionHash);
         }
     });
-
 }

@@ -20,7 +20,7 @@ function copyHTMLFiles() {
 function build() {
   // body omitted
   return browserify({
-      entries: ["./src/js/deploy/deploy.mjs", "./src/js/index.mjs"]
+      entries: ["./src/js/index.mjs"]
   })
   .transform(babelify.configure({
       presets: ["@babel/env"]
