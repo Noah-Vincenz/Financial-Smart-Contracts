@@ -5,7 +5,7 @@
 /* jshint esversion: 6 */
 
 export class Contract {
-    constructor(id, amount, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon) {
+    constructor(id, amount, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, status) {
         this.id = id;
         this.amount = amount;
         this.recipient = recipient;
@@ -13,6 +13,7 @@ export class Contract {
         this.meaningOfContractString = meaningOfContractString;
         this.horizonDate = horizonDate;
         this.toBeExecutedAtHorizon = toBeExecutedAtHorizon;
+        this.status = status;
     }
 }
 

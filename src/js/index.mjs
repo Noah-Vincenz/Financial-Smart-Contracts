@@ -56,12 +56,13 @@ function update() {
             var contractDate = new Date(dateString);
             var todayDate = new Date();
             if (contractDate.getTime() <= todayDate.getTime()) {
-                console.log("Contract " + key + " has expired.");
                 if (value.toBeExecutedAtHorizon === "yes") { // contract contains 'get'
                     executeContract(value);
                 } else { // contract just contains 'truncate' and not 'get'
                     document.getElementById("acquire_button_" + key.toString()).disabled = true;
-                    contractsMap.delete(key.toString());
+                    document.getElementById("td_status_" + key.toString()).innerHTML = "expired";
+                    contractsMap.delete(key);
+                    console.log("Contract " + key + " has expired.");
                 }
             }
         }
@@ -378,54 +379,74 @@ function parse(inputString) {
             acquireAtHorizon = "yes";
         }
     }
+    if (horizonDate === "instantaneous") {
+        acquireAtHorizon = "yes";
+    }
     console.log("amount: " + amount);
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
-    const contract = new Contract(numberOfContracts, amount, recipient, newStr,
+    const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
-       horizonDate, acquireAtHorizon);
+       horizonDate, acquireAtHorizon, "waiting to be executed");
 
     createTableRow(contract);
 
-    // TODO: check if horizonDate is smaller then currentDate -- most exernal if clause\
+    // TODO: check if horizonDate is smaller then currentDate -- most exernal if clause
     // if so then add 'expired' label & disable acquire button
     // if not then go inside next if checks
-    if (horizonDate !== "instantaneous") {
-        contractsMap.set(numberOfContracts, contract);
-    } else if (horizonDate === "instantaneous" && amount !== 0) {
+    if (horizonDate === "instantaneous") {
         executeContract(contract);
+    } else {
+        if (beforeCurrentDate(contract)) {
+            // add expired label
+            console.log("It is before current date!");
+            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
+            document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
+        } else {
+            console.log("It is not before current date!");
+            contractsMap.set(numberOfContracts, contract);
+            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
+        }
     }
     ++numberOfContracts;
 }
 
+function beforeCurrentDate(contract) {
+    var horizonArr = contract.horizonDate.split("-");
+    var dateArr = horizonArr[0].split("/");
+    var timeArr = horizonArr[1].split(":");
+    // +01:00 to get BST from UTC
+    var dateString = dateArr[2] + "-" + dateArr[1] + "-"
+    + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
+    + (parseInt(timeArr[2]) + 15).toString() + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
+    var contractDate = new Date(dateString);
+    var todayDate = new Date();
+    if (contractDate.getTime() <= todayDate.getTime()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 function executeContract(contract) {
     if (contract.horizonDate !== "instantaneous") {
-        var horizonArr = contract.horizonDate.split("-");
-        var dateArr = horizonArr[0].split("/");
-        var timeArr = horizonArr[1].split(":");
-        // +01:00 to get BST from UTC
-        var dateString = dateArr[2] + "-" + dateArr[1] + "-"
-        + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
-        + (parseInt(timeArr[2]) + 45).toString() + "+01:00"; // adding 45 seconds to the contract's expiry date to allow it to execute
-        var contractDate = new Date(dateString);
-        var todayDate = new Date();
-        if (todayDate.getTime() >= contractDate.getTime()) {
+        if (beforeCurrentDate(contract)) {
             window.alert("The contract " + contract.id + " has expired.");
-            document.getElementById("acquire_button_" + contract.id).disabled = true;
+            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
             contractsMap.delete(contract.id);
             return;
         }
     }
     holderAddress().then(holderAddress => {
         counterPartyAddress().then(counterPartyAddress => {
-            if (contract.amount != 0) {
-                if (contract.recipient == 0) { // owner receives
-                    createMoveFile(counterPartyAddress, holderAddress, contract.amount);
-                    callTransferFunction(contract, counterPartyAddress, holderAddress);
-                } else { // counter party receives
-                    createMoveFile(holderAddress, counterPartyAddress, contract.amount);
-                    callTransferFunction(contract, holderAddress, counterPartyAddress);
-                }
-                contractsMap.delete(contract.id);
+            if (contract.recipient == 0) { // owner receives
+                createMoveFile(counterPartyAddress, holderAddress, contract.amount);
+                callTransferFunction(contract, counterPartyAddress, holderAddress);
+            } else { // counter party receives
+                createMoveFile(holderAddress, counterPartyAddress, contract.amount);
+                callTransferFunction(contract, holderAddress, counterPartyAddress);
+            }
+            if (document.getElementById("td_status_" + contract.id.toString()).innerHTML !== "successful") {
+                document.getElementById("td_status_" + contract.id.toString()).innerHTML = "not accepted by user";
             }
         });
     });
@@ -435,14 +456,17 @@ function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
         if (balance >= contract.amount) {
             transfer(fromAddress, toAddress, contract.amount).then(transferTxHash => {
-                waitForReceipt(transferTxHash).then(_ => {
+                waitForReceipt(transferTxHash).then( _ => {
                     console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
+                    document.getElementById("td_status_" + contract.id.toString()).innerHTML = "successful";
+                    document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
+                    contractsMap.delete(contract.id);
                     retrieveBalances();
                 });
             });
         } else {
-            // TODO: add status 'failed' label to list
             window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
+            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "insufficient funds";
         }
     });
 }
@@ -526,11 +550,16 @@ function createTableRow(contract) {
     btn.className = "acquire_button";
     btn.id = "acquire_button_" + contract.id;
     btn.value = "acquire";
-    btn.onclick = _ => { executeContract(contract); };
+    btn.onclick = _ => {
+        executeContract(contract);
+    };
     td.appendChild(btn);
-    if (contract.toBeExecutedAtHorizon === "yes" || contract.amount === 0 || contract.horizonDate === "instantaneous") {
+    if (contract.toBeExecutedAtHorizon === "yes" || contract.horizonDate === "instantaneous") {
         btn.disabled = true;
     }
+    tr.appendChild(td = document.createElement("td"));
+    td.id = "td_status_" + contract.id;
+    td.innerHTML = contract.status;
 }
 
 function createButton (contractString, buttonId) {
