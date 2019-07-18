@@ -382,7 +382,6 @@ function parse(inputString) {
     if (horizonDate === "instantaneous") {
         acquireAtHorizon = "yes";
     }
-    console.log("amount: " + amount);
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
     const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
@@ -390,14 +389,11 @@ function parse(inputString) {
 
     createTableRow(contract);
 
-    // TODO: check if horizonDate is smaller then currentDate -- most exernal if clause
-    // if so then add 'expired' label & disable acquire button
-    // if not then go inside next if checks
     if (horizonDate === "instantaneous") {
         executeContract(contract);
     } else {
         if (beforeCurrentDate(contract)) {
-            // add expired label
+            // add expired label & disable acquire button
             console.log("It is before current date!");
             document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
             document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;

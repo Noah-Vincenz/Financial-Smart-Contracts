@@ -32,5 +32,13 @@ export function translateContract(recipient, amount, horizonDate, acquireAtHoriz
             hDate = " before " + horizonDate;
         }
     }
-    return amount + " Ether are transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
+    var adj = " is";
+    if (amount !== 1) {
+        if (amount === 0) {
+            adj = " are";
+        } else {
+            adj = "s are";
+        }
+    }
+    return amount + " Ether" + adj + " transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
 }

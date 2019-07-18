@@ -47,7 +47,17 @@ function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
     }
   }
 
-  return amount + " Ether are transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
+  var adj = " is";
+
+  if (amount !== 1) {
+    if (amount === 0) {
+      adj = " are";
+    } else {
+      adj = "s are";
+    }
+  }
+
+  return amount + " Ether" + adj + " transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
 }
 
 },{}],2:[function(require,module,exports){
@@ -927,18 +937,15 @@ function parse(inputString) {
     acquireAtHorizon = "yes";
   }
 
-  console.log("amount: " + amount);
   horizonDate = (0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizonDate));
   var contract = new _contract.Contract(numberOfContracts, amount, recipient, inputString, (0, _contract.translateContract)(recipient, amount, horizonDate, acquireAtHorizon), horizonDate, acquireAtHorizon, "waiting to be executed");
-  createTableRow(contract); // TODO: check if horizonDate is smaller then currentDate -- most exernal if clause
-  // if so then add 'expired' label & disable acquire button
-  // if not then go inside next if checks
+  createTableRow(contract);
 
   if (horizonDate === "instantaneous") {
     executeContract(contract);
   } else {
     if (beforeCurrentDate(contract)) {
-      // add expired label
+      // add expired label & disable acquire button
       console.log("It is before current date!");
       document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
       document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
