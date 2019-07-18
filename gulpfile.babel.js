@@ -15,27 +15,14 @@ function copyHTMLFiles() {
   .pipe(gulp.dest("./build"));
 }
 
-//Copy static files from html folder to build folder
-function copyJSFiles() {
-  return gulp.src("./src/js/*.js")
-  .pipe(gulp.dest("./build"));
-}
-
-//Copy static files from html folder to build folder
-function copyResources() {
-  return gulp.src("./src/js/resources.mjs")
-  .pipe(gulp.dest("./build"));
-}
-
-//Convert ES6 ode in all js files in src/js folder and copy to
+//Convert ES6 code in all js files in src/js folder and copy to
 //build folder as bundle.js
 function build() {
   // body omitted
   return browserify({
-      entries: ["./src/js/deploy.mjs"]
+      entries: ["./src/js/deploy/deploy.mjs", "./src/js/index.mjs"]
   })
   .transform(babelify.configure({
-      //presets : ["es2015"]
       presets: ["@babel/env"]
   }))
   .bundle()
@@ -54,5 +41,5 @@ function startServer() {
   });
 }
 
-exports.build = series(copyHTMLFiles, copyJSFiles, copyResources, build, startServer);
-exports.default = series(copyHTMLFiles, copyJSFiles, copyResources, build, startServer);
+exports.build = series(copyHTMLFiles, build, startServer);
+exports.default = series(copyHTMLFiles, build, startServer);

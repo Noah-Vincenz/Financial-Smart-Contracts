@@ -1,5 +1,14 @@
+/**
+ * @author Noah-Vincenz Noeh <noah-vincenz.noeh18@imperial.ac.uk>
+ */
+
+/* jshint esversion: 6 */
+
+import { hello } from "./stringManipulation.mjs"; // or './module'
+
 // TODO: add status of transactions ie executed, or failed
 // TODO: change contract string to be displayed with parenthesis in list
+
 var selectedDeposit = 0;
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
@@ -12,18 +21,21 @@ $(function(){
     }
 });
 
-window.addEventListener('load', function () { /* // commented for testing purposes
+window.addEventListener('load', function() { /* // commented for testing purposes
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input").disabled = true; */
     // start timer
+    console.log("hi");
+    console.log(hello());
+    console.log("hi");
     update();
     runClock();
 });
 
-function update() {
+global.update = function() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
@@ -49,7 +61,7 @@ function update() {
     }
 }
 
-function runClock() {
+global.runClock = function() {
     var now = new Date();
     var timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
     setTimeout(function() {
@@ -58,7 +70,7 @@ function runClock() {
     }, timeToNextTick);
 }
 
-function callDepositFunction(id) {
+global.callDepositFunction = function(id) {
     var addr = "";
     if (id === 1) {
         addr = "holder_address";
@@ -74,7 +86,7 @@ function callDepositFunction(id) {
     }
 }
 
-function callCreateContractFunction() {
+global.callCreateContractFunction = function() {
     var holderAddressValue = document.getElementById("holder_address").value;
     var counterPartyAddressValue = document.getElementById("counter_party_address").value;
     if (getSelectedMetaMaskAccount().toUpperCase() === holderAddressValue.toUpperCase()) {
@@ -90,15 +102,15 @@ function callCreateContractFunction() {
     }
 }
 
-function getSelectedDeposit() {
+global.getSelectedDeposit = function() {
     return document.getElementById("select_deposit").value;
 }
 
-function getInputString() {
+global.getInputString = function() {
     return document.getElementById("transaction_input").value;
 }
 
-function addSpacing(string) {
+global.addSpacing = function(string) {
     const regex1 = /(.*\S)(\()(.*)/;
     var matchObj = regex1.exec(string);
     while (matchObj !== null) {
@@ -126,7 +138,7 @@ function addSpacing(string) {
     return string;
 }
 
-function furtherCleanUp(string) {
+global.furtherCleanUp = function(string) {
     const regex1 = /(.*)(\( one \))(.*)/;
     var matchObj = regex1.exec(string);
     while (matchObj !== null) {
@@ -154,7 +166,7 @@ function furtherCleanUp(string) {
     return string;
 }
 
-function decomposeContract(inputString) {
+global.decomposeContract = function(inputString) {
     if (inputString === "") {
         return;
     }
@@ -186,7 +198,7 @@ function decomposeContract(inputString) {
         var strArr = rTrimWhiteSpace(lTrimWhiteSpace(inputString)).split("");
         for (var i = 0; i < strArr.length; ++i) {
               console.log("ContractString = " + contractString);
-              str = strArr[i];
+              var str = strArr[i];
               console.log("iteration through array: " + i + ". Symbol: " + str);
               if (str === ")" || i === strArr.length - 1) { // i === strArr.length - 1 so that it also handles case where input does not end with ')'
                   if (i === strArr.length - 1 && str !== ")" && currentTerm !== " ") { // for 'give one or zero' case, ie when input does not end with closing paren
@@ -363,23 +375,23 @@ function decomposeContract(inputString) {
         if (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
             combineContracts(contractsStack, conjunctionStack);
         }
-    }
-    else {
+
+        // TODO: get rid of this
+        if (conjunctionStack.length == 0 && contractsStack.length === 1 && (!stack.includes("zero") || !stack.includes("one"))) {
+            var newContractsStack = contractsStack[0].split("or");
+            combineContracts(newContractsStack, ["or"]);
+        }
+
+    } else {
         // String does not include "or" -> execute right away
         var outputStrings = inputString.split("and");
         for (var i = 0; i < outputStrings.length; ++i) {
             parse(outputStrings[i]);
         }
     }
-    // TODO: get rid of this
-    if (conjunctionStack.length == 0 && contractsStack.length === 1 && (!stack.includes("zero") || !stack.includes("one"))) {
-        newContractsStack = contractsStack[0].split("or");
-        combineContracts(newContractsStack, ["or"]);
-    }
-
 }
 
-function combineContracts(contractsStack, conjunctionStack) {
+global.combineContracts = function(contractsStack, conjunctionStack) {
     var contract1 = contractsStack.pop();
     var contract2 = contractsStack.pop();
     var conj = conjunctionStack.pop();
@@ -393,7 +405,7 @@ function combineContracts(contractsStack, conjunctionStack) {
     }
 }
 
-function parse(inputString) {
+global.parse = function(inputString) {
     var recipient = 0; // by default the contract holder is the recipient
     var amount = 1;
     var horizonDate = "instantaneous";
@@ -401,7 +413,7 @@ function parse(inputString) {
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
-        str = strArr[i];
+        var str = strArr[i];
         if (str === "give") {
             recipient = 1;
         } else if (str === "one") {
@@ -443,11 +455,12 @@ function parse(inputString) {
     ++numberOfContracts;
 }
 
-function createTableRow(contract) {
+global.createTableRow = function(contract) {
     console.log("Creating row:");
     console.log(contract.contractString);
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
+    var td;
     tr.appendChild(td = document.createElement("td"));
     td.innerHTML = contract.id;
     tr.appendChild(td = document.createElement("td"));
@@ -471,7 +484,7 @@ function createTableRow(contract) {
     }
 }
 
-function executeContract(contract) {
+global.executeContract = function(contract) {
     if (contract.horizonDate !== "instantaneous") {
         var horizonArr = contract.horizonDate.split("-");
         var dateArr = horizonArr[0].split("/");
@@ -506,7 +519,7 @@ function executeContract(contract) {
     });
 }
 
-function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
+global.translateContract = function(recipient, amount, horizonDate, acquireAtHorizon) {
     var to = " owner ";
     var from = " counter-party ";
     var hDate = " instantaneously ";
@@ -524,7 +537,7 @@ function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
     return amount + " Ether are transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
 }
 
-function callTransferFunction(fromAddress, toAddress, amount) {
+global.callTransferFunction = function(fromAddress, toAddress, amount) {
     balanceOfAddress(fromAddress).then(balance => {
         if (balance >= amount) {
             transfer(fromAddress, toAddress, amount).then(transferTxHash => {
@@ -540,7 +553,7 @@ function callTransferFunction(fromAddress, toAddress, amount) {
     });
 }
 
-function createMoveFile(sender_address, recipient_address, amount) {
+global.createMoveFile = function(sender_address, recipient_address, amount) {
     var textToWrite = "//! no-execute\n" +
     "import 0x0.LibraAccount;\n" +
     "import 0x0.LibraCoin;\n \n" +
@@ -581,7 +594,7 @@ function createMoveFile(sender_address, recipient_address, amount) {
     console.log("Created and downloaded .mvir file.");
 }
 
-function retrieveBalances() {
+global.retrieveBalances = function() {
     holderBalance().then(function(hBalance) {
         console.log("Holder Balance: " + hBalance);
         counterPartyBalance().then(function(cBalance) {
@@ -590,7 +603,7 @@ function retrieveBalances() {
     });
 }
 
-function printStack(stack, name) {
+global.printStack = function(stack, name) {
     console.log(name + ": " + stack.length);
     var x;
     for (var x = 0; x < stack.length; ++x) {
@@ -598,7 +611,7 @@ function printStack(stack, name) {
     }
 }
 
-function createButton(contractString, buttonId) {
+global.createButton = function(contractString, buttonId) {
   var button = document.createElement("button");
   button.id = "choices_button_" + buttonId;
   button.className = "choices_button";
@@ -620,7 +633,7 @@ function createButton(contractString, buttonId) {
   });
 }
 
-function cleanContractParens(contractString) {
+global.cleanContractParens = function(contractString) {
     if (contractString[contractString.length - 1] === "(") {
         contractString = contractString.slice(0, -1);
     }
@@ -635,7 +648,7 @@ function cleanContractParens(contractString) {
     return contractString;
 }
 
-function addParens(contractString) {
+global.addParens = function(contractString) {
     console.log("ADDING PARENS");
     if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
         console.log("more opening");
@@ -648,15 +661,15 @@ function addParens(contractString) {
     return contractString;
 }
 
-function openingParensAmount(string) {
+global.openingParensAmount = function(string) {
     return string.split("(").length - 1;
 }
 
-function closingParensAmount(string) {
+global.closingParensAmount = function(string) {
     return string.split(")").length - 1;
 }
 
-function createSection() {
+global.createSection = function() {
     var para = document.createElement("p");
     var node = document.createTextNode("Contract choice:");
     para.appendChild(node);
@@ -664,7 +677,7 @@ function createSection() {
     bottomContainer.appendChild(para);
 }
 
-function createOrLabel() {
+global.createOrLabel = function() {
     var para = document.createElement("p");
     para.className = "p_small";
     var node = document.createTextNode("OR");
@@ -674,7 +687,7 @@ function createOrLabel() {
     bottomContainer.appendChild(para);
 }
 
-function removeChildren(containerString) {
+global.removeChildren = function(containerString) {
     var e = document.getElementById(containerString);
     var child = e.lastElementChild;
     while (child) {
@@ -683,7 +696,7 @@ function removeChildren(containerString) {
     }
 }
 
-function testReachability() {
+global.testReachability = function() {
     decomposeContract("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero and truncate \"26/12/2019-23:33:33\" ( give zero ) )");
     removeChildren("button_choices_container");
     decomposeContract("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero or truncate \"26/12/2019-23:33:33\" ( give zero ) )");
@@ -732,7 +745,7 @@ class Contract {
     }
 }
 
-function date(stringInput) {
+global.date = function(stringInput) {
     var matches = stringInput.match(/^((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$/);
     if (matches === null) {
         return false;
@@ -743,32 +756,32 @@ function date(stringInput) {
     }
 }
 
-function lTrimWhiteSpace(str) {
+global.lTrimWhiteSpace = function(str) {
   if (str == null) return str;
   return str.replace(/^\s+/g, '');
 }
 
-function rTrimWhiteSpace(str) {
+global.rTrimWhiteSpace = function(str) {
   if (str == null) return str;
   return str.replace(/\s$/g, '');
 }
 
-function lTrimParen(str) {
+global.lTrimParen = function(str) {
   if (str == null) return str;
   return str.replace(/^\(+/g, '');
 }
 
-function rTrimParen(str) {
+global.rTrimParen = function(str) {
   if (str == null) return str;
   return str.replace(/\)$/g, '');
 }
 
-function lTrimDoubleQuotes(str) {
+global.lTrimDoubleQuotes = function(str) {
   if (str == null) return str;
   return str.replace(/^\"+/g, '');
 }
 
-function rTrimDoubleQuotes(str) {
+global.rTrimDoubleQuotes = function(str) {
   if (str == null) return str;
   return str.replace(/\"$/g, '');
 }
