@@ -29,13 +29,16 @@
                 <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
             </div>
         </div>
+        <p class="status" id="create_contract_status"></p>
         <button class="button" id = "create_contract_button" type="button" onclick="callCreateContractFunction()">Create Contract</button>
     </div>
     <div id="bottom_container">
-      <textarea rows="13" cols="140" id="transaction_input" type="text" placeholder="Transaction"></textarea><br>
-      <button class="button" id = "make_transaction_button" type="button" onclick="decomposeContract(getInputString())">Make Transaction</button>
+      <div id="bottom_input_container">
+          <textarea rows="13" cols="100" id="transaction_input" type="text" placeholder="Transaction"></textarea><br>
+          <p class="status" id="transaction_status"></p>
+          <button class="button" id = "make_transaction_button" type="button" onclick="decomposeContract(getInputString())">Make Transaction</button>
+      </div>
       <div id="button_choices_container"></div>
-      <p class="status" id="transaction_status"></p>
       <div id="tableContainer">
           <p>
               <table id="my_table">

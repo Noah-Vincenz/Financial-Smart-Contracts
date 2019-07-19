@@ -19,34 +19,6 @@ export function cleanParens(contractString) {
     return contractString;
 }
 
-export function furtherCleanUp(string) {
-    const regex1 = /(.*)(\( one \))(.*)/;
-    var matchObj = regex1.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "one" + matchObj[3];
-        matchObj = regex1.exec(string)
-    }
-    const regex2 = /(.*)(\( give one \))(.*)/;
-    matchObj = regex2.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "give one" + matchObj[3];
-        matchObj = regex2.exec(string)
-    }
-    const regex3 = /(.*)(\( zero \))(.*)/;
-    matchObj = regex3.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "zero" + matchObj[3];
-        matchObj = regex3.exec(string)
-    }
-    const regex4 = /(.*)(\( give zero \))(.*)/;
-    matchObj = regex4.exec(string);
-    while (matchObj !== null) {
-        string = matchObj[1] + "give zero" + matchObj[3];
-        matchObj = regex4.exec(string)
-    }
-    return string;
-}
-
 export function addSpacing(string) {
     const regex1 = /(.*\S)(\()(.*)/;
     var matchObj = regex1.exec(string);

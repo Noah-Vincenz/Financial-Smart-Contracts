@@ -1,8 +1,11 @@
 body {
+    width: 100%;
     background-color: #95dffe30;
     color: black;
     font-size: 20px;
     font-family: arial, sans-serif;
+    padding: 0px;
+    margin: 0px;
 }
 
 h1 {
@@ -13,13 +16,13 @@ h1 {
 
 table {
     color: #707070;
-    padding: 10px;
     border-collapse: collapse;
     width: 100%;
 }
 td, th {
     border: 2px solid #E4E5E5;
     text-align: left;
+    font-size: 18px;
     padding: 8px;
 }
 tr:nth-child(even) {
@@ -56,14 +59,10 @@ textarea[disabled]{
   cursor: not-allowed;
 }
 
-div {
-  padding: 5px 10px;
-}
-
 .address_input {
-    width: 350px;
-    height: 30px;
     font-size: 14px;
+    width: 100%;
+    max-width: 350px;
 }
 
 .p_small {
@@ -82,52 +81,80 @@ div {
     border: 1px solid gray;
     background-color: lightgray;
     color: gray;
-    padding: 5px 10px;
+    padding: 5px 5px 5px 5px;
+}
+
+.status {
+    width: 100%;
+    color: red;
+    font-size: 15px;
+}
+
+#outer_container {
+    padding-left: 150px;
+    padding-right: 150px;
+    width: auto;
+}
+
+#deposit_container {
+    width: auto;
 }
 
 #deposit {
-  position: relative;
-  font-family: Arial;
-  color: #707070;
-  font-size: 20px;
-  margin-bottom: 10px;
+    position: relative;
+    font-family: Arial;
+    color: #707070;
+    font-size: 20px;
+    margin-bottom: 10px;
+    width: 100%;
 }
 
 #select_deposit {
-  position: relative;
-  font-family: Arial;
-  font-size: 17px;
+    position: relative;
+    font-family: Arial;
+    font-size: 17px;
+    width: 100%;
 }
 
 #top_container {
     text-align: center;
+    width: 100%;
     border-bottom: 0.5px solid lightgray;
-    margin-top: -20px;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
 }
 
 #top_input_container {
+    width: 100%;
     display: flex;
     flex-direction: row;
 }
 
 #holder_container {
+    width: 100%;
     flex: 1;
 }
 
 #counter_party_container {
+    width: 100%;
     flex: 1;
 }
 
 #bottom_container {
+    width: 100%;
     text-align: center;
+}
+
+#bottom_input_container {
+    width: 100%;
+    border-bottom: 0.5px solid lightgray;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
 }
 
 #transaction_input {
+    width: 100%;
+    padding: 0px;
     resize: none;
     font-size: 20px;
-}
-
-#headerContainer {
-    text-align: center;
 }

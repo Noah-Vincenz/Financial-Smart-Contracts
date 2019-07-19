@@ -5,9 +5,9 @@
 /* jshint esversion: 6 */
 
 import {
-  cleanParens, furtherCleanUp, addSpacing, addParens, openingParensAmount,
-  closingParensAmount, lTrimWhiteSpace, rTrimWhiteSpace, rTrimParen,
-  lTrimDoubleQuotes, rTrimDoubleQuotes
+  cleanParens, addSpacing, addParens, openingParensAmount, closingParensAmount,
+  lTrimWhiteSpace, rTrimWhiteSpace, lTrimParen, rTrimParen, lTrimDoubleQuotes,
+  rTrimDoubleQuotes
 } from "./stringmanipulation.mjs";
 
 import {Contract, translateContract} from "./contract.mjs";
@@ -31,12 +31,14 @@ $(function(){
     }
 });
 
-window.addEventListener('load', function() { /* // commented for testing purposes
+window.addEventListener('load', function() {  // commented for testing purposes
+  /*
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
-    document.getElementById("transaction_input").disabled = true; */
+    document.getElementById("transaction_input").disabled = true;
+    */
     // start timer
     update();
     runClock();
@@ -90,7 +92,7 @@ global.callDepositFunction = function(id) {
         document.getElementById("make_transaction_button").disabled = false;
         document.getElementById("transaction_input").disabled = false;
     } else {
-        window.alert("Please change the currently selected MetaMask account to the one you would like to deposit to.");
+        document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the one you would like to deposit to.";
     }
 }
 
@@ -106,7 +108,7 @@ global.callCreateContractFunction = function() {
         document.getElementById("deposit_button2").disabled = false;
         document.getElementById("select_deposit").disabled = false;
     } else {
-        window.alert("Please change the currently selected MetaMask account to the contract holder account.");
+        document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the contract holder account.";
     }
 }
 
@@ -116,10 +118,17 @@ function getSelectedDeposit() {
 
 global.getInputString = function() {
     return document.getElementById("transaction_input").value;
-}
+};
 
 global.decomposeContract = function(inputString) {
+    document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
+        document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
+        return;
+    }
+    if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
+        console.error("The contract is not constructed properly.");
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly.";
         return;
     }
     // remove linebreaks
@@ -128,214 +137,101 @@ global.decomposeContract = function(inputString) {
     inputString = inputString.replace(/  +/g, ' ');
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
-    inputString = furtherCleanUp(inputString); // to be able to handle '( scaleK 10 ( one ) or zero )'
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";
+    var noOfOpeningParens = 0;
+    var noOfClosingParens = 0;
+    var contractString = "";
+    var contractsStack = [];
+    var conjunctionsStack = [];
     // check if inputstring contains 'or' else execute right away
     if (inputString.includes("or")) {
-        var firstOpeningParenOcc = inputString.indexOf("(");
-        var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
-        if (!firstSubstring.includes("or")) {
-            inputString = inputString.slice(firstOpeningParenOcc, inputString.length);
-            stringToAddToBeginning = firstSubstring;
-        }
-        var stack = [];
-        var currentTerm = ""; //keeps track of the term ie and,give,one when initially looping through input & is used to add these to stack
-        var currentConj = "";
-        var conjunctionStack = []; // whenever stack is empty then conjunctionStack will be popped and used
-        var contractString = ""; // used to accumulate the complete contract from its parts one by one when popping off the stack
-        var contractsStack = [];
-        var firstPartOfConjunction = "";
-        var strArr = rTrimWhiteSpace(lTrimWhiteSpace(inputString)).split("");
+        var strArr = inputString.split(" ");
         for (var i = 0; i < strArr.length; ++i) {
-              console.log("ContractString = " + contractString);
-              var str = strArr[i];
-              console.log("iteration through array: " + i + ". Symbol: " + str);
-              if (str === ")" || i === strArr.length - 1) { // i === strArr.length - 1 so that it also handles case where input does not end with ')'
-                  if (str !== ")" && currentTerm !== " ") { // for 'give one or zero' case, ie when input does not end with closing paren
-                      currentTerm += str;
-                      console.log("Pushing last term - " + currentTerm + " - on stack.");
-                      stack.push(currentTerm);
-                  } else if (str === ")" && contractString !== "( ") {
-                      contractString += " )";
-                      console.log("contractString now: " + contractString);
-                  }
-                  currentTerm = "";
-                  console.log("contractString initially: " + contractString);
-
-                  if (contractString === "( ") {
-                      contractString = ")";
-                  }
-                  // pop while items off stack until discovered |)| == popped |(|
-                  while (stack.length > 0) {
-                      var term = stack.pop();
-                      console.log("Stack popping 1 - term: " + term);
-                      if (term === "and" || term === "or") {
-                          console.log("And / Or is being popped");
-                          console.log(firstPartOfConjunction);
-                          // if already have first and part then add it to it, else only add this to contractsStack
-                          if (firstPartOfConjunction !== "") { //changed order -- this used to be third if clause
-                              currentConj = "";
-                              var s = stringToAddToBeginning + firstPartOfConjunction + " " + conjunctionStack.pop() + " " + contractString;
-                              console.log("0.5: Pushing " + s + " to contractsStack");
-                              contractsStack.push(addParens(s)); //
-                              stringToAddToBeginning = "";
-                              firstPartOfConjunction = "";
-                              if (strArr.length > i + 2
-                                && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
-                                && conjunctionStack.length !== 0) {
-                                  var con2 = contractsStack.pop();
-                                  var con1 = contractsStack.pop();
-                                  var s = con1 + " " + conjunctionStack.pop() + " " + con2;
-                                  contractsStack.push(s);
-                              }
-
-                          } else if (i == strArr.length - 1 && stack.length == 0) {
-                              currentConj = "";
-                              console.log("0.125: Pushing " + contractString + " to contractsStack");
-                              contractsStack.push(contractString);
-
-                          } else if ((stack.length == 0 || (stack.length == 1 && stack[0] === "(")) && conjunctionStack.length !== 0) { // add contractString to contractsStack.pop()
-                              currentConj = "";
-                              var s = contractsStack.pop() + " " + conjunctionStack.pop() + " " + contractString;
-                              console.log("0.25: Pushing " + s + " to contractsStack");
-                              contractsStack.push(s);
-
-                          } else {
-                              currentConj = term;
-                              if (!contractString.includes("one") && !contractString.includes("zero")) {
-                                  break;
-                              }
-                              console.log("1: Pushing " + contractString + " to contractsStack");
-                              contractsStack.push(contractString);
-                          }
-                          contractString = "";
-
-                      } else if (term === "(") { // stop popping
-                          contractString = term + " " + contractString;
-                          console.log("currentConj: " + currentConj);
-                          if (stack.length !== 0 && currentConj !== "") { // contracts string should be pushed to contracts stack not the combined string
-                              var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
-                              console.log("1.5: Pushing " + s + " to contractsStack");
-                              contractsStack.push(s);
-                              currentConj = "";
-                              contractString = "";
-
-                              if (strArr.length > (i + 2)
-                                && openingParensAmount(inputString.slice(0, i + 3)) === closingParensAmount(inputString.slice(0, i + 3))
-                                && conjunctionStack.length !== 0) {
-                                  var con2 = contractsStack.pop();
-                                  var con1 = contractsStack.pop();
-                                  var s = "( " + con1 + " " + conjunctionStack.pop() + " " + con2 + " )";
-                                  console.log("1.65: Pushing " + s + " to contractsStack");
-                                  contractsStack.push(s);
-                              }
-                          }
-                          console.log("Current contractString: " + contractString);
-                          break; //stop popping
-
-                      } else if (term === "zero" || term === "one") { //then add current contractString to contractsStack and start from empty contractString
-                          if (contractString.includes("zero") || contractString.includes("one")) { // for '((give one) or give zero)' case
-                              firstPartOfConjunction = rTrimParen(contractString);
-                              contractString = term + " )";
-                              console.log("ContractString already includes zero / one");
-                              console.log(firstPartOfConjunction);
-                              console.log(contractString);
-                          } else {
-                              contractString = term + " " + contractString;
-                          }
-                      } else {
-                          contractString = term + " " + contractString;
-                      }
-                  }
-                  console.log("contractString now = " + contractString);
-                  printStack(stack, "termStack");
-                  printStack(conjunctionStack, "conjunctionStack");
-                  printStack(contractsStack, "contractsStack");
-
-                  if (stack.length == 0 && contractString !== "" && contractString !== "( ") {
-                     if (currentConj !== "" && i !== strArr.length - 1) {
-                          var s = contractString + " " + conjunctionStack.pop() + " " + contractsStack.pop();
-                          console.log("1.75: Pushing " + s + " to contractsStack");
-                          contractsStack.push(s);
-                          currentConj = "";
-
-                      } else { // if there is no currConj then we can just add this one
-                          console.log("2: Pushing " + contractString + " to contractsStack");
-                          contractsStack.push(contractString);
-                      }
-                      contractString = "";
-                  }
-
-              } else if (str === " ") {
-                  // push term
-                  if (currentTerm !== "") { // not needed
-                      if (currentTerm === "and" || currentTerm === "or") {
-                          conjunctionStack.push(currentTerm);
-                          if (parseInt(stack[stack.length - 1])) {
-                              contractString = stack.pop() + " " + contractString;
-                              contractString = stack.pop() + " " + contractString;
-                          }
-                      }
-                      console.log("Pushing last term - " + currentTerm + " - on stack.");
-                      stack.push(currentTerm);
-                      currentTerm = "";
-                  }
-              } else if (str === "(") {
-                  stack.push(str);
-              } else {
-                 // its part of term
-                 currentTerm += str;
-              }
-              console.log("contractString now 2 = " + contractString);
-          }
-
-          if (stack.length > 0 && (stack.includes("one") || stack.includes("zero"))) {
-              while (stack.length > 0) {
-                  var term = stack.pop();
-                  console.log("Stack popping 2 - term: " + term);
-                  if (term === "and" || term === "or") {
-                      currentConj = term;
-                      contractString = ""; // to print out the whole contract when all its parts have been discovered
-                  } else {
-                      contractString = term + " " + contractString;
-                  }
-              }
-              console.log("Contract string just before end: " + contractString);
-              if (contractString !== "") {
-                  console.log("6: Pushing " + contractString + " to contractsStack");
-                  contractsStack.push(contractString);
-              }
+            var term = strArr[i];
+            if (term === "and" || term === "or") {
+               if (noOfOpeningParens === noOfClosingParens) { // found outer most conjunct
+                   conjunctionsStack.push(term);
+                   contractsStack.push(contractString);
+                   contractsStack.push(strArr.slice(i + 1).join(' '));
+                   break;
+               } else if (noOfOpeningParens > noOfClosingParens) {
+                   contractString = contractString + " " + term;
+               }
+           } else {
+                if (contractString === "") {
+                   contractString = term;
+                } else {
+                   contractString = contractString + " " + term;
+                }
+                if (term === "(") {
+                    ++noOfOpeningParens;
+                } else if (term === ")") {
+                    ++noOfClosingParens;
+                    if (i === strArr.length - 1) {
+                        contractsStack.push(contractString);
+                    }
+                }
+           }
+           if (noOfClosingParens > noOfOpeningParens) {
+               console.error("The contract is not constructed properly.");
+               document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly.";
+               break;
+           }
         }
-        printStack(stack, "termStack");
-        printStack(conjunctionStack, "conjunctionStack");
-        printStack(contractsStack, "contractsStack");
-        var res = contractsStack.length / conjunctionStack.length;
-        if (conjunctionStack.length >= 1 && contractsStack.length >= 2 && res === 2) {
-            combineContracts(contractsStack, conjunctionStack);
+        if (contractsStack.length === 1 && contractsStack[0].includes("or")) {
+            conjunctionsStack.push("or");
+            contractsStack = splitContract(strArr);
         }
-
-        // TODO: get rid of this
-        if (conjunctionStack.length == 0 && contractsStack.length === 1 && (!stack.includes("zero") || !stack.includes("one"))) {
-            var newContractsStack = contractsStack[0].split("or");
-            combineContracts(newContractsStack, ["or"]);
-        }
+        combineContracts(contractsStack, conjunctionsStack);
 
     } else {
-        // String does not include "or" -> execute right away
+        // String does not include "or": execute right away
         var outputStrings = inputString.split("and");
         for (var i = 0; i < outputStrings.length; ++i) {
-            parse(outputStrings[i]);
+            parse(cleanParens(outputStrings[i]));
         }
     }
 };
+
+function splitContract(contractStringArr) {
+    // do not split by "or" because this will split by first 'or' occurence
+    // we want to split by 'or' occurrence with only 1 difference between |openingParen| and |closingParen|
+    var newStack = [];
+    var index = findMostBalancedOr(contractStringArr);
+    newStack[0] = cleanParens(contractStringArr.slice(0, index).join(' '));
+    newStack[1] = cleanParens(contractStringArr.slice(index + 1, contractStringArr.length - 1).join(' '));
+    if (openingParensAmount(newStack[0]) > closingParensAmount(newStack[0])) {
+        newStack[0] = newStack[0] + " )";
+    }
+    if (closingParensAmount(newStack[1]) > openingParensAmount(newStack[1])) {
+        newStack[1] = "( " + newStack[1];
+    }
+    return newStack;
+}
+
+function findMostBalancedOr(contractStringArr) {
+    var openingParens = 0;
+    var closingParens = 0;
+    var indexOfMostBalancedOr = contractStringArr.length - 1;
+    for (var i = 0; i < contractStringArr.length; ++i) {
+        var term = contractStringArr[i];
+        if (term === "(") {
+            ++openingParens;
+        } else if (term === ")") {
+            ++closingParens;
+        } else if (term === "or" && (openingParens - closingParens) <  indexOfMostBalancedOr) {
+            indexOfMostBalancedOr = i;
+        }
+    }
+    return indexOfMostBalancedOr;
+}
 
 function combineContracts(contractsStack, conjunctionStack) {
     var contract1 = contractsStack.pop();
     var contract2 = contractsStack.pop();
     var conj = conjunctionStack.pop();
     console.log("Combining leftover contracts...");
-    console.log(contract1 + " " + conj + " " + contract2);
     if (conj === "or") {
         createSection();
         createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 1);
@@ -504,7 +400,7 @@ function createMoveFile(sender_address, recipient_address, amount) {
         downloadLink.style.display = "none";
         document.body.appendChild(downloadLink);
     }
-    // downloadLink.click(); // commented for testing purposes
+    //downloadLink.click(); // commented for testing purposes
     console.log("Created and downloaded .mvir file.");
 }
 

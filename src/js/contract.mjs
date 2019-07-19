@@ -40,5 +40,5 @@ export function translateContract(recipient, amount, horizonDate, acquireAtHoriz
             adj = "s are";
         }
     }
-    return amount + " Ether" + adj + " transferred from the contract " + from + " address to the contract " + to + " address " + hDate + ".";
+    return amount + " Ether" + adj + " transferred from the " + from + " address to " + to + " address " + hDate + ".";
 }
