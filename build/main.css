@@ -63,6 +63,7 @@ textarea[disabled]{
     font-size: 14px;
     width: 100%;
     max-width: 350px;
+    border: 0.5px solid lightgray;
 }
 
 .p_small {
@@ -91,8 +92,8 @@ textarea[disabled]{
 }
 
 #outer_container {
-    padding-left: 150px;
-    padding-right: 150px;
+    padding-left: 15%;
+    padding-right: 15%;
     width: auto;
 }
 

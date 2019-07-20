@@ -144,12 +144,22 @@ global.decomposeContract = function(inputString) {
     var contractString = "";
     var contractsStack = [];
     var conjunctionsStack = [];
+    stringToAddToBeginning = "";
+
     // check if inputstring contains 'or' else execute right away
     if (inputString.includes("or")) {
+        var firstOpeningParenOcc = inputString.indexOf("(");
+        var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
+        if (!firstSubstring.includes("or")) {
+            inputString = inputString.slice(firstOpeningParenOcc, inputString.length);
+            stringToAddToBeginning = firstSubstring;
+        }
         var strArr = inputString.split(" ");
+        var indexOfMostBalancedOr = strArr.length - 1;
+        var mostBalancedOr = strArr.length - 1;
         for (var i = 0; i < strArr.length; ++i) {
             var term = strArr[i];
-            if (term === "and" || term === "or") {
+            if (term === "or") {
                if (noOfOpeningParens === noOfClosingParens) { // found outer most conjunct
                    conjunctionsStack.push(term);
                    contractsStack.push(contractString);
@@ -157,6 +167,10 @@ global.decomposeContract = function(inputString) {
                    break;
                } else if (noOfOpeningParens > noOfClosingParens) {
                    contractString = contractString + " " + term;
+                   if ( (noOfOpeningParens - noOfClosingParens) < mostBalancedOr ) {
+                      mostBalancedOr = noOfOpeningParens - noOfClosingParens;
+                      indexOfMostBalancedOr = i;
+                   }
                }
            } else {
                 if (contractString === "") {
@@ -181,7 +195,7 @@ global.decomposeContract = function(inputString) {
         }
         if (contractsStack.length === 1 && contractsStack[0].includes("or")) {
             conjunctionsStack.push("or");
-            contractsStack = splitContract(strArr);
+            contractsStack = splitContract(strArr, indexOfMostBalancedOr);
         }
         combineContracts(contractsStack, conjunctionsStack);
 
@@ -194,13 +208,12 @@ global.decomposeContract = function(inputString) {
     }
 };
 
-function splitContract(contractStringArr) {
+function splitContract(contractStringArr, indexOfMostBalancedOr) {
     // do not split by "or" because this will split by first 'or' occurence
     // we want to split by 'or' occurrence with only 1 difference between |openingParen| and |closingParen|
     var newStack = [];
-    var index = findMostBalancedOr(contractStringArr);
-    newStack[0] = cleanParens(contractStringArr.slice(0, index).join(' '));
-    newStack[1] = cleanParens(contractStringArr.slice(index + 1, contractStringArr.length - 1).join(' '));
+    newStack[0] = cleanParens(contractStringArr.slice(0, indexOfMostBalancedOr).join(' '));
+    newStack[1] = cleanParens(contractStringArr.slice(indexOfMostBalancedOr + 1, contractStringArr.length - 1).join(' '));
     if (openingParensAmount(newStack[0]) > closingParensAmount(newStack[0])) {
         newStack[0] = newStack[0] + " )";
     }
@@ -208,23 +221,6 @@ function splitContract(contractStringArr) {
         newStack[1] = "( " + newStack[1];
     }
     return newStack;
-}
-
-function findMostBalancedOr(contractStringArr) {
-    var openingParens = 0;
-    var closingParens = 0;
-    var indexOfMostBalancedOr = contractStringArr.length - 1;
-    for (var i = 0; i < contractStringArr.length; ++i) {
-        var term = contractStringArr[i];
-        if (term === "(") {
-            ++openingParens;
-        } else if (term === ")") {
-            ++closingParens;
-        } else if (term === "or" && (openingParens - closingParens) <  indexOfMostBalancedOr) {
-            indexOfMostBalancedOr = i;
-        }
-    }
-    return indexOfMostBalancedOr;
 }
 
 function combineContracts(contractsStack, conjunctionStack) {
