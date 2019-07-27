@@ -17,8 +17,10 @@ import {createContract, deposit, getSelectedMetaMaskAccount, holderBalance,
   transfer, waitForReceipt
 } from "./deploy/deploy.mjs"
 
-// TODO: add status of transactions ie executed, or failed
-// TODO: change contract string to be displayed with parenthesis in list
+
+//TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
+
+
 
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
@@ -120,7 +122,102 @@ global.getInputString = function() {
     return document.getElementById("transaction_input").value;
 };
 
+
+// TODO: add conditionals
+// - check if contains 'if' --> evaluate conditional first -- does not matter if it is nested somewhere
+// start from '(' after if and find next ')' WHERE noOfOpening == 1
+// split string into '(...)', '{...}', '{...}' (if contains else)
+// split by outermost comparison operator
+// find horizon of each contract - check if date is later
+// replace if clause by contract either {true} or {false} contract
+
+// TODO: add option for nested condition ie (x > y) && (a < b || c > b)
+function performConditionalEvalution (inputString) {
+    var strBeginning = "";
+    var strEnd = "";
+    var strArr = inputString.split(/if(.+)/);
+    if (strArr.length == 2) {
+        strBeginning = strArr[0];
+    }
+    var openingParen = 0;
+    var symbolArr = [];
+    if (strArr.length == 2) {
+        var symbolArr = strArr[1].split("");
+    } else {
+        var symbolArr = strArr[0].split("");
+    }
+    for (var i = 0; i < symbolArr.length; ++i) {
+        var symbol = symbolArr[i];
+        if (symbol === "(") {
+            ++openingParen;
+        } else if (symbol === ")") {
+            --openingParen;
+            if (openingParen === 0) {
+                // have found the whole condition
+                var bool;
+                if (strArr.length == 2) {
+                    bool = conditionalEvalution(strArr[1].substring(0, i));
+                } else {
+                    bool = conditionalEvalution(strArr[0].substring(0, i));
+                }
+                var actionAndEnd = strArr[1].substring(i + 2);
+                var indexOfFirstClosingCurlyBrace = actionAndEnd.indexOf("}");
+                var action1 = actionAndEnd.substring(0, indexOfFirstClosingCurlyBrace);
+                var action2 = "";
+                var substring2 = actionAndEnd.substring(indexOfFirstClosingCurlyBrace + 2);
+                strEnd = substring2;
+                var substring2Arr = substring2.split(" ");
+                // if next symbole after indexOfFirstClosingCurlyBrace is else then we split again
+                if (substring2Arr[0] === "else") {
+                    indexOfFirstClosingCurlyBrace = substring2.indexOf("}");
+                    action2 = substring2.substring(5, indexOfMostBalancedOr);
+                    strEnd = substring2.substring(indexOfMostBalancedOr + 2, substring2.length);
+                }
+                if (bool) { // if the if clause succeeds then execute action1
+                    return strBeginning + action1 + strEnd;
+                } else { // if no 'else' then return empty string
+                    return strBeginning + action2 + strEnd;
+                }
+            }
+        }
+    }
+}
+
+function conditionalEvalution(inputString) {
+    var strArr = inputString.split(" ");
+    var openingParen = 0;
+    for (var i = 0; i < strArr.length; ++i) {  // TODO: change to looping through every letter
+        var term = strArr[i];
+        if (term === "(") {
+            ++openingParen;
+        } else if (term === ")") {
+            --openingParen;
+        } else if (openingParen === 1) {
+            if (term === "||") {
+                var bool = conditionalEvalution(part1) || conditionalEvalution(part2);
+                return bool;
+            } else if (term === "&&") {
+                var bool = conditionalEvalution(part1) && conditionalEvalution(part2);
+                return bool;
+            } else if (term === ">") {
+                //TODO: get date of part 1 and date of part 2 and check if 1 is greater than 2
+            }
+        }
+    }
+    return outputString;
+}
+
+
+
 global.decomposeContract = function(inputString) {
+    //TODO: check formate of string ie whenever 'if' then followed by '(){}'
+    // TODO: do conditional evaluation first
+
+    // repeat replacing the if clause while string includes if
+    if (inputString.includes("if")) {
+        inputString = performConditionalEvalution (inputString);
+    }
+
     document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
         document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
