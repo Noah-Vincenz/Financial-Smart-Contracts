@@ -698,7 +698,7 @@ function performConditionalEvalution(inputString) {
           strEnd = substring2.substring(indexOfFirstClosingCurlyBrace + 2);
         }
 
-        console.log(bool); //TODO: bool is false!
+        console.log(bool);
 
         if (bool) {
           // if the if clause succeeds then execute action1
@@ -708,7 +708,6 @@ function performConditionalEvalution(inputString) {
         } else {
           // if no 'else' then return zero TODO: cannot do that as in nested one this will mess with clause
           if (action2 == "") {
-            //return strBeginning + " zero " + strEnd;
             return strBeginning + " " + strEnd;
           }
 
@@ -755,7 +754,7 @@ function conditionalEvalution(inputString) {
         // TODO: allow comparison of numbers - need parser to parse (1 * 7) > 5
         //if no truncate included then horizon is infinite, else find truncate with max date
         var part1 = inputString.substring(2, i - 1);
-        var part2 = "";
+        var part2 = ""; // TODO: add <= , >=, ==
 
         if (strArr[i + 1] === "=") {
           part2 = inputString.substring(i + 3, inputString.length - 1);
@@ -774,53 +773,95 @@ function conditionalEvalution(inputString) {
         console.log(horizon2);
 
         if (term === ">") {
-          console.log("greater than");
+          if (strArr[i + 1] !== "=") {
+            console.log("greater than");
 
-          if (horizon1 === "infinite" || horizon2 === "infinite") {
-            if (horizon1 === "infinite" && horizon2 === "infinite") {
-              console.log("both are infinite");
-              return false;
-            } else {
-              if (horizon1 === "infinite") {
-                console.log("hor1 is infinite");
-                return true;
-              } else {
-                console.log("hor2 is infinite");
+            if (horizon1 === "infinite" || horizon2 === "infinite") {
+              if (horizon1 === "infinite" && horizon2 === "infinite") {
+                console.log("both are infinite");
                 return false;
+              } else {
+                if (horizon1 === "infinite") {
+                  console.log("hor1 is infinite");
+                  return true;
+                } else {
+                  console.log("hor2 is infinite");
+                  return false;
+                }
               }
             }
-          }
 
-          console.log("none are infinite");
-          return greaterDate(horizon1, horizon2);
+            console.log("none are infinite");
+            return greaterDate(horizon1, horizon2);
+          } else {
+            console.log("greater than or equal to");
+
+            if (horizon1 === "infinite" || horizon2 === "infinite") {
+              if (horizon1 === "infinite" && horizon2 === "infinite") {
+                console.log("both are infinite");
+                return true;
+              } else {
+                if (horizon1 === "infinite") {
+                  console.log("hor1 is infinite");
+                  return true;
+                } else {
+                  console.log("hor2 is infinite");
+                  return false;
+                }
+              }
+            }
+
+            console.log("none are infinite");
+            return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+          }
         } else if (term === "<") {
-          console.log("horizons");
-          console.log(horizon1);
-          console.log(horizon2);
+          if (strArr[i + 1] !== "=") {
+            console.log("horizons");
+            console.log(horizon1);
+            console.log(horizon2);
 
-          if (horizon1 === "infinite" || horizon2 === "infinite") {
-            if (horizon1 === "infinite" && horizon2 === "infinite") {
-              return false;
-            } else {
-              if (horizon1 === "infinite") {
+            if (horizon1 === "infinite" || horizon2 === "infinite") {
+              if (horizon1 === "infinite" && horizon2 === "infinite") {
                 return false;
               } else {
-                return true;
+                if (horizon1 === "infinite") {
+                  return false;
+                } else {
+                  return true;
+                }
               }
             }
-          }
 
-          return !greaterDate(horizon1, horizon2);
-        } else if (term === "=") {
-          if (horizon1 === "infinite" || horizon2 === "infinite") {
-            if (horizon1 === "infinite" && horizon2 === "infinite") {
-              return true;
-            } else {
-              return false;
+            return !greaterDate(horizon1, horizon2);
+          } else {
+            if (horizon1 === "infinite" || horizon2 === "infinite") {
+              if (horizon1 === "infinite" && horizon2 === "infinite") {
+                return true;
+              } else {
+                if (horizon1 === "infinite") {
+                  return false;
+                } else {
+                  return true;
+                }
+              }
             }
-          }
 
-          return equalDates(horizon1, horizon2);
+            return !greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+          }
+        } else if (term === "=") {
+          if (strArr[i + 1] === "=") {
+            if (horizon1 === "infinite" || horizon2 === "infinite") {
+              if (horizon1 === "infinite" && horizon2 === "infinite") {
+                return true;
+              } else {
+                return false;
+              }
+            }
+
+            return equalDates(horizon1, horizon2);
+          } else {
+            console.error("= should be ==");
+          }
         }
       }
     }
