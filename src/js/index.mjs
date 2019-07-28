@@ -7,7 +7,7 @@
 import {
   cleanParens, addSpacing, addParens, openingParensAmount, closingParensAmount,
   lTrimWhiteSpace, rTrimWhiteSpace, lTrimParen, rTrimParen, lTrimDoubleQuotes,
-  rTrimDoubleQuotes
+  rTrimDoubleQuotes, lTrimBrace, rTrimBrace
 } from "./stringmanipulation.mjs";
 
 import {Contract, translateContract} from "./contract.mjs";
@@ -20,6 +20,9 @@ import {createContract, deposit, getSelectedMetaMaskAccount, holderBalance,
 
 //TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
 
+// TODO: no truncate means infinite horizon!!!!!!!!!!!
+
+// TODO: PROBLEM: cannot just use max truncate because if there is contract without truncate then max will be infinite
 
 
 var numberOfContracts = 0;
@@ -135,17 +138,13 @@ global.getInputString = function() {
 function performConditionalEvalution (inputString) {
     var strBeginning = "";
     var strEnd = "";
-    var strArr = inputString.split(/if(.+)/);
-    if (strArr.length == 2) {
-        strBeginning = strArr[0];
+    var indexOfIf = inputString.indexOf("if");
+    if (indexOfIf > 2) {
+        strBeginning = inputString.substring(0, indexOfIf - 1);
     }
     var openingParen = 0;
-    var symbolArr = [];
-    if (strArr.length == 2) {
-        var symbolArr = strArr[1].split("");
-    } else {
-        var symbolArr = strArr[0].split("");
-    }
+    var leftOverSubstring = inputString.substring(indexOfIf + 2);
+    var symbolArr = leftOverSubstring.split("");
     for (var i = 0; i < symbolArr.length; ++i) {
         var symbol = symbolArr[i];
         if (symbol === "(") {
@@ -154,29 +153,42 @@ function performConditionalEvalution (inputString) {
             --openingParen;
             if (openingParen === 0) {
                 // have found the whole condition
-                var bool;
-                if (strArr.length == 2) {
-                    bool = conditionalEvalution(strArr[1].substring(0, i));
-                } else {
-                    bool = conditionalEvalution(strArr[0].substring(0, i));
+                if (leftOverSubstring.charAt(i + 2) !== "{") {
+                    console.error("if statements are followed by curly braces.");
                 }
-                var actionAndEnd = strArr[1].substring(i + 2);
-                var indexOfFirstClosingCurlyBrace = actionAndEnd.indexOf("}");
-                var action1 = actionAndEnd.substring(0, indexOfFirstClosingCurlyBrace);
+                var ifCondition = leftOverSubstring.substring(0, i);
+                var bool = conditionalEvalution(rTrimWhiteSpace(lTrimWhiteSpace(rTrimParen(lTrimParen(ifCondition)))));
+                var substring1 = leftOverSubstring.substring(i + 2);
+                var indexOfFirstClosingCurlyBrace = substring1.indexOf("}");
+                var action1 = substring1.substring(0, indexOfFirstClosingCurlyBrace);
                 var action2 = "";
-                var substring2 = actionAndEnd.substring(indexOfFirstClosingCurlyBrace + 2);
+                var substring2 = substring1.substring(indexOfFirstClosingCurlyBrace + 2);
                 strEnd = substring2;
-                var substring2Arr = substring2.split(" ");
+                var substring2Arr = substring2.split(" "); // check if can check for start of string more efficiently
                 // if next symbole after indexOfFirstClosingCurlyBrace is else then we split again
                 if (substring2Arr[0] === "else") {
+                    if (substring2Arr[1] !== "{") {
+                        console.error("else should be followed by curly braces.");
+                    }
+                    console.log("in here");
                     indexOfFirstClosingCurlyBrace = substring2.indexOf("}");
-                    action2 = substring2.substring(5, indexOfMostBalancedOr);
-                    strEnd = substring2.substring(indexOfMostBalancedOr + 2, substring2.length);
+                    action2 = substring2.substring(5, indexOfFirstClosingCurlyBrace);
+                    strEnd = substring2.substring(indexOfFirstClosingCurlyBrace + 2);
                 }
+                console.log(bool); //TODO: bool is false!
                 if (bool) { // if the if clause succeeds then execute action1
-                    return strBeginning + action1 + strEnd;
-                } else { // if no 'else' then return empty string
-                    return strBeginning + action2 + strEnd;
+                    console.log("action1");
+                    console.log(action1);
+                    return strBeginning + lTrimBrace(rTrimBrace(action1)) + strEnd;
+                } else { // if no 'else' then return zero TODO: cannot do that as in nested one this will mess with clause
+                    if (action2 == "") {
+                        //return strBeginning + " zero " + strEnd;
+                        return strBeginning + " " + strEnd;
+                    }
+                    console.log("action2");
+                    console.log(action2);
+                    console.log(action2.length);
+                    return strBeginning + lTrimBrace(rTrimBrace(action2)) + strEnd;
                 }
             }
         }
@@ -184,27 +196,134 @@ function performConditionalEvalution (inputString) {
 }
 
 function conditionalEvalution(inputString) {
-    var strArr = inputString.split(" ");
+    console.log("inputstring " + inputString);
+    var strArr = inputString.split("");
     var openingParen = 0;
-    for (var i = 0; i < strArr.length; ++i) {  // TODO: change to looping through every letter
+    for (var i = 0; i < strArr.length; ++i) {
         var term = strArr[i];
         if (term === "(") {
             ++openingParen;
         } else if (term === ")") {
             --openingParen;
         } else if (openingParen === 1) {
-            if (term === "||") {
-                var bool = conditionalEvalution(part1) || conditionalEvalution(part2);
-                return bool;
-            } else if (term === "&&") {
-                var bool = conditionalEvalution(part1) && conditionalEvalution(part2);
-                return bool;
-            } else if (term === ">") {
-                //TODO: get date of part 1 and date of part 2 and check if 1 is greater than 2
+            if (term === "|" || term === "&") {
+                console.log("found " + term);
+                var part1 = inputString.substring(2, i - 1);
+                var part2 = inputString.substring(i + 2, inputString.length - 1);
+                console.log("ici1");
+                console.log(part1);
+                console.log(part2);
+                if (term === "|") {
+                    var bool = conditionalEvalution(part1) || conditionalEvalution(part2);
+                    return bool;
+                } else if (term === "&") {
+                    var bool = conditionalEvalution(part1) && conditionalEvalution(part2);
+                    return bool;
+                }
+            }
+            else if (term === ">" || term === "<" || term === "=") {
+                // can only compare two contracts - so we cannot have (a & b) > (c | d), cannot have  a & b or  a | b
+                // TODO: allow comparison of numbers - need parser to parse (1 * 7) > 5
+                //if no truncate included then horizon is infinite, else find truncate with max date
+
+                var part1 = inputString.substring(2, i - 1);
+                var part2 = "";
+                if (strArr[i + 1] === "=") {
+                    part2 = inputString.substring(i + 3, inputString.length - 1);
+                } else {
+                    part2 = inputString.substring(i + 2, inputString.length - 1);
+                }
+                console.log("ici2");
+                console.log(part1);
+                console.log(part2);
+                var horizon1 = getHorizon(part1);
+                var horizon2 = getHorizon(part2);
+                console.log("horizon obtained 1");
+                console.log(horizon1);
+                console.log("horizon obtained 2");
+                console.log(horizon2);
+                if (term === ">") {
+                    console.log("greater than");
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            console.log("both are infinite");
+                            return false;
+                        } else {
+                            if (horizon1 === "infinite") {
+                                console.log("hor1 is infinite");
+                                return true;
+                            } else {
+                                console.log("hor2 is infinite");
+                                return false;
+                            }
+                        }
+                    }
+                    console.log("none are infinite");
+                    return greaterDate(horizon1, horizon2);
+                } else if (term === "<") {
+                    console.log("horizons");
+                    console.log(horizon1);
+                    console.log(horizon2);
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            return false;
+                        } else {
+                            if (horizon1 === "infinite") {
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        }
+                    }
+                    return !greaterDate(horizon1, horizon2);
+                } else if (term === "=") {
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                    return equalDates(horizon1, horizon2);
+                }
             }
         }
     }
     return outputString;
+}
+
+function getHorizon(contractString) {
+    console.log("Getting horizon");
+    console.log(contractString);
+    // Loops through the whole contract to find the largest horizon
+    if (!contractString.includes("truncate")) {
+        console.log("does not include truncate");
+        return "infinite";
+    } else {
+        // TODO: change to go through all contracts by splitting by all 'and' 'or' occurrences
+        var strArr = contractString.split(" ");
+        var indexOfFirstTruncate = strArr.indexOf("truncate");
+        var substringArr = strArr.slice(indexOfFirstTruncate + 1);
+        var maxHorizon = substringArr[0]; // setting first horizon as maxHorizon
+        var comeAcrossTruncate = false;
+        for (var i = 0; i < strArr.length; ++i) {
+            if(strArr[i] === "truncate") {
+                comeAcrossTruncate = true;
+                if (greaterDate(strArr[i + 1], maxHorizon)) {
+                    maxHorizon = strArr[i + 1];
+                }
+                ++i;
+            } else if (strArr[i] === "and" || strArr[i] === "or") { // have reached end of subcontract
+                if (!comeAcrossTruncate) { // if we have not come across a "truncate" then this subcontract's horizon is infinite
+                    console.log(strArr);
+                    console.log("have not come across truncate before conjucnction " + strArr[i] + " at " + i);
+                    return "infinite";
+                }
+                comeAcrossTruncate = false;
+            }
+        }
+        return maxHorizon;
+    }
 }
 
 
@@ -212,11 +331,6 @@ function conditionalEvalution(inputString) {
 global.decomposeContract = function(inputString) {
     //TODO: check formate of string ie whenever 'if' then followed by '(){}'
     // TODO: do conditional evaluation first
-
-    // repeat replacing the if clause while string includes if
-    if (inputString.includes("if")) {
-        inputString = performConditionalEvalution (inputString);
-    }
 
     document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
@@ -229,11 +343,36 @@ global.decomposeContract = function(inputString) {
         return;
     }
     // remove linebreaks
-    inputString = inputString.replace(/(\r\n|\n|\r)/gm,"");
+    inputString = inputString.replace(/(\r\n|\n|\r)/gm," ");
     // remove multiple whitespaces
     inputString = inputString.replace(/  +/g, ' ');
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
+
+    // repeat replacing the if clause while string includes if
+    while (inputString.includes("if")) {
+        console.log("Headie1");
+        console.log(inputString);
+        console.log("performing cond eval");
+        inputString = performConditionalEvalution(inputString);
+    }
+    console.log("Headie2");
+    console.log(inputString);
+    inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
+    // check if first/last word is and/or
+    var st = inputString.split(" ");
+    console.log(st[0]);
+    if (st[0] === "and" || st[0] === "or") {
+        var firstIndex = inputString.indexOf(" ");
+        inputString = inputString.substring(firstIndex + 1);
+    }
+    if (st[st.length - 1] === "and" || st[st.length - 1] === "or") {
+        var lastIndex = inputString.lastIndexOf(" ");
+        inputString = inputString.substring(0, lastIndex);
+    }
+    console.log("Headie3");
+    console.log(inputString);
+
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";
     var noOfOpeningParens = 0;
@@ -395,17 +534,48 @@ function parse(inputString) {
     ++numberOfContracts;
 }
 
-function beforeCurrentDate(contract) {
-    var horizonArr = contract.horizonDate.split("-");
+function computeDateString(dateString) {
+    var horizonArr = dateString.split("-");
     var dateArr = horizonArr[0].split("/");
     var timeArr = horizonArr[1].split(":");
     // +01:00 to get BST from UTC
-    var dateString = dateArr[2] + "-" + dateArr[1] + "-"
+    var finalDateString = dateArr[2] + "-" + dateArr[1] + "-"
     + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
     + (parseInt(timeArr[2]) + 15).toString() + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
-    var contractDate = new Date(dateString);
+    return finalDateString;
+}
+
+function beforeCurrentDate(contract) {
+    var contractDate = new Date(computeDateString(contract.horizonDate));
     var todayDate = new Date();
     if (contractDate.getTime() <= todayDate.getTime()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function equalDates(dateString1, dateString2) {
+    // for first date
+    var contractDate1 = new Date(computeDateString(dateString1));
+    // for second date
+    var contractDate2 = new Date(computeDateString(dateString2));
+
+    if (contractDate1.getTime() === contractDate2.getTime()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function greaterDate(dateString1, dateString2) {
+    // returns true if dateString1 > dateString2
+    // for first date
+    var contractDate1 = new Date(computeDateString(dateString1));
+    // for second date
+    var contractDate2 = new Date(computeDateString(dateString2));
+
+    if (contractDate1.getTime() > contractDate2.getTime()) {
         return true;
     } else {
         return false;

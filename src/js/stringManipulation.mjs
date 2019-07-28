@@ -20,6 +20,7 @@ export function cleanParens(contractString) {
 }
 
 export function addSpacing(string) {
+    // paren spacing
     const regex1 = /(.*\S)(\()(.*)/;
     var matchObj = regex1.exec(string);
     while (matchObj !== null) {
@@ -43,6 +44,31 @@ export function addSpacing(string) {
     while (matchObj !== null) {
         string = matchObj[1] + matchObj[2] + " " + matchObj[3];
         matchObj = regex4.exec(string)
+    }
+    // braces spacing
+    const regex5 = /(.*\S)({)(.*)/;
+    var matchObj = regex5.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        matchObj = regex5.exec(string)
+    }
+    const regex6 = /(.*\S)(})(.*)/;
+    matchObj = regex6.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        matchObj = regex6.exec(string)
+    }
+    const regex7 = /(.*)({)(\S.*)/;
+    matchObj = regex7.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        matchObj = regex7.exec(string)
+    }
+    const regex8 = /(.*)(})(\S.*)/;
+    matchObj = regex8.exec(string);
+    while (matchObj !== null) {
+        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        matchObj = regex8.exec(string)
     }
     return string;
 }
@@ -82,6 +108,16 @@ export function lTrimParen(str) {
 export function rTrimParen(str) {
     if (str == null) return str;
     return str.replace(/\)$/g, '');
+}
+
+export function lTrimBrace(str) {
+    if (str == null) return str;
+    return str.replace(/^\{+/g, '');
+}
+
+export function rTrimBrace(str) {
+    if (str == null) return str;
+    return str.replace(/\}$/g, '');
 }
 
 export function lTrimDoubleQuotes(str) {
