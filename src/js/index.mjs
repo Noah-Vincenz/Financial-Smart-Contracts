@@ -125,7 +125,6 @@ global.getInputString = function() {
     return document.getElementById("transaction_input").value;
 };
 
-
 // TODO: add conditionals
 // - check if contains 'if' --> evaluate conditional first -- does not matter if it is nested somewhere
 // start from '(' after if and find next ')' WHERE noOfOpening == 1
@@ -134,285 +133,217 @@ global.getInputString = function() {
 // find horizon of each contract - check if date is later
 // replace if clause by contract either {true} or {false} contract
 // TODO: add option for nested condition ie (x > y) && (a < b || c > b)
-function findAndEvaluateLeastBalancedIf(inputString) {
+function evaluateConditionals(inputString) {
     var openingParens = 0;
-    var symbolArr = inputString.split("");
-    var leastBalancedIfParens = -1;
-    var leastBalancedIfIndex = 0;
+    var closingParens = 0;
+    var stack = [];
+    var ifsStack = []; // keeping stack of leftover opening parenthesis in from previous ifs
     var ifCondition = "";
-    // finding least balanced if
-    for (var i = 0; i < symbolArr.length; ++i) {
-        var symbol = symbolArr[i];
-        if (symbol === "(") {
-            console.log("opening");
+    var ifsToBeMatched = 0; // keeps track of how many ifs have been read ie. how nested clause is
+    var termArr = inputString.split(" ");
+    for (var i = 0; i < termArr.length; ++i) {
+        var term = termArr[i];
+        console.log("term: " + term);
+        stack.push(term);
+        if (term === "if") {
+            ++ifsToBeMatched;
+            ifsStack.push(openingParens - closingParens);
+        } else if (term === "(") {
             ++openingParens;
-        } else if (symbol === ")") {
-          console.log("closing");
-            --openingParens;
-        } else if (symbol === "i" && symbolArr[i + 1] === "f" && openingParens > leastBalancedIfParens) {
-            console.log("found new leastBalancedIfIndex");
-            leastBalancedIfIndex = i;
-            leastBalancedIfParens = openingParens;
-        }
-    }
-    openingParens = 0;
-    var j = 0;
-    console.log(leastBalancedIfIndex);
-    // finding the whole if condition
-    for (j = leastBalancedIfIndex; j < symbolArr.length; ++j) {
-        var symbol = symbolArr[j];
-        if (symbol === "(") {
-            ++openingParens;
-        } else if (symbol === ")") {
-            --openingParens;
-            console.log("openingParens: " + openingParens);
-            if (openingParens === 0) {
-                // have found the whole condition
-                console.log(inputString.charAt(j + 1));
-                console.log(inputString.charAt(j + 2));
-                console.log(inputString.charAt(j + 3));
-                if (inputString.charAt(j + 2) !== "{") {
-                    console.error("if statements should be followed by curly braces.");
+        } else if (term === ")") {
+            ++closingParens;
+            //if (openingParens - ifsStack[ifsStack.length - 1] === closingParens) {
+            if ( ( ifsStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0 ) || ( openingParens - ifsStack[ifsStack.length - 1] === closingParens ) ) {
+
+                // pop from stack until we have read 'if'
+                // --ifsRead
+                while (stack[stack.length - 1] !== "if") {
+                    if (ifCondition === "") {
+                        ifCondition = stack.pop();
+                    } else {
+                        ifCondition = stack.pop() + " " + ifCondition;
+                    }
                 }
-                ifCondition = inputString.substring(leastBalancedIfIndex + 5, j - 1);
-                console.log("Found end of if");
-                break;
-            }
-        }
-    }
-    var start = "";
-    start = inputString.substring(0, leastBalancedIfIndex - 1);
-    /*
-    if (inputString.charAt(leastBalancedIfIndex - 2) === "(") {
-        start = inputString.substring(0, leastBalancedIfIndex - 3);
-    } else {
-        start = inputString.substring(0, leastBalancedIfIndex - 1);
-    }
-    */
+                console.log("if condition: " + ifCondition);
+                stack.pop(); // popping 'if' off stack
+                console.log(stack);
+                --ifsToBeMatched;
+                // performance is good here: not parsing {}{} stuff
+                var leftOverArr = termArr.slice(i + 1);
+                var firstIndexClosingBrack = leftOverArr.indexOf("}");
+                var action1Arr = leftOverArr.slice(1, firstIndexClosingBrack);
+                var action1 = action1Arr.join(" ");
+                console.log("action1: " + action1);
+                var action2Arr = [];
+                var action2 = "";
+                if (leftOverArr[firstIndexClosingBrack + 1] === "else") {
+                    leftOverArr = leftOverArr.slice(firstIndexClosingBrack + 2); // + 2 because of 'else'
+                    firstIndexClosingBrack = leftOverArr.indexOf("}");
+                    action2Arr = leftOverArr.slice(1, firstIndexClosingBrack);
+                    action2 = action2Arr.join(" ");
+                }
+                console.log("action2: " + action2);
+                var bool = conditionalEvaluation(rTrimWhiteSpace(lTrimWhiteSpace(rTrimParen(lTrimParen(ifCondition)))));
+                console.log("bool: " + bool);
+                if (stack[stack.length - 1] === "(" && leftOverArr[firstIndexClosingBrack + 1] === ")") {
+                    stack.pop(); // get rid of previous '('
+                    ++i; // skip next previous ')'
+                    leftOverArr.splice(firstIndexClosingBrack + 1, 1); // for check in action=="" part
+                    ++closingParens;
+                }
 
-    console.log("START");
-    console.log(start);
-    console.log(ifCondition);
-    console.log(symbolArr.length);
-    console.log(inputString);
-    var endWithActions = inputString.substring(j + 2);
-    console.log(endWithActions);
-    var bool = conditionalEvalution(rTrimWhiteSpace(lTrimWhiteSpace(ifCondition)));
-    //var bool = conditionalEvalution(rTrimWhiteSpace(lTrimWhiteSpace(rTrimParen(lTrimParen(ifCondition)))));
-    if (!endWithActions.includes("}")) {
-        console.error("no closing curly brace found after if clause");
-    }
-    console.log("bool: " + bool);
-    var indexOfFirstClosingCurlyBrace = endWithActions.indexOf("}");
-    var action1 = endWithActions.substring(0, indexOfFirstClosingCurlyBrace);
-    var action2 = "";
-    var substring2 = "";
-    if (indexOfFirstClosingCurlyBrace !== endWithActions.length - 1 && indexOfFirstClosingCurlyBrace !== endWithActions.length - 2) {
-        substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 2);
-    }
-    /*
-    if (endWithActions.charAt(indexOfFirstClosingCurlyBrace + 2) === "e") { // conditional contains else
-        substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 2);
-    } else {
-        substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 4);
-    }
-    */
-    var end = substring2;
-    console.log("END");
-    console.log(end);
-    var substring2Arr = substring2.split(" "); // check if can check for start of string more efficiently
-    // if next symbole after indexOfFirstClosingCurlyBrace is else then we split again
-    if (substring2Arr[0] === "else") {
-        if (substring2Arr[1] !== "{") {
-            console.error("else should be followed by curly braces.");
-        }
-        indexOfFirstClosingCurlyBrace = substring2.indexOf("}");
-        action2 = substring2.substring(5, indexOfFirstClosingCurlyBrace);
-        end = substring2.substring(indexOfFirstClosingCurlyBrace + 2);
-    }
-    console.log(bool);
-    var startArr = start.split(" ");
-    var endArr = end.split(" ");
-    if (startArr[startArr.length - 1] === "(" && endArr[0] === ")") {
-        var firstIndex = end.indexOf(" ");
-        var lastIndex = start.lastIndexOf(" ");
-        start = start.substring(0, lastIndex);
-        end = end.substring(firstIndex + 1);
-        startArr = start.split(" ");
-        endArr = end.split(" ");
-    }
-    if (bool) { // if the if clause succeeds then execute action1
-        console.log("action1");
-        console.log(action1);
-        return start + lTrimBrace(rTrimBrace(action1)) + end;
-    } else { // if no 'else' then return zero TODO: cannot do that as in nested one this will mess with clause
-        if (action2 == "") {
-            console.log("No else clause given");
-            // check if first/last word is and/or
+                if (bool) { // if the if clause succeeds then execute action1
+                    stack.push(lTrimBrace(rTrimBrace(action1)));
+                } else {
+                    if (action2 == "") {
+                        if (stack[stack.length - 1] === "and" || stack[stack.length - 1] === "or") {
+                            stack.pop();
+                        }
+                        console.log("yas");
+                        console.log(leftOverArr[firstIndexClosingBrack + 1]);
+                        if (leftOverArr[firstIndexClosingBrack + 1] === "and" || leftOverArr[firstIndexClosingBrack + 1] === "or") {
+                            ++i;
+                        }
+                    }
+                    stack.push(lTrimBrace(rTrimBrace(action2)));
+                }
+                console.log(stack);
+                // skip next terms until end of conditional clause is reached
+                i = i + action1Arr.length + 2;
+                if (action2Arr.length !== 0) {
+                    i = i + 1 + action2Arr.length + 2;
+                }
 
-            console.log(startArr[startArr.length - 1]);
-            console.log(start);
-            console.log(end);
-            if (startArr[startArr.length - 1] === "and" || startArr[startArr.length - 1] === "or") {
-                var lastIndex = start.lastIndexOf(" ");
-                start = start.substring(0, lastIndex);
             }
-            console.log(endArr[0]);
-            console.log(end);
-            if (endArr[0] === "and" || endArr[0] === "or") {
-                var firstIndex = end.indexOf(" ");
-                end = end.substring(firstIndex + 1);
-            }
-            console.log("YAS");
-            console.log(start);
-            console.log(end);
-            return start + " " + end;
+            ifsStack.pop();
+            ifCondition = "";
+        } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
+          && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "=="
+          && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&"
+          && term !== "||" && !parseInt(term) && !isDate(term) && term !== "else" && term !== "}"
+          && term !== "{" && term !== "and" && term !== "or") {
+            // give error
+            console.log(isDate("24/03/2019-23:33:33"));
+            console.log(isDate(term.toString()));
+            console.log(isDate("25/03/2019-23:33:33"));
+            console.error("invalid token at term " + i + " in contract string: " + term);
+            return;
         }
-        console.log("action2");
-        console.log(action2);
-        console.log(action2.length);
-        return start + lTrimBrace(rTrimBrace(action2)) + end;
     }
+    var contractString = "";
+    while (stack.length !== 0) {
+        contractString = stack.pop() + " " + contractString;
+    }
+    return lTrimWhiteSpace(rTrimWhiteSpace(contractString));
 }
 
 
-function conditionalEvalution(inputString) {
-    console.log("inputstring " + inputString);
-    var strArr = inputString.split("");
+// TODO: split by term instead?
+// add if clause that checks 'else if (term !== 'truncate' && term !== 'get' ...) { console.error (wrong syntax at...);}'
+function conditionalEvaluation(inputString) {
+    var strArr = inputString.split(" ");
     var openingParens = 0;
     for (var i = 0; i < strArr.length; ++i) {
         var term = strArr[i];
-        console.log("term: " + term);
         if (term === "(") {
             ++openingParens;
         } else if (term === ")") {
             --openingParens;
         } else if (openingParens === 0) {
-            if (term === "|" || term === "&") {
-                console.log("found " + term);
-                var part1 = inputString.substring(0, i - 1);
-                var part2 = inputString.substring(i + 2, inputString.length + 1);
-                console.log("ici1");
-                console.log(part1);
-                console.log(part2);
-                if (term === "|") {
-                    var x = conditionalEvalution(part1);
-                    var y = conditionalEvalution(part2);
-                    console.log("COND EVAL");
-                    console.log(x);
-                    console.log(y);
-                    console.log(x || y);
-                    var bool = x || y;
-                    return bool;
-                } else if (term === "&") {
-                    var bool = conditionalEvalution(part1) && conditionalEvalution(part2);
-                    return bool;
+            if (term === "||" || term === "&&") {
+                var part1 = strArr.slice(0, i).join(" ");
+                var part2 = strArr.slice(i + 1).join(" ");
+                var bool1 = conditionalEvaluation(lTrimWhiteSpace(rTrimWhiteSpace(lTrimParen(rTrimParen(part1)))));
+                var bool2 = conditionalEvaluation(lTrimWhiteSpace(rTrimWhiteSpace(lTrimParen(rTrimParen(part2)))));
+                if (term === "||") {
+                    return bool1 || bool2;
+                } else if (term === "&&") {
+                    return bool1 && bool2;
                 }
             }
-            else if (term === ">" || term === "<" || term === "=") {
+            else if (term === ">" || term === "<" || term === "==" || term === ">=" || term === "<=") {
                 // can only compare two contracts - so we cannot have (a & b) > (c | d), cannot have  a & b or  a | b
                 // TODO: allow comparison of numbers - need parser to parse (1 * 7) > 5
                 //if no truncate included then horizon is infinite, else find truncate with max date
-
-                var part1 = inputString.substring(0, i - 1);
-                var part2 = "";
-                // TODO: add <= , >=, ==
-                if (strArr[i + 1] === "=") {
-                    part2 = inputString.substring(i + 3, inputString.length - 1);
-                } else {
-                    part2 = inputString.substring(i + 2, inputString.length + 1);
-                }
-                console.log("ici2");
-                console.log(part1);
-                console.log(part2);
+                var part1 = strArr.slice(0, i).join(" ");
+                var part2 = strArr.slice(i + 1).join(" ");
                 var horizon1 = getHorizon(part1);
                 var horizon2 = getHorizon(part2);
                 console.log("horizon obtained 1");
                 console.log(horizon1);
                 console.log("horizon obtained 2");
                 console.log(horizon2);
-                if (term === ">") {
-                    if (strArr[i + 1] !== "=") {
-                        console.log("greater than");
-                        if (horizon1 === "infinite" || horizon2 === "infinite") {
-                            if (horizon1 === "infinite" && horizon2 === "infinite") {
-                                console.log("both are infinite");
-                                return false;
-                            } else {
-                                if (horizon1 === "infinite") {
-                                    console.log("hor1 is infinite");
-                                    return true;
-                                } else {
-                                    console.log("hor2 is infinite");
-                                    return false;
-                                }
-                            }
-                        }
-                        console.log("none are infinite");
-                        return greaterDate(horizon1, horizon2);
-                    } else {
-                        console.log("greater than or equal to");
-                        if (horizon1 === "infinite" || horizon2 === "infinite") {
-                            if (horizon1 === "infinite" && horizon2 === "infinite") {
-                                console.log("both are infinite");
+                if (term === ">=") {
+                    console.log("greater than or equal to");
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            console.log("both are infinite");
+                            return true;
+                        } else {
+                            if (horizon1 === "infinite") {
+                                console.log("hor1 is infinite");
                                 return true;
                             } else {
-                                if (horizon1 === "infinite") {
-                                    console.log("hor1 is infinite");
-                                    return true;
-                                } else {
-                                    console.log("hor2 is infinite");
-                                    return false;
-                                }
+                                console.log("hor2 is infinite");
+                                return false;
                             }
                         }
-                        console.log("none are infinite");
-                        return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
                     }
+                    console.log("none are infinite");
+                    return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+                } else if (term === ">") {
+                    console.log("greater than");
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            console.log("both are infinite");
+                            return false;
+                        } else {
+                            if (horizon1 === "infinite") {
+                                console.log("hor1 is infinite");
+                                return true;
+                            } else {
+                                console.log("hor2 is infinite");
+                                return false;
+                            }
+                        }
+                    }
+                    console.log("none are infinite");
+                    return greaterDate(horizon1, horizon2);
+                } else if (term === "<=") {
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            return true;
+                        } else {
+                            if (horizon1 === "infinite") {
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        }
+                    }
+                    return !greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
                 } else if (term === "<") {
-                    if (strArr[i + 1] !== "=") {
-                        console.log("horizons");
-                        console.log(horizon1);
-                        console.log(horizon2);
-                        if (horizon1 === "infinite" || horizon2 === "infinite") {
-                            if (horizon1 === "infinite" && horizon2 === "infinite") {
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            return false;
+                        } else {
+                            if (horizon1 === "infinite") {
                                 return false;
                             } else {
-                                if (horizon1 === "infinite") {
-                                    return false;
-                                } else {
-                                    return true;
-                                }
-                            }
-                        }
-                        return !greaterDate(horizon1, horizon2);
-                    } else {
-                        if (horizon1 === "infinite" || horizon2 === "infinite") {
-                            if (horizon1 === "infinite" && horizon2 === "infinite") {
                                 return true;
-                            } else {
-                                if (horizon1 === "infinite") {
-                                    return false;
-                                } else {
-                                    return true;
-                                }
                             }
                         }
-                        return !greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
                     }
-                } else if (term === "=") {
-                    if (strArr[i + 1] === "=") {
-                        if (horizon1 === "infinite" || horizon2 === "infinite") {
-                            if (horizon1 === "infinite" && horizon2 === "infinite") {
-                                return true;
-                            } else {
-                                return false;
-                            }
+                    return !greaterDate(horizon1, horizon2);
+                } else if (term === "==") {
+                    if (horizon1 === "infinite" || horizon2 === "infinite") {
+                        if (horizon1 === "infinite" && horizon2 === "infinite") {
+                            return true;
+                        } else {
+                            return false;
                         }
-                        return equalDates(horizon1, horizon2);
-                    } else {
-                        console.error("= should be ==");
                     }
+                    return equalDates(horizon1, horizon2);
                 }
             }
         }
@@ -420,14 +351,10 @@ function conditionalEvalution(inputString) {
 }
 
 function getHorizon(contractString) {
-    console.log("Getting horizon");
-    console.log(contractString);
     // Loops through the whole contract to find the largest horizon
     if (!contractString.includes("truncate")) {
-        console.log("does not include truncate");
         return "infinite";
     } else {
-        // TODO: change to go through all contracts by splitting by all 'and' 'or' occurrences
         var strArr = contractString.split(" ");
         var indexOfFirstTruncate = strArr.indexOf("truncate");
         var substringArr = strArr.slice(indexOfFirstTruncate + 1);
@@ -442,8 +369,6 @@ function getHorizon(contractString) {
                 ++i;
             } else if (strArr[i] === "and" || strArr[i] === "or") { // have reached end of subcontract
                 if (!comeAcrossTruncate) { // if we have not come across a "truncate" then this subcontract's horizon is infinite
-                    console.log(strArr);
-                    console.log("have not come across truncate before conjucnction " + strArr[i] + " at " + i);
                     return "infinite";
                 }
                 comeAcrossTruncate = false;
@@ -477,11 +402,9 @@ global.decomposeContract = function(inputString) {
     inputString = addSpacing(inputString);
 
     // repeat replacing the if clause while string includes if
-    while (inputString.includes("if")) {
-        console.log("Headie1");
-        console.log(inputString);
-        console.log("performing cond eval");
-        inputString = findAndEvaluateLeastBalancedIf(inputString);
+    inputString = evaluateConditionals(inputString);
+    if (inputString === "") {
+        return;
     }
 
     console.log("Headie2");
