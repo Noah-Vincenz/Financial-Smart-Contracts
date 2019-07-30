@@ -649,101 +649,199 @@ global.getInputString = function () {
 // TODO: add option for nested condition ie (x > y) && (a < b || c > b)
 
 
-function performConditionalEvalution(inputString) {
-  var strBeginning = "";
-  var strEnd = "";
-  var indexOfIf = inputString.indexOf("if");
-
-  if (indexOfIf > 2) {
-    strBeginning = inputString.substring(0, indexOfIf - 1);
-  }
-
-  var openingParen = 0;
-  var leftOverSubstring = inputString.substring(indexOfIf + 2);
-  var symbolArr = leftOverSubstring.split("");
+function findAndEvaluateLeastBalancedIf(inputString) {
+  var openingParens = 0;
+  var symbolArr = inputString.split("");
+  var leastBalancedIfParens = -1;
+  var leastBalancedIfIndex = 0;
+  var ifCondition = ""; // finding least balanced if
 
   for (var i = 0; i < symbolArr.length; ++i) {
     var symbol = symbolArr[i];
 
     if (symbol === "(") {
-      ++openingParen;
+      console.log("opening");
+      ++openingParens;
     } else if (symbol === ")") {
-      --openingParen;
+      console.log("closing");
+      --openingParens;
+    } else if (symbol === "i" && symbolArr[i + 1] === "f" && openingParens > leastBalancedIfParens) {
+      console.log("found new leastBalancedIfIndex");
+      leastBalancedIfIndex = i;
+      leastBalancedIfParens = openingParens;
+    }
+  }
 
-      if (openingParen === 0) {
+  openingParens = 0;
+  var j = 0;
+  console.log(leastBalancedIfIndex); // finding the whole if condition
+
+  for (j = leastBalancedIfIndex; j < symbolArr.length; ++j) {
+    var symbol = symbolArr[j];
+
+    if (symbol === "(") {
+      ++openingParens;
+    } else if (symbol === ")") {
+      --openingParens;
+      console.log("openingParens: " + openingParens);
+
+      if (openingParens === 0) {
         // have found the whole condition
-        if (leftOverSubstring.charAt(i + 2) !== "{") {
-          console.error("if statements are followed by curly braces.");
+        console.log(inputString.charAt(j + 1));
+        console.log(inputString.charAt(j + 2));
+        console.log(inputString.charAt(j + 3));
+
+        if (inputString.charAt(j + 2) !== "{") {
+          console.error("if statements should be followed by curly braces.");
         }
 
-        var ifCondition = leftOverSubstring.substring(0, i);
-        var bool = conditionalEvalution((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)((0, _stringmanipulation.rTrimParen)((0, _stringmanipulation.lTrimParen)(ifCondition)))));
-        var substring1 = leftOverSubstring.substring(i + 2);
-        var indexOfFirstClosingCurlyBrace = substring1.indexOf("}");
-        var action1 = substring1.substring(0, indexOfFirstClosingCurlyBrace);
-        var action2 = "";
-        var substring2 = substring1.substring(indexOfFirstClosingCurlyBrace + 2);
-        strEnd = substring2;
-        var substring2Arr = substring2.split(" "); // check if can check for start of string more efficiently
-        // if next symbole after indexOfFirstClosingCurlyBrace is else then we split again
-
-        if (substring2Arr[0] === "else") {
-          if (substring2Arr[1] !== "{") {
-            console.error("else should be followed by curly braces.");
-          }
-
-          console.log("in here");
-          indexOfFirstClosingCurlyBrace = substring2.indexOf("}");
-          action2 = substring2.substring(5, indexOfFirstClosingCurlyBrace);
-          strEnd = substring2.substring(indexOfFirstClosingCurlyBrace + 2);
-        }
-
-        console.log(bool);
-
-        if (bool) {
-          // if the if clause succeeds then execute action1
-          console.log("action1");
-          console.log(action1);
-          return strBeginning + (0, _stringmanipulation.lTrimBrace)((0, _stringmanipulation.rTrimBrace)(action1)) + strEnd;
-        } else {
-          // if no 'else' then return zero TODO: cannot do that as in nested one this will mess with clause
-          if (action2 == "") {
-            return strBeginning + " " + strEnd;
-          }
-
-          console.log("action2");
-          console.log(action2);
-          console.log(action2.length);
-          return strBeginning + (0, _stringmanipulation.lTrimBrace)((0, _stringmanipulation.rTrimBrace)(action2)) + strEnd;
-        }
+        ifCondition = inputString.substring(leastBalancedIfIndex + 5, j - 1);
+        console.log("Found end of if");
+        break;
       }
     }
+  }
+
+  var start = "";
+  start = inputString.substring(0, leastBalancedIfIndex - 1);
+  /*
+  if (inputString.charAt(leastBalancedIfIndex - 2) === "(") {
+      start = inputString.substring(0, leastBalancedIfIndex - 3);
+  } else {
+      start = inputString.substring(0, leastBalancedIfIndex - 1);
+  }
+  */
+
+  console.log("START");
+  console.log(start);
+  console.log(ifCondition);
+  console.log(symbolArr.length);
+  console.log(inputString);
+  var endWithActions = inputString.substring(j + 2);
+  console.log(endWithActions);
+  var bool = conditionalEvalution((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(ifCondition))); //var bool = conditionalEvalution(rTrimWhiteSpace(lTrimWhiteSpace(rTrimParen(lTrimParen(ifCondition)))));
+
+  if (!endWithActions.includes("}")) {
+    console.error("no closing curly brace found after if clause");
+  }
+
+  console.log("bool: " + bool);
+  var indexOfFirstClosingCurlyBrace = endWithActions.indexOf("}");
+  var action1 = endWithActions.substring(0, indexOfFirstClosingCurlyBrace);
+  var action2 = "";
+  var substring2 = "";
+
+  if (indexOfFirstClosingCurlyBrace !== endWithActions.length - 1 && indexOfFirstClosingCurlyBrace !== endWithActions.length - 2) {
+    substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 2);
+  }
+  /*
+  if (endWithActions.charAt(indexOfFirstClosingCurlyBrace + 2) === "e") { // conditional contains else
+      substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 2);
+  } else {
+      substring2 = endWithActions.substring(indexOfFirstClosingCurlyBrace + 4);
+  }
+  */
+
+
+  var end = substring2;
+  console.log("END");
+  console.log(end);
+  var substring2Arr = substring2.split(" "); // check if can check for start of string more efficiently
+  // if next symbole after indexOfFirstClosingCurlyBrace is else then we split again
+
+  if (substring2Arr[0] === "else") {
+    if (substring2Arr[1] !== "{") {
+      console.error("else should be followed by curly braces.");
+    }
+
+    indexOfFirstClosingCurlyBrace = substring2.indexOf("}");
+    action2 = substring2.substring(5, indexOfFirstClosingCurlyBrace);
+    end = substring2.substring(indexOfFirstClosingCurlyBrace + 2);
+  }
+
+  console.log(bool);
+  var startArr = start.split(" ");
+  var endArr = end.split(" ");
+
+  if (startArr[startArr.length - 1] === "(" && endArr[0] === ")") {
+    var firstIndex = end.indexOf(" ");
+    var lastIndex = start.lastIndexOf(" ");
+    start = start.substring(0, lastIndex);
+    end = end.substring(firstIndex + 1);
+    startArr = start.split(" ");
+    endArr = end.split(" ");
+  }
+
+  if (bool) {
+    // if the if clause succeeds then execute action1
+    console.log("action1");
+    console.log(action1);
+    return start + (0, _stringmanipulation.lTrimBrace)((0, _stringmanipulation.rTrimBrace)(action1)) + end;
+  } else {
+    // if no 'else' then return zero TODO: cannot do that as in nested one this will mess with clause
+    if (action2 == "") {
+      console.log("No else clause given"); // check if first/last word is and/or
+
+      console.log(startArr[startArr.length - 1]);
+      console.log(start);
+      console.log(end);
+
+      if (startArr[startArr.length - 1] === "and" || startArr[startArr.length - 1] === "or") {
+        var lastIndex = start.lastIndexOf(" ");
+        start = start.substring(0, lastIndex);
+      }
+
+      console.log(endArr[0]);
+      console.log(end);
+
+      if (endArr[0] === "and" || endArr[0] === "or") {
+        var firstIndex = end.indexOf(" ");
+        end = end.substring(firstIndex + 1);
+      }
+
+      console.log("YAS");
+      console.log(start);
+      console.log(end);
+      return start + " " + end;
+    }
+
+    console.log("action2");
+    console.log(action2);
+    console.log(action2.length);
+    return start + (0, _stringmanipulation.lTrimBrace)((0, _stringmanipulation.rTrimBrace)(action2)) + end;
   }
 }
 
 function conditionalEvalution(inputString) {
   console.log("inputstring " + inputString);
   var strArr = inputString.split("");
-  var openingParen = 0;
+  var openingParens = 0;
 
   for (var i = 0; i < strArr.length; ++i) {
     var term = strArr[i];
+    console.log("term: " + term);
 
     if (term === "(") {
-      ++openingParen;
+      ++openingParens;
     } else if (term === ")") {
-      --openingParen;
-    } else if (openingParen === 1) {
+      --openingParens;
+    } else if (openingParens === 0 || openingParens === 1) {
       if (term === "|" || term === "&") {
         console.log("found " + term);
-        var part1 = inputString.substring(2, i - 1);
-        var part2 = inputString.substring(i + 2, inputString.length - 1);
+        var part1 = inputString.substring(0, i - 1);
+        var part2 = inputString.substring(i + 2, inputString.length + 1);
         console.log("ici1");
         console.log(part1);
         console.log(part2);
 
         if (term === "|") {
-          var bool = conditionalEvalution(part1) || conditionalEvalution(part2);
+          var x = conditionalEvalution(part1);
+          var y = conditionalEvalution(part2);
+          console.log("COND EVAL");
+          console.log(x);
+          console.log(y);
+          console.log(x || y);
+          var bool = x || y;
           return bool;
         } else if (term === "&") {
           var bool = conditionalEvalution(part1) && conditionalEvalution(part2);
@@ -753,13 +851,13 @@ function conditionalEvalution(inputString) {
         // can only compare two contracts - so we cannot have (a & b) > (c | d), cannot have  a & b or  a | b
         // TODO: allow comparison of numbers - need parser to parse (1 * 7) > 5
         //if no truncate included then horizon is infinite, else find truncate with max date
-        var part1 = inputString.substring(2, i - 1);
+        var part1 = inputString.substring(0, i - 1);
         var part2 = ""; // TODO: add <= , >=, ==
 
         if (strArr[i + 1] === "=") {
           part2 = inputString.substring(i + 3, inputString.length - 1);
         } else {
-          part2 = inputString.substring(i + 2, inputString.length - 1);
+          part2 = inputString.substring(i + 2, inputString.length + 1);
         }
 
         console.log("ici2");
@@ -866,8 +964,6 @@ function conditionalEvalution(inputString) {
       }
     }
   }
-
-  return outputString;
 }
 
 function getHorizon(contractString) {
@@ -939,28 +1035,12 @@ global.decomposeContract = function (inputString) {
     console.log("Headie1");
     console.log(inputString);
     console.log("performing cond eval");
-    inputString = performConditionalEvalution(inputString);
+    inputString = findAndEvaluateLeastBalancedIf(inputString);
   }
 
   console.log("Headie2");
   console.log(inputString);
-  inputString = (0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(inputString)); // check if first/last word is and/or
-
-  var st = inputString.split(" ");
-  console.log(st[0]);
-
-  if (st[0] === "and" || st[0] === "or") {
-    var firstIndex = inputString.indexOf(" ");
-    inputString = inputString.substring(firstIndex + 1);
-  }
-
-  if (st[st.length - 1] === "and" || st[st.length - 1] === "or") {
-    var lastIndex = inputString.lastIndexOf(" ");
-    inputString = inputString.substring(0, lastIndex);
-  }
-
-  console.log("Headie3");
-  console.log(inputString);
+  inputString = (0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(inputString));
   removeChildren("button_choices_container");
   stringToAddToBeginning = "";
   var noOfOpeningParens = 0;
@@ -1044,7 +1124,7 @@ global.decomposeContract = function (inputString) {
 
 function splitContract(contractStringArr, indexOfMostBalancedOr) {
   // do not split by "or" because this will split by first 'or' occurence
-  // we want to split by 'or' occurrence with only 1 difference between |openingParen| and |closingParen|
+  // we want to split by 'or' occurrence with only 1 difference between |openingParens| and |closingParen|
   var newStack = [];
   newStack[0] = (0, _stringmanipulation.cleanParens)(contractStringArr.slice(0, indexOfMostBalancedOr).join(' '));
   newStack[1] = (0, _stringmanipulation.cleanParens)(contractStringArr.slice(indexOfMostBalancedOr + 1, contractStringArr.length - 1).join(' '));
