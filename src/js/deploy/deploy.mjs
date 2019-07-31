@@ -39,31 +39,6 @@ export function createContract(holderAddress, counterPartyAddress) {
   });
 }
 
-export function deposit(party, depositAmount) {
-  var partyString = "";
-  if (party === 1) {
-    partyString = "holder";
-    holderAddress().then(function(address) {
-        console.log("Contract Holder: " + address);
-        depositCollateral(address, depositAmount).then(holderDepositTxHash => {
-            waitForReceipt(holderDepositTxHash).then(_ => {
-                console.log("Deposit of " + depositAmount + " Ether has been added to " + partyString + " account.");
-            });
-        });
-    });
-  } else {
-    partyString = "counter-party";
-    counterPartyAddress().then(function(address) {
-        console.log("Contract Counter-Party: " + address);
-        depositCollateral(address, depositAmount).then(counterPartyDepositTxHash => {
-            waitForReceipt(counterPartyDepositTxHash).then(_ => {
-                console.log("Deposit of " + depositAmount + " Ether has been added to " + partyString + " account.");
-            });
-        });
-    });
-  }
-}
-
 // this does not exist for Kovan chain
 function unlockAccount(address) {
     return new Promise (function (resolve, reject) {
@@ -78,9 +53,12 @@ function unlockAccount(address) {
     });
 }
 
-function estimateGas(dataIn) {
+/*
+export function estimateGas(senderAddress, recipientAddress, amount) {
     return new Promise (function (resolve, reject) {
-        web3.eth.estimateGas({to: web3.eth.defaultAccount, data: dataIn}, function(err, result) {
+        console.log("chica");
+        web3.eth.estimateGas({to: recipientAddress, amount: web3.toWei(amount, "ether")}, function(err, result) {
+            console.log("chici");
             if (err) {
               reject(err);
             } else {
@@ -89,18 +67,7 @@ function estimateGas(dataIn) {
         });
     });
 }
-
-function getGasLimit() {
-    return new Promise (function (resolve, reject) {
-        web3.eth.getBlock("latest", function(err, block) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(block.gasLimit);
-            }
-        });
-    });
-}
+*/
 
 function instantiateNew (holderAddress, counterPartyAddress, dataIn) {
     return new Promise (function (resolve, reject) {
@@ -125,11 +92,8 @@ function stringToBin(str) {
     return result;
 }
 
-function depositCollateral(senderAddress, amount) {
+export function depositCollateral(senderAddress, amount) {
     return new Promise (function (resolve, reject) {
-        console.log(senderAddress);
-        console.log(web3.toChecksumAddress(senderAddress));
-        console.log(smartContractInstance);
         smartContractInstance.depositCollateral(amount, {from: senderAddress, value: web3.toWei(amount, "ether")}, function (err, result) {
             if(err) {
                   reject(err);
@@ -238,18 +202,4 @@ export function waitForReceipt(transactionHash) {
             }
       });
   });
-}
-
-function transferEther(fromAddress, toAddress, amount) {
-    web3.eth.sendTransaction({
-      to: toAddress,
-      from: fromAddress,
-      gasPrice: "20000000000",
-      gas: "210000",
-      value: web3.toWei(amount, "ether")}, function(err, transactionHash) {
-        if (!err) {
-          console.log("Transferred ether.");
-          console.log("TransactionHash: " + transactionHash);
-        }
-    });
 }

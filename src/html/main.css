@@ -70,6 +70,13 @@ textarea[disabled]{
     font-size: 10px;
 }
 
+.p_balance {
+    font-size: 17px;
+    color: #707070;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+
 .choices_button {
     color: gray;
     background-color: white;
@@ -106,6 +113,7 @@ textarea[disabled]{
     font-family: Arial;
     color: #707070;
     font-size: 20px;
+    margin-top: 30px;
     margin-bottom: 10px;
     width: 100%;
 }

@@ -4,17 +4,18 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script src="bundle.js"></script>
   <meta charset="utf-8">
-  <title>Financial Smart Contracts</title>
+  <title>Nexus - Financial Smart Contracts</title>
   <link rel="stylesheet" type="text/css" href="main.css" />
 </head>
 <body>
   <div id="outer_container">
-    <h1 align="center">Financial Smart Contracts</h1>
+    <h1 align="center">Nexus</h1>
     <div id="top_container">
         <div id="top_input_container">
             <div id="holder_container">
-                <input id="holder_address" class="address_input" type="text" placeholder="Holder Address"
+                <input id="holder_address" class="address_input" type="text" placeholder="Contract Holder Address"
                 value="0x004ec07d2329997267Ec62b4166639513386F32E" maxlength="42"><br>
+                <p class="p_balance" id="holder_balance_p">Balance: 0ETH</p>
                 <button class="button" id = "deposit_button1" type="button" onclick="callDepositFunction(1)">deposit</button>
             </div>
 
@@ -24,8 +25,9 @@
             </div>
 
             <div id="counter_party_container">
-                <input id="counter_party_address" class="address_input" type="text" placeholder="Counter-Party Address"
+                <input id="counter_party_address" class="address_input" type="text" placeholder="Contract Counter-Party Address"
                 value="0x7f023262356b002a4b7deb7ce057eb8b1aabb427" maxlength="42"><br>
+                <p class="p_balance" id="counter_party_balance_p">Balance: 0ETH</p>
                 <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
             </div>
         </div>

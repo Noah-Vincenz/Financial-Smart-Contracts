@@ -12,7 +12,7 @@ import {
 
 import {Contract, translateContract} from "./contract.mjs";
 
-import {createContract, deposit, getSelectedMetaMaskAccount, holderBalance,
+import {createContract, depositCollateral, getSelectedMetaMaskAccount, holderBalance,
   counterPartyBalance, holderAddress, counterPartyAddress, balanceOfAddress,
   transfer, waitForReceipt
 } from "./deploy/deploy.mjs"
@@ -84,6 +84,10 @@ function runClock() {
     }, timeToNextTick);
 }
 
+function updateBalances() {
+    retrieveBalances();
+}
+
 global.callDepositFunction = function(id) {
     document.getElementById("create_contract_status").innerHTML = "";
     var addr = "";
@@ -92,8 +96,18 @@ global.callDepositFunction = function(id) {
     } else {
         addr = "counter_party_address";
     }
-    if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById(addr).value.toUpperCase()) {
-        deposit(id, getSelectedDeposit());
+    var depositAmount = getSelectedDeposit();
+    var senderAddress = document.getElementById(addr).value;
+    if (getSelectedMetaMaskAccount().toUpperCase() === senderAddress.toUpperCase()) {
+        depositCollateral(senderAddress, depositAmount).then(holderDepositTxHash => {
+            waitForReceipt(holderDepositTxHash).then(_ => {
+                console.log("Deposit of " + depositAmount + " Ether has been added to " + addr + " account.");
+                retrieveBalances();
+            });
+        });
+
+
+        //deposit(id, getSelectedDeposit());
         document.getElementById("make_transaction_button").disabled = false;
         document.getElementById("transaction_input").disabled = false;
     } else {
@@ -502,7 +516,6 @@ function combineContracts(contractsStack, conjunctionStack) {
     var contract1 = contractsStack.pop();
     var contract2 = contractsStack.pop();
     var conj = conjunctionStack.pop();
-    console.log("Combining leftover contracts...");
     if (conj === "or") {
         createSection();
         createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 1);
@@ -546,32 +559,22 @@ function parse(inputString) {
             acquireAtHorizon = "yes";
         }
     }
-    /*
-    if (horizonDate === "instantaneous") {
-        acquireAtHorizon = "yes";
-    }
-    */
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
     const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
-
     createTableRow(contract);
-    /*
-    if (horizonDate === "instantaneous") {
-        executeContract(contract);
-    } else { */
-        if (beforeCurrentDate(contract)) {
-            // add expired label & disable acquire button
-            console.log("It is before current date!");
-            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
-            document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
-        } else {
-            console.log("It is not before current date!");
-            contractsMap.set(numberOfContracts, contract);
-            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
-        }
-    //}
+
+    if (horizonDate !== "infinite" && beforeCurrentDate(contract)) {
+        // add expired label & disable acquire button
+        console.log("It is before current date!");
+        document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
+        document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
+    } else {
+        console.log("It is not before current date!");
+        contractsMap.set(numberOfContracts, contract);
+        document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
+    }
     ++numberOfContracts;
 }
 
@@ -657,7 +660,7 @@ function callTransferFunction(contract, fromAddress, toAddress) {
                     document.getElementById("td_status_" + contract.id.toString()).innerHTML = "successful";
                     document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
                     contractsMap.delete(contract.id);
-                    retrieveBalances();
+                    updateBalances();
                 });
             });
         } else {
@@ -710,9 +713,9 @@ function createMoveFile(sender_address, recipient_address, amount) {
 
 function retrieveBalances() {
     holderBalance().then(function(hBalance) {
-        console.log("Holder Balance: " + hBalance);
+        document.getElementById("holder_balance_p").innerHTML = "Balance: " + hBalance + "ETH";
         counterPartyBalance().then(function(cBalance) {
-            console.log("Counter-Party Balance: " + cBalance);
+            document.getElementById("counter_party_balance_p").innerHTML = "Balance: " + cBalance + "ETH";
         });
     });
 }
@@ -759,19 +762,19 @@ function createTableRow(contract) {
 }
 
 function createButton (contractString, buttonId) {
-  var button = document.createElement("button");
-  button.id = "choices_button_" + buttonId;
-  button.className = "choices_button";
-  button.innerHTML = cleanParens(contractString);
-  // 2. Append somewhere
-  var bottomContainer = document.getElementById("button_choices_container");
-  bottomContainer.appendChild(button);
-  // 3. Add event handler
-  button.addEventListener ("click", function() {
-      console.log("Pressed button");
-      console.log(stringToAddToBeginning + button.innerHTML);
-      decomposeContract(stringToAddToBeginning + button.innerHTML);
-  });
+    var button = document.createElement("button");
+    button.id = "choices_button_" + buttonId;
+    button.className = "choices_button";
+    button.innerHTML = cleanParens(contractString);
+    // 2. Append somewhere
+    var bottomContainer = document.getElementById("button_choices_container");
+    bottomContainer.appendChild(button);
+    // 3. Add event handler
+    button.addEventListener ("click", function() {
+        console.log("Pressed button");
+        console.log(stringToAddToBeginning + button.innerHTML);
+        decomposeContract(stringToAddToBeginning + button.innerHTML);
+    });
 }
 
 function createSection() {
