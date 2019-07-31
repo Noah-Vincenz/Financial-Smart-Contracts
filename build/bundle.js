@@ -550,7 +550,7 @@ function update() {
           key = _step$value[0],
           value = _step$value[1];
 
-      if (value.horizonDate !== "instantaneous") {
+      if (value.horizonDate !== "infinite") {
         var horizonArr = value.horizonDate.split("-");
         var dateArr = horizonArr[0].split("/");
         var timeArr = horizonArr[1].split(":"); // +01:00 to get BST from UTC
@@ -932,8 +932,11 @@ global.decomposeContract = function (inputString) {
     console.error("Parenthesis mismatch: The contract is not constructed properly.");
     document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
     return;
-  } // remove linebreaks
+  }
 
+  console.log(inputString);
+  inputString = (0, _stringmanipulation.changeDateFormat)(inputString);
+  console.log(inputString); // remove linebreaks
 
   inputString = inputString.replace(/(\r\n|\n|\r)/gm, " "); // remove multiple whitespaces
 
@@ -1290,11 +1293,11 @@ function createTableRow(contract) {
   tr.appendChild(td = document.createElement("td"));
   td.innerHTML = contract.id;
   tr.appendChild(td = document.createElement("td"));
-  td.innerHTML = contract.contractString;
+  td.innerHTML = (0, _stringmanipulation.changeDateFormatBack)(contract.contractString);
   tr.appendChild(td = document.createElement("td"));
-  td.innerHTML = contract.meaningOfContractString;
+  td.innerHTML = (0, _stringmanipulation.changeDateFormatBack)(contract.meaningOfContractString);
   tr.appendChild(td = document.createElement("td"));
-  td.innerHTML = contract.horizonDate;
+  td.innerHTML = (0, _stringmanipulation.changeDateFormatBack)(contract.horizonDate);
   tr.appendChild(td = document.createElement("td"));
   td.innerHTML = contract.toBeExecutedAtHorizon;
   tr.appendChild(td = document.createElement("td"));
@@ -1419,6 +1422,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.cleanParens = cleanParens;
+exports.changeDateFormat = changeDateFormat;
+exports.changeDateFormatBack = changeDateFormatBack;
 exports.addSpacing = addSpacing;
 exports.addParens = addParens;
 exports.openingParensAmount = openingParensAmount;
@@ -1453,6 +1458,30 @@ function cleanParens(contractString) {
   }
 
   return contractString;
+}
+
+function changeDateFormat(string) {
+  var regex = /(.*)(\d\d\d\d)\s(\d\d)(.*)/;
+  var matchObj = regex.exec(string);
+
+  while (matchObj !== null) {
+    string = matchObj[1] + matchObj[2] + "-" + matchObj[3] + matchObj[4];
+    matchObj = regex.exec(string);
+  }
+
+  return string;
+}
+
+function changeDateFormatBack(string) {
+  var regex = /(.*)(\d\d\d\d)-(\d\d)(.*)/;
+  var matchObj = regex.exec(string);
+
+  while (matchObj !== null) {
+    string = matchObj[1] + matchObj[2] + " " + matchObj[3] + matchObj[4];
+    matchObj = regex.exec(string);
+  }
+
+  return string;
 }
 
 function addSpacing(string) {

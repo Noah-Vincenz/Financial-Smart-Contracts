@@ -7,7 +7,7 @@
 import {
   cleanParens, addSpacing, addParens, openingParensAmount, closingParensAmount,
   lTrimWhiteSpace, rTrimWhiteSpace, lTrimParen, rTrimParen, lTrimDoubleQuotes,
-  rTrimDoubleQuotes, lTrimBrace, rTrimBrace
+  rTrimDoubleQuotes, lTrimBrace, rTrimBrace, changeDateFormat, changeDateFormatBack
 } from "./stringmanipulation.mjs";
 
 import {Contract, translateContract} from "./contract.mjs";
@@ -53,7 +53,7 @@ function update() {
     // if get: then execute
     // if not get: then disable acquire button
     for (var [key, value] of contractsMap) {
-        if (value.horizonDate !== "instantaneous") {
+        if (value.horizonDate !== "infinite") {
             var horizonArr = value.horizonDate.split("-");
             var dateArr = horizonArr[0].split("/");
             var timeArr = horizonArr[1].split(":");
@@ -85,6 +85,7 @@ function runClock() {
 }
 
 global.callDepositFunction = function(id) {
+    document.getElementById("create_contract_status").innerHTML = "";
     var addr = "";
     if (id === 1) {
         addr = "holder_address";
@@ -101,6 +102,7 @@ global.callDepositFunction = function(id) {
 }
 
 global.callCreateContractFunction = function() {
+    document.getElementById("create_contract_status").innerHTML = "";
     var holderAddressValue = document.getElementById("holder_address").value;
     var counterPartyAddressValue = document.getElementById("counter_party_address").value;
     if (getSelectedMetaMaskAccount().toUpperCase() === holderAddressValue.toUpperCase()) {
@@ -382,6 +384,9 @@ global.decomposeContract = function(inputString) {
         document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
         return;
     }
+    console.log(inputString);
+    inputString = changeDateFormat(inputString);
+    console.log(inputString);
     // remove linebreaks
     inputString = inputString.replace(/(\r\n|\n|\r)/gm," ");
     // remove multiple whitespaces
@@ -728,11 +733,11 @@ function createTableRow(contract) {
     tr.appendChild(td = document.createElement("td"));
     td.innerHTML = contract.id;
     tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.contractString;
+    td.innerHTML = changeDateFormatBack(contract.contractString);
     tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.meaningOfContractString;
+    td.innerHTML = changeDateFormatBack(contract.meaningOfContractString);
     tr.appendChild(td = document.createElement("td"));
-    td.innerHTML = contract.horizonDate;
+    td.innerHTML = changeDateFormatBack(contract.horizonDate);
     tr.appendChild(td = document.createElement("td"));
     td.innerHTML = contract.toBeExecutedAtHorizon;
     tr.appendChild(td = document.createElement("td"));

@@ -19,6 +19,26 @@ export function cleanParens(contractString) {
     return contractString;
 }
 
+export function changeDateFormat(string) {
+  const regex = /(.*)(\d\d\d\d)\s(\d\d)(.*)/;
+  var matchObj = regex.exec(string);
+  while (matchObj !== null) {
+      string = matchObj[1] + matchObj[2] + "-" + matchObj[3] + matchObj[4];
+      matchObj = regex.exec(string);
+  }
+  return string;
+}
+
+export function changeDateFormatBack(string) {
+  const regex = /(.*)(\d\d\d\d)-(\d\d)(.*)/;
+  var matchObj = regex.exec(string);
+  while (matchObj !== null) {
+      string = matchObj[1] + matchObj[2] + " " + matchObj[3] + matchObj[4];
+      matchObj = regex.exec(string);
+  }
+  return string;
+}
+
 export function addSpacing(string) {
     // paren spacing
     const regex1 = /(.*\S)(\()(.*)/;
