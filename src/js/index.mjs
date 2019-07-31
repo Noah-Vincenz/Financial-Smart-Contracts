@@ -143,7 +143,7 @@ function evaluateConditionals(inputString) {
         if (term === "if" && i < termArr.length - 3) {
             if (nextTerm !== "(") {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
-                return;
+                return "error";
             }
             ++ifsToBeMatched;
             ifsStack.push(openingParens - closingParens);
@@ -152,13 +152,13 @@ function evaluateConditionals(inputString) {
               || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "=="
               || nextTerm === "&&" || nextTerm === "||") {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
-                return;
+                return "error";
             }
             ++openingParens;
         } else if (term === ")") {
             if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" ) ) {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
-                return;
+                return "error";
             }
             ++closingParens;
             //if (openingParens - ifsStack[ifsStack.length - 1] === closingParens) {
@@ -175,7 +175,6 @@ function evaluateConditionals(inputString) {
                 }
                 console.log("if condition: " + ifCondition);
                 stack.pop(); // popping 'if' off stack
-                console.log(stack);
                 --ifsToBeMatched;
                 // performance is good here: not parsing {}{} stuff
                 var leftOverArr = termArr.slice(i + 1);
@@ -232,7 +231,7 @@ function evaluateConditionals(inputString) {
           && term !== "{" && term !== "and" && term !== "or") {
             // give error
             console.error("syntax error at term " + i.toString() + ": " + term);
-            return;
+            return "error";
         }
     }
     var contractString = "";
@@ -379,8 +378,8 @@ global.decomposeContract = function(inputString) {
         return;
     }
     if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
-        console.error("The contract is not constructed properly.");
-        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly.";
+        console.error("Parenthesis mismatch: The contract is not constructed properly.");
+        document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
         return;
     }
     // remove linebreaks
@@ -395,10 +394,18 @@ global.decomposeContract = function(inputString) {
     if (inputString === "") {
         return;
     }
+    if (inputString === "error") {
+        document.getElementById("transaction_status").innerHTML = "Syntax error: The contract is not constructed properly.";
+        return;
+    }
 
-    console.log("Headie2");
-    console.log(inputString);
     inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
+
+    if (inputString.includes("get") && !inputString.includes("truncate")) {
+        console.error("The contract is not constructed properly. Contract strings cannot include 'get' without 'truncate'.");
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Contract strings cannot include 'get' without 'truncate'.";
+        return;
+    }
 
     removeChildren("button_choices_container");
     stringToAddToBeginning = "";
@@ -451,9 +458,9 @@ global.decomposeContract = function(inputString) {
                 }
            }
            if (noOfClosingParens > noOfOpeningParens) {
-               console.error("The contract is not constructed properly.");
-               document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly.";
-               break;
+               console.error("Parenthesis mismatch: The contract is not constructed properly.");
+               document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
+               return;
            }
         }
         if (contractsStack.length === 1 && contractsStack[0].includes("or")) {
@@ -502,7 +509,7 @@ function combineContracts(contractsStack, conjunctionStack) {
 function parse(inputString) {
     var recipient = 0; // by default the contract holder is the recipient
     var amount = 1;
-    var horizonDate = "instantaneous";
+    var horizonDate = "infinite";
     var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
@@ -519,34 +526,36 @@ function parse(inputString) {
                 amount = amount * parseInt(strArr[i + 1]);
                 ++i;
             } else {
-                console.log("'scaleK' should be followed by an integer.");
-                break;
+                console.error("Syntax error: scaleK should be followed by an integer.");
+                return;
             }
         } else if (str === "truncate") {
             if (strArr.length > i + 1 && isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(strArr[i + 1])))) {
                 horizonDate = strArr[i + 1];
                 ++i;
             } else {
-                console.log("truncate should be followed by a date in the following pattern: 'dd/mm/yyyy-hh:mm:ss'.");
-                break;
+                console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy-hh:mm:ss'.");
+                return;
             }
         } else if (str === "get") {
             acquireAtHorizon = "yes";
         }
     }
+    /*
     if (horizonDate === "instantaneous") {
         acquireAtHorizon = "yes";
     }
+    */
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
     const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
 
     createTableRow(contract);
-
+    /*
     if (horizonDate === "instantaneous") {
         executeContract(contract);
-    } else {
+    } else { */
         if (beforeCurrentDate(contract)) {
             // add expired label & disable acquire button
             console.log("It is before current date!");
@@ -557,7 +566,7 @@ function parse(inputString) {
             contractsMap.set(numberOfContracts, contract);
             document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
         }
-    }
+    //}
     ++numberOfContracts;
 }
 
@@ -610,7 +619,7 @@ function greaterDate(dateString1, dateString2) {
 }
 
 function executeContract(contract) {
-    if (contract.horizonDate !== "instantaneous") {
+    if (contract.horizonDate !== "infinite") {
         if (beforeCurrentDate(contract)) {
             window.alert("The contract " + contract.id + " has expired.");
             document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
@@ -736,7 +745,7 @@ function createTableRow(contract) {
         executeContract(contract);
     };
     td.appendChild(btn);
-    if (contract.toBeExecutedAtHorizon === "yes" || contract.horizonDate === "instantaneous") {
+    if (contract.toBeExecutedAtHorizon === "yes") {
         btn.disabled = true;
     }
     tr.appendChild(td = document.createElement("td"));
