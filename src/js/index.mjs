@@ -22,8 +22,7 @@ import {createContract, deposit, getSelectedMetaMaskAccount, holderBalance,
 
 // TODO: no truncate means infinite horizon!!!!!!!!!!!
 
-// TODO: PROBLEM: cannot just use max truncate because if there is contract without truncate then max will be infinite
-
+//TODO: check format of string ie whenever 'if' then followed by '(){}'
 
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
@@ -125,14 +124,10 @@ global.getInputString = function() {
     return document.getElementById("transaction_input").value;
 };
 
-// TODO: add conditionals
-// - check if contains 'if' --> evaluate conditional first -- does not matter if it is nested somewhere
-// start from '(' after if and find next ')' WHERE noOfOpening == 1
 // split string into '(...)', '{...}', '{...}' (if contains else)
 // split by outermost comparison operator
 // find horizon of each contract - check if date is later
 // replace if clause by contract either {true} or {false} contract
-// TODO: add option for nested condition ie (x > y) && (a < b || c > b)
 function evaluateConditionals(inputString) {
     var openingParens = 0;
     var closingParens = 0;
@@ -143,14 +138,28 @@ function evaluateConditionals(inputString) {
     var termArr = inputString.split(" ");
     for (var i = 0; i < termArr.length; ++i) {
         var term = termArr[i];
-        console.log("term: " + term);
+        var nextTerm = termArr[i + 1]; // for syntax checking
         stack.push(term);
-        if (term === "if") {
+        if (term === "if" && i < termArr.length - 3) {
+            if (nextTerm !== "(") {
+                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                return;
+            }
             ++ifsToBeMatched;
             ifsStack.push(openingParens - closingParens);
-        } else if (term === "(") {
+        } else if (term === "(" && i < termArr.length - 3) {
+            if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<"
+              || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "=="
+              || nextTerm === "&&" || nextTerm === "||") {
+                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                return;
+            }
             ++openingParens;
         } else if (term === ")") {
+            if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" ) ) {
+                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                return;
+            }
             ++closingParens;
             //if (openingParens - ifsStack[ifsStack.length - 1] === closingParens) {
             if ( ( ifsStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0 ) || ( openingParens - ifsStack[ifsStack.length - 1] === closingParens ) ) {
@@ -199,14 +208,13 @@ function evaluateConditionals(inputString) {
                         if (stack[stack.length - 1] === "and" || stack[stack.length - 1] === "or") {
                             stack.pop();
                         }
-                        console.log("yas");
-                        console.log(leftOverArr[firstIndexClosingBrack + 1]);
                         if (leftOverArr[firstIndexClosingBrack + 1] === "and" || leftOverArr[firstIndexClosingBrack + 1] === "or") {
                             ++i;
                         }
                     }
                     stack.push(lTrimBrace(rTrimBrace(action2)));
                 }
+                console.log("stack:");
                 console.log(stack);
                 // skip next terms until end of conditional clause is reached
                 i = i + action1Arr.length + 2;
@@ -220,13 +228,10 @@ function evaluateConditionals(inputString) {
         } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
           && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "=="
           && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&"
-          && term !== "||" && !parseInt(term) && !isDate(term) && term !== "else" && term !== "}"
+          && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
           && term !== "{" && term !== "and" && term !== "or") {
             // give error
-            console.log(isDate("24/03/2019-23:33:33"));
-            console.log(isDate(term.toString()));
-            console.log(isDate("25/03/2019-23:33:33"));
-            console.error("invalid token at term " + i + " in contract string: " + term);
+            console.error("syntax error at term " + i.toString() + ": " + term);
             return;
         }
     }
@@ -237,9 +242,6 @@ function evaluateConditionals(inputString) {
     return lTrimWhiteSpace(rTrimWhiteSpace(contractString));
 }
 
-
-// TODO: split by term instead?
-// add if clause that checks 'else if (term !== 'truncate' && term !== 'get' ...) { console.error (wrong syntax at...);}'
 function conditionalEvaluation(inputString) {
     var strArr = inputString.split(" ");
     var openingParens = 0;
@@ -274,40 +276,30 @@ function conditionalEvaluation(inputString) {
                 console.log("horizon obtained 2");
                 console.log(horizon2);
                 if (term === ">=") {
-                    console.log("greater than or equal to");
                     if (horizon1 === "infinite" || horizon2 === "infinite") {
                         if (horizon1 === "infinite" && horizon2 === "infinite") {
-                            console.log("both are infinite");
                             return true;
                         } else {
                             if (horizon1 === "infinite") {
-                                console.log("hor1 is infinite");
                                 return true;
                             } else {
-                                console.log("hor2 is infinite");
                                 return false;
                             }
                         }
                     }
-                    console.log("none are infinite");
                     return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
                 } else if (term === ">") {
-                    console.log("greater than");
                     if (horizon1 === "infinite" || horizon2 === "infinite") {
                         if (horizon1 === "infinite" && horizon2 === "infinite") {
-                            console.log("both are infinite");
                             return false;
                         } else {
                             if (horizon1 === "infinite") {
-                                console.log("hor1 is infinite");
                                 return true;
                             } else {
-                                console.log("hor2 is infinite");
                                 return false;
                             }
                         }
                     }
-                    console.log("none are infinite");
                     return greaterDate(horizon1, horizon2);
                 } else if (term === "<=") {
                     if (horizon1 === "infinite" || horizon2 === "infinite") {
@@ -381,9 +373,6 @@ function getHorizon(contractString) {
 
 
 global.decomposeContract = function(inputString) {
-    //TODO: check formate of string ie whenever 'if' then followed by '(){}'
-    // TODO: do conditional evaluation first
-
     document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
         document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
