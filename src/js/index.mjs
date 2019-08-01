@@ -7,7 +7,8 @@
 import {
   cleanParens, addSpacing, addParens, openingParensAmount, closingParensAmount,
   lTrimWhiteSpace, rTrimWhiteSpace, lTrimParen, rTrimParen, lTrimDoubleQuotes,
-  rTrimDoubleQuotes, lTrimBrace, rTrimBrace, changeDateFormat, changeDateFormatBack
+  rTrimDoubleQuotes, lTrimBrace, rTrimBrace, changeDateFormat, changeDateFormatBack,
+  trimSemiColon
 } from "./stringmanipulation.mjs";
 
 import {Contract, translateContract} from "./contract.mjs";
@@ -20,7 +21,6 @@ import {depositCollateral, getSelectedMetaMaskAccount, holderBalance,
 import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
 
 //TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
-//TODO: add oracles
 //TODO: add gas estimation of transfers
 //TODO: go over conditionalEvaluation to check if correct for all cases
 
@@ -30,6 +30,7 @@ var contractsMap = new Map(); // map from contract id to contract object
 var agreedOracleAddress;
 var account1Deposited = false;
 var account2Deposited = false;
+var definitionsMap = new Map();
 
 $(function(){
     var $select = $(".custom_select");
@@ -52,6 +53,45 @@ window.addEventListener('load', function() {  // commented for testing purposes
     update();
     runClock();
 });
+
+// TODO: transform input ie decrease spaces
+global.addDefinition = function(inputString) {
+    document.getElementById("add_definitions_status").innerHTML = "";
+    // pattern matching for semantics
+    var matches = inputString.match(/^\w+\s=\s.+;$/);
+    if (matches === null) {
+        document.getElementById("add_definitions_status").innerHTML = "The format of the given definition is incorrect.";
+        return;
+    }
+    document.getElementById("input_added_textarea").innerHTML = "";
+    var strArr = inputString.split("=");
+    var part1 = rTrimWhiteSpace(strArr[0]);
+    var part2 = trimSemiColon(lTrimWhiteSpace(strArr[1]));
+    console.log(part1);
+    console.log(part2);
+    // check semantics of second part
+    var secondArr = part2.split(" ");
+    for (var i = 0; i < secondArr.length; ++i) {
+        var term = secondArr[i];
+        console.log("term: " + term);
+        if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
+        && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "=="
+        && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&"
+        && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
+        && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon" && !definitionsMap.has(term)) {
+            document.getElementById("add_definitions_status").innerHTML = "The format of the given definition is incorrect.";
+            return;
+        }
+    }
+    definitionsMap.set(part1, part2);
+    for (var [key, value] of definitionsMap) {
+        document.getElementById("input_added_textarea").innerHTML += (key + " = " + value + "\n");
+    }
+}
+
+global.getDefinitionsText = function() {
+    return document.getElementById("add_input_textarea").value;
+}
 
 function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
@@ -179,6 +219,7 @@ function evaluateConditionals(inputString) {
         if (term === "if" && i < termArr.length - 3) {
             if (nextTerm !== "(") {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++ifsToBeMatched;
@@ -189,12 +230,14 @@ function evaluateConditionals(inputString) {
               || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{"
               || nextTerm === "}") {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++openingParens;
         } else if (term === ")") {
             if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" || nextTerm === "}") ) {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+                document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++closingParens;
@@ -268,6 +311,7 @@ function evaluateConditionals(inputString) {
           && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
             // give error
             console.error("syntax error at term " + i.toString() + ": " + term);
+            document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
             return "error";
         }
     }
@@ -419,9 +463,27 @@ global.decomposeContract = function(inputString) {
         document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
         return;
     }
-    console.log(inputString);
+    // replacing own definitions with map values
+    var strSplit = inputString.split(" ");
+    let keys = Array.from(definitionsMap.keys());
+    var intersection = strSplit.filter(value => keys.includes(value));
+    while(intersection.length !== 0) {
+        for(var i = 0; i < intersection.length; ++i) {
+            const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
+            var matchObj = regex.exec(inputString);
+            var value = definitionsMap.get(intersection[i]);
+            if (value.indexOf("one") !== value.lastIndexOf("one") ||
+              value.indexOf("zero") !== value.lastIndexOf("zero") ||
+              ( value.includes("one") && value.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
+                inputString = matchObj[1] + "( " + definitionsMap.get(intersection[i]) + " )" + matchObj[3];
+            } else {
+                inputString = matchObj[1] + definitionsMap.get(intersection[i]) + matchObj[3];
+            }
+        }
+        strSplit = inputString.split(" ");
+        intersection = strSplit.filter(value => keys.includes(value));
+    }
     inputString = changeDateFormat(inputString);
-    console.log(inputString);
     // remove linebreaks
     inputString = inputString.replace(/(\r\n|\n|\r)/gm," ");
     // remove multiple whitespaces
@@ -435,7 +497,7 @@ global.decomposeContract = function(inputString) {
         return;
     }
     if (inputString === "error") {
-        document.getElementById("transaction_status").innerHTML = "Syntax error: The contract is not constructed properly.";
+        //document.getElementById("transaction_status").innerHTML = "Syntax error: The contract is not constructed properly.";
         return;
     }
 
@@ -516,7 +578,9 @@ global.decomposeContract = function(inputString) {
         // String does not include "or": execute right away
         var outputStrings = inputString.split("and");
         for (var i = 0; i < outputStrings.length; ++i) {
-            parse(cleanParens(outputStrings[i]));
+            console.log(outputStrings[i]);
+            console.log(cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
+            parse(cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
         }
     }
 };
@@ -571,6 +635,7 @@ function parse(inputString) {
                 ++i;
             } else {
                 console.error("Syntax error: scaleK should be followed by an integer or an observable.");
+                document.getElementById("transaction_status").innerHTML = "Syntax error: scaleK should be followed by an integer or an observable.";
                 return;
             }
         } else if (str === "truncate") {
@@ -579,6 +644,7 @@ function parse(inputString) {
                 ++i;
             } else {
                 console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.");
+                document.getElementById("transaction_status").innerHTML = "Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.";
                 return;
             }
         } else if (str === "get") {

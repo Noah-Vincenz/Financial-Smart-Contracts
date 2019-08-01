@@ -9,8 +9,8 @@ body {
 }
 
 h1 {
-    color: #707070;
-    font-size: 50px;
+    color: #0059b3;
+    font-size: 60px;
     margin-top: 0px;
 }
 
@@ -29,7 +29,7 @@ tr:nth-child(even) {
     background-color: #eeeeee;
 }
 
-button {
+.button {
   border: 1px solid #0066cc;
   background-color: #0099cc;
   color: #ffffff;
@@ -39,15 +39,15 @@ button {
   margin: 10px;
 }
 
-button:hover {
+.button:hover {
   border: 1px solid #0099cc;
   background-color: #00aacc;
   color: #ffffff;
   padding: 5px 10px;
 }
 
-button:disabled,
-button[disabled]{
+.button:disabled,
+.button[disabled]{
   border: 1px solid #999999;
   background-color: #cccccc;
   color: #a0a0a0;
@@ -98,12 +98,6 @@ textarea[disabled]{
     font-size: 15px;
 }
 
-.select_item {
-    position: relative;
-    font-family: Arial;
-    font-size: 17px;
-}
-
 .label {
     position: relative;
     font-family: Arial;
@@ -114,6 +108,23 @@ textarea[disabled]{
     width: 100%;
 }
 
+.arrow_button {
+    color: #ffffff;
+    background-color: lightgray;
+    border-color: #707070;
+    font-size: 20px;
+    font-weight: bold;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 30px;
+    padding-right: 30px;
+    cursor: pointer;
+}
+
+.arrow_button:hover {
+    background-color: #e6e6e6;
+}
+
 #outer_container {
     padding-left: 15%;
     padding-right: 15%;
@@ -122,6 +133,11 @@ textarea[disabled]{
 
 #deposit_container {
     width: auto;
+}
+
+#select_deposit {
+    position: relative;
+    font-size: 17px;
 }
 
 #top_container {
@@ -148,9 +164,55 @@ textarea[disabled]{
     flex: 1;
 }
 
+#select_oracle {
+    position: relative;
+    font-size: 14px;
+}
+
 #bottom_container {
     width: 100%;
     text-align: center;
+}
+
+#bottom_container1 {
+    width: 100%;
+    border-bottom: 0.5px solid lightgray;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+}
+
+#p_add_definitions {
+    text-align: left;
+    font-size: 17px;
+    margin-bottom: 20px;
+}
+
+#bottom_add_definitions_container {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+#add_input_textarea {
+    font-size: 14px;
+    resize: none;
+    width: 100%;
+    flex: 1;
+}
+
+#arrow_button_container {
+    width: 100%;
+    height: inherit;
+    flex: 1;
+}
+
+#input_added_textarea {
+    font-size: 14px;
+    resize: none;
+    width: 100%;
+    flex: 1;
 }
 
 #bottom_input_container {

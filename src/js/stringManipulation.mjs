@@ -11,10 +11,11 @@ export function cleanParens(contractString) {
     if (contractString[0] === ")") {
         contractString = contractString.substring(1);
     }
-    if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
-        contractString = lTrimParen(contractString);
-    } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
-        contractString = rTrimParen(contractString);
+    while (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+        contractString = lTrimParen(lTrimWhiteSpace(contractString));
+    }
+    while (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+        contractString = rTrimParen(rTrimWhiteSpace(contractString));
     }
     return contractString;
 }
@@ -148,4 +149,9 @@ export function lTrimDoubleQuotes(str) {
 export function rTrimDoubleQuotes(str) {
     if (str == null) return str;
     return str.replace(/\"$/g, '');
+}
+
+export function trimSemiColon(str) {
+    if (str == null) return str;
+    return str.replace(/;/g, '');
 }

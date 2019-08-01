@@ -429,7 +429,6 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 //TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
-//TODO: add oracles
 //TODO: add gas estimation of transfers
 //TODO: go over conditionalEvaluation to check if correct for all cases
 var numberOfContracts = 0;
@@ -440,6 +439,7 @@ var contractsMap = new Map(); // map from contract id to contract object
 var agreedOracleAddress;
 var account1Deposited = false;
 var account2Deposited = false;
+var definitionsMap = new Map();
 $(function () {
   var $select = $(".custom_select");
 
@@ -461,21 +461,83 @@ window.addEventListener('load', function () {
 
   update();
   runClock();
-});
+}); // TODO: transform input ie decrease spaces
 
-function update() {
-  // loop through all contracts and check if their time == current time and if so check if get or not
-  // if get: then execute
-  // if not get: then disable acquire button
+global.addDefinition = function (inputString) {
+  document.getElementById("add_definitions_status").innerHTML = ""; // pattern matching for semantics
+
+  var matches = inputString.match(/^\w+\s=\s.+;$/);
+
+  if (matches === null) {
+    document.getElementById("add_definitions_status").innerHTML = "The format of the given definition is incorrect.";
+    return;
+  }
+
+  document.getElementById("input_added_textarea").innerHTML = "";
+  var strArr = inputString.split("=");
+  var part1 = (0, _stringmanipulation.rTrimWhiteSpace)(strArr[0]);
+  var part2 = (0, _stringmanipulation.trimSemiColon)((0, _stringmanipulation.lTrimWhiteSpace)(strArr[1]));
+  console.log(part1);
+  console.log(part2); // check semantics of second part
+
+  var secondArr = part2.split(" ");
+
+  for (var i = 0; i < secondArr.length; ++i) {
+    var term = secondArr[i];
+    console.log("term: " + term);
+
+    if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "==" && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&" && term !== "||" && !parseInt(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon" && !definitionsMap.has(term)) {
+      document.getElementById("add_definitions_status").innerHTML = "The format of the given definition is incorrect.";
+      return;
+    }
+  }
+
+  definitionsMap.set(part1, part2);
   var _iteratorNormalCompletion = true;
   var _didIteratorError = false;
   var _iteratorError = undefined;
 
   try {
-    for (var _iterator = contractsMap[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+    for (var _iterator = definitionsMap[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
       var _step$value = _slicedToArray(_step.value, 2),
           key = _step$value[0],
           value = _step$value[1];
+
+      document.getElementById("input_added_textarea").innerHTML += key + " = " + value + "\n";
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+        _iterator["return"]();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+};
+
+global.getDefinitionsText = function () {
+  return document.getElementById("add_input_textarea").value;
+};
+
+function update() {
+  // loop through all contracts and check if their time == current time and if so check if get or not
+  // if get: then execute
+  // if not get: then disable acquire button
+  var _iteratorNormalCompletion2 = true;
+  var _didIteratorError2 = false;
+  var _iteratorError2 = undefined;
+
+  try {
+    for (var _iterator2 = contractsMap[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      var _step2$value = _slicedToArray(_step2.value, 2),
+          key = _step2$value[0],
+          value = _step2$value[1];
 
       if (value.horizonDate !== "infinite") {
         var horizonArr = value.horizonDate.split("-");
@@ -501,16 +563,16 @@ function update() {
       }
     }
   } catch (err) {
-    _didIteratorError = true;
-    _iteratorError = err;
+    _didIteratorError2 = true;
+    _iteratorError2 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion && _iterator["return"] != null) {
-        _iterator["return"]();
+      if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+        _iterator2["return"]();
       }
     } finally {
-      if (_didIteratorError) {
-        throw _iteratorError;
+      if (_didIteratorError2) {
+        throw _iteratorError2;
       }
     }
   }
@@ -627,6 +689,7 @@ function evaluateConditionals(inputString) {
     if (term === "if" && i < termArr.length - 3) {
       if (nextTerm !== "(") {
         console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+        document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
         return "error";
       }
 
@@ -635,6 +698,7 @@ function evaluateConditionals(inputString) {
     } else if (term === "(" && i < termArr.length - 3) {
       if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<" || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "==" || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || nextTerm === "}") {
         console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+        document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
         return "error";
       }
 
@@ -642,6 +706,7 @@ function evaluateConditionals(inputString) {
     } else if (term === ")") {
       if (i < termArr.length - 1 && (nextTerm === "if" || nextTerm === "(" || nextTerm === "}")) {
         console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+        document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
         return "error";
       }
 
@@ -725,6 +790,7 @@ function evaluateConditionals(inputString) {
     } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "==" && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&" && term !== "||" && !parseInt(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
       // give error
       console.error("syntax error at term " + i.toString() + ": " + term);
+      document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
       return "error";
     }
   }
@@ -894,11 +960,36 @@ global.decomposeContract = function (inputString) {
     console.error("Parenthesis mismatch: The contract is not constructed properly.");
     document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
     return;
+  } // replacing own definitions with map values
+
+
+  var strSplit = inputString.split(" ");
+  var keys = Array.from(definitionsMap.keys());
+  var intersection = strSplit.filter(function (value) {
+    return keys.includes(value);
+  });
+
+  while (intersection.length !== 0) {
+    for (var i = 0; i < intersection.length; ++i) {
+      var regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
+      var matchObj = regex.exec(inputString);
+      var value = definitionsMap.get(intersection[i]);
+
+      if (value.indexOf("one") !== value.lastIndexOf("one") || value.indexOf("zero") !== value.lastIndexOf("zero") || value.includes("one") && value.includes("zero")) {
+        // value consists of multiple contracts - add parenthesis
+        inputString = matchObj[1] + "( " + definitionsMap.get(intersection[i]) + " )" + matchObj[3];
+      } else {
+        inputString = matchObj[1] + definitionsMap.get(intersection[i]) + matchObj[3];
+      }
+    }
+
+    strSplit = inputString.split(" ");
+    intersection = strSplit.filter(function (value) {
+      return keys.includes(value);
+    });
   }
 
-  console.log(inputString);
-  inputString = (0, _stringmanipulation.changeDateFormat)(inputString);
-  console.log(inputString); // remove linebreaks
+  inputString = (0, _stringmanipulation.changeDateFormat)(inputString); // remove linebreaks
 
   inputString = inputString.replace(/(\r\n|\n|\r)/gm, " "); // remove multiple whitespaces
 
@@ -913,7 +1004,7 @@ global.decomposeContract = function (inputString) {
   }
 
   if (inputString === "error") {
-    document.getElementById("transaction_status").innerHTML = "Syntax error: The contract is not constructed properly.";
+    //document.getElementById("transaction_status").innerHTML = "Syntax error: The contract is not constructed properly.";
     return;
   }
 
@@ -1004,7 +1095,9 @@ global.decomposeContract = function (inputString) {
     var outputStrings = inputString.split("and");
 
     for (var i = 0; i < outputStrings.length; ++i) {
-      parse((0, _stringmanipulation.cleanParens)(outputStrings[i]));
+      console.log(outputStrings[i]);
+      console.log((0, _stringmanipulation.cleanParens)((0, _stringmanipulation.lTrimWhiteSpace)((0, _stringmanipulation.rTrimWhiteSpace)(outputStrings[i]))));
+      parse((0, _stringmanipulation.cleanParens)((0, _stringmanipulation.lTrimWhiteSpace)((0, _stringmanipulation.rTrimWhiteSpace)(outputStrings[i]))));
     }
   }
 };
@@ -1070,6 +1163,7 @@ function parse(inputString) {
         ++i;
       } else {
         console.error("Syntax error: scaleK should be followed by an integer or an observable.");
+        document.getElementById("transaction_status").innerHTML = "Syntax error: scaleK should be followed by an integer or an observable.";
         return;
       }
     } else if (str === "truncate") {
@@ -1078,6 +1172,7 @@ function parse(inputString) {
         ++i;
       } else {
         console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.");
+        document.getElementById("transaction_status").innerHTML = "Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.";
         return;
       }
     } else if (str === "get") {
@@ -1492,6 +1587,7 @@ exports.lTrimBrace = lTrimBrace;
 exports.rTrimBrace = rTrimBrace;
 exports.lTrimDoubleQuotes = lTrimDoubleQuotes;
 exports.rTrimDoubleQuotes = rTrimDoubleQuotes;
+exports.trimSemiColon = trimSemiColon;
 
 /**
  * @author Noah-Vincenz Noeh <noah-vincenz.noeh18@imperial.ac.uk>
@@ -1507,10 +1603,12 @@ function cleanParens(contractString) {
     contractString = contractString.substring(1);
   }
 
-  if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
-    contractString = lTrimParen(contractString);
-  } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
-    contractString = rTrimParen(contractString);
+  while (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+    contractString = lTrimParen(lTrimWhiteSpace(contractString));
+  }
+
+  while (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+    contractString = rTrimParen(rTrimWhiteSpace(contractString));
   }
 
   return contractString;
@@ -1666,6 +1764,11 @@ function lTrimDoubleQuotes(str) {
 function rTrimDoubleQuotes(str) {
   if (str == null) return str;
   return str.replace(/\"$/g, '');
+}
+
+function trimSemiColon(str) {
+  if (str == null) return str;
+  return str.replace(/;/g, '');
 }
 
 },{}]},{},[4]);
