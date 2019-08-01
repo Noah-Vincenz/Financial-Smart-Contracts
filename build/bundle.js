@@ -147,16 +147,6 @@ function instantiateNew(holderAddress, counterPartyAddress) {
   });
 }
 
-function stringToBin(str) {
-  var result = [];
-
-  for (var i = 0; i < str.length; i++) {
-    result.push(str.charCodeAt(i));
-  }
-
-  return result;
-}
-
 function depositCollateral(senderAddress, amount) {
   return new Promise(function (resolve, reject) {
     smartContractInstance.depositCollateral(amount, {
@@ -448,6 +438,8 @@ var stringToAddToBeginning = ""; // string that is added to the beginning of the
 var contractsMap = new Map(); // map from contract id to contract object
 
 var agreedOracleAddress;
+var account1Deposited = false;
+var account2Deposited = false;
 $(function () {
   var $select = $(".custom_select");
 
@@ -537,12 +529,6 @@ function updateBalances() {
   retrieveBalances();
 }
 
-function getWeather() {
-  Weather.getCurrent("Kansas City", function (current) {
-    console.log(["currently:", current.temperature(), "and", current.conditions()].join(" "));
-  });
-}
-
 global.callDepositFunction = function (id) {
   document.getElementById("create_contract_status").innerHTML = "";
   var addr = "";
@@ -560,12 +546,21 @@ global.callDepositFunction = function (id) {
     (0, _deploy.depositCollateral)(senderAddress, depositAmount).then(function (holderDepositTxHash) {
       (0, _deploy.waitForReceipt)(holderDepositTxHash).then(function (_) {
         console.log("Deposit of " + depositAmount + " Ether has been added to " + addr + " account.");
+
+        if (id === 1) {
+          account1Deposited = true;
+        } else {
+          account2Deposited = true;
+        }
+
+        if (account1Deposited && account2Deposited) {
+          document.getElementById("make_transaction_button").disabled = false;
+          document.getElementById("transaction_input").disabled = false;
+        }
+
         retrieveBalances();
       });
-    }); //deposit(id, getSelectedDeposit());
-
-    document.getElementById("make_transaction_button").disabled = false;
-    document.getElementById("transaction_input").disabled = false;
+    });
   } else {
     document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the one you would like to deposit to.";
   }

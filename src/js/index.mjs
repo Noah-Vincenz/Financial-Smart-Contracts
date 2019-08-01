@@ -47,6 +47,7 @@ window.addEventListener('load', function() {  // commented for testing purposes
     document.getElementById("transaction_input").disabled = true;
     */
     createOracles();
+
     // start timer
     update();
     runClock();
@@ -90,14 +91,6 @@ function runClock() {
 
 function updateBalances() {
     retrieveBalances();
-}
-
-function getWeather() {
-    Weather.getCurrent("Kansas City", function(current) {
-      console.log(
-        ["currently:",current.temperature(),"and",current.conditions()].join(" ")
-      );
-    });
 }
 
 global.callDepositFunction = function(id) {
