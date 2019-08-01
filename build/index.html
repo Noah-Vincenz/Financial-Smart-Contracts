@@ -11,6 +11,7 @@
 <body>
   <div id="outer_container">
     <h1 align="center">Nexus</h1>
+    <p id="p_section_header">Set up a Smart Contract Between 2 Parties:</p>
     <div id="top_container">
         <div id="top_input_container">
             <div id="holder_container">
@@ -43,22 +44,24 @@
     </div>
     <div id="bottom_container">
       <div id="bottom_container1">
-          <p id="p_add_definitions">Add a Definition to the Language:</p>
+          <p id="p_section_header">Add a Definition to the Language:</p>
           <div id="bottom_add_definitions_container">
               <textarea id="add_input_textarea" rows="6" cols="10" type="text" placeholder="andGive = and give;"></textarea>
               <div id="arrow_button_container">
                   <button class="arrow_button" id = "arrow_button" type="button" onclick="addDefinition(getDefinitionsText())">></button>
               </div>
-              <textarea id="input_added_textarea" rows="6" cols="10" type="text" disabled="true"></textarea>
+              <textarea id="input_added_textarea" rows="6" cols="10" type="text" placeholder="No definitions given yet." disabled="true"></textarea>
           </div>
           <p class="status" id="add_definitions_status"></p>
       </div>
+      <p id="p_section_header">Construct Smart Contract Transactions:</p>
       <div id="bottom_input_container">
-          <textarea rows="13" cols="100" id="transaction_input" type="text" placeholder="Transaction"></textarea><br>
+          <textarea rows="13" cols="100" id="transaction_input_textarea" type="text" placeholder="Transaction"></textarea><br>
           <p class="status" id="transaction_status"></p>
           <button class="button" id = "make_transaction_button" type="button" onclick="decomposeContract(getInputString())">Make Transaction</button>
       </div>
       <div id="button_choices_container"></div>
+      <p id="p_section_header">All Contracts:</p>
       <div id="tableContainer">
           <p>
               <table id="my_table">

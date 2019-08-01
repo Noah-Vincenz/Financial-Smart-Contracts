@@ -29,6 +29,15 @@ tr:nth-child(even) {
     background-color: #eeeeee;
 }
 
+textarea {
+    padding: 5px;
+}
+
+textarea:disabled,
+textarea[disabled]{
+  cursor: not-allowed;
+}
+
 .button {
   border: 1px solid #0066cc;
   background-color: #0099cc;
@@ -51,11 +60,6 @@ tr:nth-child(even) {
   border: 1px solid #999999;
   background-color: #cccccc;
   color: #a0a0a0;
-  cursor: not-allowed;
-}
-
-textarea:disabled,
-textarea[disabled]{
   cursor: not-allowed;
 }
 
@@ -181,10 +185,11 @@ textarea[disabled]{
     padding-bottom: 30px;
 }
 
-#p_add_definitions {
+#p_section_header {
     text-align: left;
-    font-size: 17px;
-    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 40px;
 }
 
 #bottom_add_definitions_container {
@@ -222,9 +227,8 @@ textarea[disabled]{
     padding-bottom: 30px;
 }
 
-#transaction_input {
+#transaction_input_textarea {
     width: 100%;
-    padding: 0px;
     resize: none;
-    font-size: 20px;
+    font-size: 18px;
 }

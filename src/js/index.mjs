@@ -45,7 +45,7 @@ window.addEventListener('load', function() {  // commented for testing purposes
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
-    document.getElementById("transaction_input").disabled = true;
+    document.getElementById("transaction_input_textarea").disabled = true;
     */
     createOracles();
 
@@ -154,7 +154,7 @@ global.callDepositFunction = function(id) {
                 }
                 if (account1Deposited && account2Deposited) {
                     document.getElementById("make_transaction_button").disabled = false;
-                    document.getElementById("transaction_input").disabled = false;
+                    document.getElementById("transaction_input_textarea").disabled = false;
                 }
                 retrieveBalances();
             });
@@ -197,7 +197,7 @@ function getSelectedOracle() {
 }
 
 global.getInputString = function() {
-    return document.getElementById("transaction_input").value;
+    return document.getElementById("transaction_input_textarea").value;
 };
 
 // split string into '(...)', '{...}', '{...}' (if contains else)

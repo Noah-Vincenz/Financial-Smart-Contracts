@@ -20,12 +20,12 @@ export class Contract {
 export function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
     var to = " owner ";
     var from = " counter-party ";
-    var hDate = " instantaneously ";
+    var hDate = "";
     if (recipient === 1) {
         to = " counter-party ";
         from = " owner ";
     }
-    if (horizonDate !== "instantaneous") {
+    if (horizonDate !== "infinite") {
         if (acquireAtHorizon === "yes") {
             hDate = " at " + horizonDate;
         } else {
@@ -33,12 +33,12 @@ export function translateContract(recipient, amount, horizonDate, acquireAtHoriz
         }
     }
     var adj = " is";
-    if (amount !== 1) {
-        if (amount === 0) {
+    if (parseFloat(amount) !== 1) {
+        if (parseFloat(amount) === 0) {
             adj = " are";
         } else {
             adj = "s are";
         }
     }
-    return amount + " Ether" + adj + " transferred from the " + from + " address to " + to + " address " + hDate + ".";
+    return amount + " Ether" + adj + " transferred from the " + from + " address to the " + to + " address" + hDate + ".";
 }

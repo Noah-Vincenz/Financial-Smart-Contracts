@@ -32,14 +32,14 @@ exports.Contract = Contract;
 function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
   var to = " owner ";
   var from = " counter-party ";
-  var hDate = " instantaneously ";
+  var hDate = "";
 
   if (recipient === 1) {
     to = " counter-party ";
     from = " owner ";
   }
 
-  if (horizonDate !== "instantaneous") {
+  if (horizonDate !== "infinite") {
     if (acquireAtHorizon === "yes") {
       hDate = " at " + horizonDate;
     } else {
@@ -49,15 +49,15 @@ function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
 
   var adj = " is";
 
-  if (amount !== 1) {
-    if (amount === 0) {
+  if (parseFloat(amount) !== 1) {
+    if (parseFloat(amount) === 0) {
       adj = " are";
     } else {
       adj = "s are";
     }
   }
 
-  return amount + " Ether" + adj + " transferred from the " + from + " address to " + to + " address " + hDate + ".";
+  return amount + " Ether" + adj + " transferred from the " + from + " address to the " + to + " address" + hDate + ".";
 }
 
 },{}],2:[function(require,module,exports){
@@ -455,7 +455,7 @@ window.addEventListener('load', function () {
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
-    document.getElementById("transaction_input").disabled = true;
+    document.getElementById("transaction_input_textarea").disabled = true;
     */
   (0, _oracles.createOracles)(); // start timer
 
@@ -617,7 +617,7 @@ global.callDepositFunction = function (id) {
 
         if (account1Deposited && account2Deposited) {
           document.getElementById("make_transaction_button").disabled = false;
-          document.getElementById("transaction_input").disabled = false;
+          document.getElementById("transaction_input_textarea").disabled = false;
         }
 
         retrieveBalances();
@@ -662,7 +662,7 @@ function getSelectedOracle() {
 }
 
 global.getInputString = function () {
-  return document.getElementById("transaction_input").value;
+  return document.getElementById("transaction_input_textarea").value;
 }; // split string into '(...)', '{...}', '{...}' (if contains else)
 // split by outermost comparison operator
 // find horizon of each contract - check if date is later
