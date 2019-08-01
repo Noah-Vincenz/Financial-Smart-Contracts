@@ -28,6 +28,8 @@ var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
 var contractsMap = new Map(); // map from contract id to contract object
 var agreedOracleAddress;
+var account1Deposited = false;
+var account2Deposited = false;
 
 $(function(){
     var $select = $(".custom_select");
@@ -112,14 +114,18 @@ global.callDepositFunction = function(id) {
         depositCollateral(senderAddress, depositAmount).then(holderDepositTxHash => {
             waitForReceipt(holderDepositTxHash).then(_ => {
                 console.log("Deposit of " + depositAmount + " Ether has been added to " + addr + " account.");
+                if (id === 1) {
+                    account1Deposited = true;
+                } else {
+                    account2Deposited = true;
+                }
+                if (account1Deposited && account2Deposited) {
+                    document.getElementById("make_transaction_button").disabled = false;
+                    document.getElementById("transaction_input").disabled = false;
+                }
                 retrieveBalances();
             });
         });
-
-
-        //deposit(id, getSelectedDeposit());
-        document.getElementById("make_transaction_button").disabled = false;
-        document.getElementById("transaction_input").disabled = false;
     } else {
         document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the one you would like to deposit to.";
     }
