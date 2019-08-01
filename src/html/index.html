@@ -20,8 +20,8 @@
             </div>
 
             <div id="deposit_container">
-                <p id="deposit">Deposit:</p>
-                <select id="select_deposit" class="custom_select"></select>
+                <p id="p_deposit" class="label">Deposit:</p>
+                <select id="select_deposit" class="select_item custom_select"></select>
             </div>
 
             <div id="counter_party_container">
@@ -31,8 +31,14 @@
                 <button class="button" id = "deposit_button2" type="button" onclick="callDepositFunction(2)">deposit</button>
             </div>
         </div>
+        <p id="p_oracle" class="label">Oracle for Contract:</p>
+        <select id="select_oracle" class="select_item">
+            <option value="0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56">0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56</option>
+            <option value="0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca">0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca</option>
+            <option value="0xa03cbbea9891d7961ed23fd965b6ad3109c36a30">0xa03cbbea9891d7961ed23fd965b6ad3109c36a30</option>
+        </select>
         <p class="status" id="create_contract_status"></p>
-        <button class="button" id = "create_contract_button" type="button" onclick="callCreateContractFunction()">Create Contract</button>
+        <button class="button" id = "create_contract_button" type="button" onclick="createContractFunction()">Create Contract</button>
     </div>
     <div id="bottom_container">
       <div id="bottom_input_container">

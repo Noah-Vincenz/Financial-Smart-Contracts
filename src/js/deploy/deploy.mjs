@@ -30,13 +30,12 @@ export function getSelectedMetaMaskAccount() {
     return web3.eth.accounts[0];
 }
 
-export function createContract(holderAddress, counterPartyAddress) {
-  web3.eth.defaultAccount = holderAddress;
-  instantiateNew(holderAddress, counterPartyAddress, codeHex).then(instantiationTxHash => {
-      waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
-          smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
-      });
-  });
+export function setDefaultAccount(address) {
+    web3.eth.defaultAccount = address;
+}
+
+export function setSmartContractInstance(contractAddress) {
+    smartContractInstance = smartContract.at(contractAddress);
 }
 
 // this does not exist for Kovan chain
@@ -53,25 +52,9 @@ function unlockAccount(address) {
     });
 }
 
-/*
-export function estimateGas(senderAddress, recipientAddress, amount) {
+export function instantiateNew (holderAddress, counterPartyAddress) {
     return new Promise (function (resolve, reject) {
-        console.log("chica");
-        web3.eth.estimateGas({to: recipientAddress, amount: web3.toWei(amount, "ether")}, function(err, result) {
-            console.log("chici");
-            if (err) {
-              reject(err);
-            } else {
-              resolve(result * 1.2);
-            }
-        });
-    });
-}
-*/
-
-function instantiateNew (holderAddress, counterPartyAddress, dataIn) {
-    return new Promise (function (resolve, reject) {
-        smartContract.new(holderAddress, counterPartyAddress, {data: dataIn, from: web3.eth.defaultAccount}, function (err, contractInstance) {
+        smartContract.new(holderAddress, counterPartyAddress, {data: codeHex, from: web3.eth.defaultAccount}, function (err, contractInstance) {
         //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
             if (err) {
                 reject(err);
@@ -82,14 +65,6 @@ function instantiateNew (holderAddress, counterPartyAddress, dataIn) {
             }
         });
     });
-}
-
-function stringToBin(str) {
-    var result = [];
-    for (var i = 0; i < str.length; i++) {
-        result.push(str.charCodeAt(i));
-    }
-    return result;
 }
 
 export function depositCollateral(senderAddress, amount) {

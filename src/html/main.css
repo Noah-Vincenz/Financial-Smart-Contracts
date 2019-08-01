@@ -98,17 +98,13 @@ textarea[disabled]{
     font-size: 15px;
 }
 
-#outer_container {
-    padding-left: 15%;
-    padding-right: 15%;
-    width: auto;
+.select_item {
+    position: relative;
+    font-family: Arial;
+    font-size: 17px;
 }
 
-#deposit_container {
-    width: auto;
-}
-
-#deposit {
+.label {
     position: relative;
     font-family: Arial;
     color: #707070;
@@ -118,11 +114,14 @@ textarea[disabled]{
     width: 100%;
 }
 
-#select_deposit {
-    position: relative;
-    font-family: Arial;
-    font-size: 17px;
-    width: 100%;
+#outer_container {
+    padding-left: 15%;
+    padding-right: 15%;
+    width: auto;
+}
+
+#deposit_container {
+    width: auto;
 }
 
 #top_container {

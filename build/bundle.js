@@ -67,7 +67,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.getSelectedMetaMaskAccount = getSelectedMetaMaskAccount;
-exports.createContract = createContract;
+exports.setDefaultAccount = setDefaultAccount;
+exports.setSmartContractInstance = setSmartContractInstance;
+exports.instantiateNew = instantiateNew;
 exports.depositCollateral = depositCollateral;
 exports.holderBalance = holderBalance;
 exports.counterPartyBalance = counterPartyBalance;
@@ -105,13 +107,12 @@ function getSelectedMetaMaskAccount() {
   return web3.eth.accounts[0];
 }
 
-function createContract(holderAddress, counterPartyAddress) {
-  web3.eth.defaultAccount = holderAddress;
-  instantiateNew(holderAddress, counterPartyAddress, codeHex).then(function (instantiationTxHash) {
-    waitForReceipt(instantiationTxHash).then(function (instantiationReceipt) {
-      smartContractInstance = smartContract.at(instantiationReceipt.contractAddress);
-    });
-  });
+function setDefaultAccount(address) {
+  web3.eth.defaultAccount = address;
+}
+
+function setSmartContractInstance(contractAddress) {
+  smartContractInstance = smartContract.at(contractAddress);
 } // this does not exist for Kovan chain
 
 
@@ -127,27 +128,11 @@ function unlockAccount(address) {
     });
   });
 }
-/*
-export function estimateGas(senderAddress, recipientAddress, amount) {
-    return new Promise (function (resolve, reject) {
-        console.log("chica");
-        web3.eth.estimateGas({to: recipientAddress, amount: web3.toWei(amount, "ether")}, function(err, result) {
-            console.log("chici");
-            if (err) {
-              reject(err);
-            } else {
-              resolve(result * 1.2);
-            }
-        });
-    });
-}
-*/
 
-
-function instantiateNew(holderAddress, counterPartyAddress, dataIn) {
+function instantiateNew(holderAddress, counterPartyAddress) {
   return new Promise(function (resolve, reject) {
     smartContract["new"](holderAddress, counterPartyAddress, {
-      data: dataIn,
+      data: codeHex,
       from: web3.eth.defaultAccount
     }, function (err, contractInstance) {
       //smartContract.new({data: dataIn, from: web3.eth.defaultAccount, gasPrice: 4000000000, gas: gasLimit}, function (err, contractInstance) {
@@ -443,6 +428,8 @@ var _contract = require("./contract.mjs");
 
 var _deploy = require("./deploy/deploy.mjs");
 
+var _oracles = require("./oracles.mjs");
+
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -452,13 +439,15 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 //TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
-// TODO: no truncate means infinite horizon!!!!!!!!!!!
-//TODO: check format of string ie whenever 'if' then followed by '(){}'
+//TODO: add oracles
+//TODO: add gas estimation of transfers
+//TODO: go over conditionalEvaluation to check if correct for all cases
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
 
 var contractsMap = new Map(); // map from contract id to contract object
 
+var agreedOracleAddress;
 $(function () {
   var $select = $(".custom_select");
 
@@ -476,7 +465,8 @@ window.addEventListener('load', function () {
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input").disabled = true;
     */
-  // start timer
+  (0, _oracles.createOracles)(); // start timer
+
   update();
   runClock();
 });
@@ -547,6 +537,12 @@ function updateBalances() {
   retrieveBalances();
 }
 
+function getWeather() {
+  Weather.getCurrent("Kansas City", function (current) {
+    console.log(["currently:", current.temperature(), "and", current.conditions()].join(" "));
+  });
+}
+
 global.callDepositFunction = function (id) {
   document.getElementById("create_contract_status").innerHTML = "";
   var addr = "";
@@ -575,19 +571,26 @@ global.callDepositFunction = function (id) {
   }
 };
 
-global.callCreateContractFunction = function () {
+global.createContractFunction = function () {
   document.getElementById("create_contract_status").innerHTML = "";
   var holderAddressValue = document.getElementById("holder_address").value;
   var counterPartyAddressValue = document.getElementById("counter_party_address").value;
 
   if ((0, _deploy.getSelectedMetaMaskAccount)().toUpperCase() === holderAddressValue.toUpperCase()) {
-    (0, _deploy.createContract)(holderAddressValue, counterPartyAddressValue);
-    document.getElementById("create_contract_button").disabled = true;
-    document.getElementById("holder_address").disabled = true;
-    document.getElementById("counter_party_address").disabled = true;
-    document.getElementById("deposit_button1").disabled = false;
-    document.getElementById("deposit_button2").disabled = false;
-    document.getElementById("select_deposit").disabled = false;
+    (0, _deploy.setDefaultAccount)(holderAddressValue);
+    (0, _deploy.instantiateNew)(holderAddressValue, counterPartyAddressValue).then(function (instantiationTxHash) {
+      (0, _deploy.waitForReceipt)(instantiationTxHash).then(function (instantiationReceipt) {
+        (0, _deploy.setSmartContractInstance)(instantiationReceipt.contractAddress);
+        document.getElementById("create_contract_button").disabled = true;
+        document.getElementById("select_oracle").disabled = true;
+        document.getElementById("holder_address").disabled = true;
+        document.getElementById("counter_party_address").disabled = true;
+        document.getElementById("deposit_button1").disabled = false;
+        document.getElementById("deposit_button2").disabled = false;
+        document.getElementById("select_deposit").disabled = false;
+        agreedOracleAddress = getSelectedOracle();
+      });
+    });
   } else {
     document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the contract holder account.";
   }
@@ -595,6 +598,10 @@ global.callCreateContractFunction = function () {
 
 function getSelectedDeposit() {
   return document.getElementById("select_deposit").value;
+}
+
+function getSelectedOracle() {
+  return document.getElementById("select_oracle").value;
 }
 
 global.getInputString = function () {
@@ -631,14 +638,14 @@ function evaluateConditionals(inputString) {
       ++ifsToBeMatched;
       ifsStack.push(openingParens - closingParens);
     } else if (term === "(" && i < termArr.length - 3) {
-      if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<" || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "==" || nextTerm === "&&" || nextTerm === "||") {
+      if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<" || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "==" || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || nextTerm === "}") {
         console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
         return "error";
       }
 
       ++openingParens;
     } else if (term === ")") {
-      if (i < termArr.length - 1 && (nextTerm === "if" || nextTerm === "(")) {
+      if (i < termArr.length - 1 && (nextTerm === "if" || nextTerm === "(" || nextTerm === "}")) {
         console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
         return "error";
       }
@@ -720,7 +727,7 @@ function evaluateConditionals(inputString) {
 
       ifsStack.pop();
       ifCondition = "";
-    } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "==" && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&" && term !== "||" && !parseInt(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or") {
+    } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "==" && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&" && term !== "||" && !parseInt(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
       // give error
       console.error("syntax error at term " + i.toString() + ": " + term);
       return "error";
@@ -932,7 +939,10 @@ global.decomposeContract = function (inputString) {
   var conjunctionsStack = [];
   stringToAddToBeginning = ""; // check if inputstring contains 'or' else execute right away
 
-  if (inputString.includes("or")) {
+  var matches = inputString.match(/^(.*)\sor\s(.*)$/);
+
+  if (matches !== null) {
+    //if (inputString.includes("or")) {
     var firstOpeningParenOcc = inputString.indexOf("(");
     var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
 
@@ -1038,7 +1048,12 @@ function combineContracts(contractsStack, conjunctionStack) {
 function parse(inputString) {
   var recipient = 0; // by default the contract holder is the recipient
 
-  var amount = 1;
+  var amount = "1";
+
+  if (inputString.includes("zero")) {
+    amount = "0";
+  }
+
   var horizonDate = "infinite";
   var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
 
@@ -1051,16 +1066,15 @@ function parse(inputString) {
 
     if (str === "give") {
       recipient = 1;
-    } else if (str === "one") {
-      amount *= 1;
-    } else if (str === "zero") {
-      amount *= 0;
-    } else if (str === "scaleK") {
+    } else if (str === "scaleK" && !inputString.includes("zero")) {
       if (strArr.length > i + 1 && parseInt(strArr[i + 1])) {
-        amount = amount * parseInt(strArr[i + 1]);
+        amount = (parseInt(amount) * parseInt(strArr[i + 1])).toString();
+        ++i;
+      } else if (strArr.length > i + 1 && (strArr[i + 1] === "tempInLondon" || strArr[i + 1] === "libor3m")) {
+        amount = strArr[i + 1];
         ++i;
       } else {
-        console.error("Syntax error: scaleK should be followed by an integer.");
+        console.error("Syntax error: scaleK should be followed by an integer or an observable.");
         return;
       }
     } else if (str === "truncate") {
@@ -1068,7 +1082,7 @@ function parse(inputString) {
         horizonDate = strArr[i + 1];
         ++i;
       } else {
-        console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy-hh:mm:ss'.");
+        console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.");
         return;
       }
     } else if (str === "get") {
@@ -1082,11 +1096,9 @@ function parse(inputString) {
 
   if (horizonDate !== "infinite" && beforeCurrentDate(contract)) {
     // add expired label & disable acquire button
-    console.log("It is before current date!");
     document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
     document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
   } else {
-    console.log("It is not before current date!");
     contractsMap.set(numberOfContracts, contract);
     document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
   }
@@ -1152,15 +1164,24 @@ function executeContract(contract) {
     }
   }
 
+  if (contract.amount === "tempInLondon") {
+    contract.amount = (0, _oracles.getOracleByAddress)(agreedOracleAddress).getTempInLondon().toString();
+  }
+
+  if (contract.amount === "libor3m") {
+    contract.amount = (0, _oracles.getOracleByAddress)(agreedOracleAddress).getLiborSpotRate().toString();
+  } //newStr = convertObservables(newStr);
+
+
   (0, _deploy.holderAddress)().then(function (holderAddress) {
     (0, _deploy.counterPartyAddress)().then(function (counterPartyAddress) {
       if (contract.recipient == 0) {
         // owner receives
-        createMoveFile(counterPartyAddress, holderAddress, contract.amount);
+        createMoveFile(counterPartyAddress, holderAddress, parseFloat(contract.amount));
         callTransferFunction(contract, counterPartyAddress, holderAddress);
       } else {
         // counter party receives
-        createMoveFile(holderAddress, counterPartyAddress, contract.amount);
+        createMoveFile(holderAddress, counterPartyAddress, parseFloat(contract.amount));
         callTransferFunction(contract, holderAddress, counterPartyAddress);
       }
 
@@ -1173,8 +1194,8 @@ function executeContract(contract) {
 
 function callTransferFunction(contract, fromAddress, toAddress) {
   (0, _deploy.balanceOfAddress)(fromAddress).then(function (balance) {
-    if (balance >= contract.amount) {
-      (0, _deploy.transfer)(fromAddress, toAddress, contract.amount).then(function (transferTxHash) {
+    if (balance >= parseFloat(contract.amount)) {
+      (0, _deploy.transfer)(fromAddress, toAddress, parseFloat(contract.amount)).then(function (transferTxHash) {
         (0, _deploy.waitForReceipt)(transferTxHash).then(function (_) {
           console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
           document.getElementById("td_status_" + contract.id.toString()).innerHTML = "successful";
@@ -1280,8 +1301,6 @@ function createButton(contractString, buttonId) {
   bottomContainer.appendChild(button); // 3. Add event handler
 
   button.addEventListener("click", function () {
-    console.log("Pressed button");
-    console.log(stringToAddToBeginning + button.innerHTML);
     decomposeContract(stringToAddToBeginning + button.innerHTML);
   });
 }
@@ -1363,7 +1382,101 @@ global.testReachability = function () {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./contract.mjs":1,"./deploy/deploy.mjs":2,"./stringmanipulation.mjs":5}],5:[function(require,module,exports){
+},{"./contract.mjs":1,"./deploy/deploy.mjs":2,"./oracles.mjs":5,"./stringmanipulation.mjs":6}],5:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createOracles = createOracles;
+exports.getOracleByAddress = getOracleByAddress;
+exports.Oracle = void 0;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+/**
+ * @author Noah-Vincenz Noeh <noah-vincenz.noeh18@imperial.ac.uk>
+ */
+
+/* jshint esversion: 6 */
+var oracleArr = [];
+
+var Oracle =
+/*#__PURE__*/
+function () {
+  function Oracle(address) {
+    _classCallCheck(this, Oracle);
+
+    this.address = address;
+  }
+
+  _createClass(Oracle, [{
+    key: "getTempInLondon",
+    value: function getTempInLondon() {
+      switch (this.address) {
+        case "0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56":
+          return 23;
+          break;
+
+        case "0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca":
+          return 25;
+          break;
+
+        case "0xa03cbbea9891d7961ed23fd965b6ad3109c36a30":
+          return 22;
+          break;
+
+        default: // code block
+
+      }
+    }
+  }, {
+    key: "getLiborSpotRate",
+    value: function getLiborSpotRate() {
+      switch (this.address) {
+        case "0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56":
+          return 2.26563;
+          break;
+
+        case "0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca":
+          return 2.25634;
+          break;
+
+        case "0xa03cbbea9891d7961ed23fd965b6ad3109c36a30":
+          return 2.26551;
+          break;
+
+        default: // code block
+
+      }
+    }
+  }]);
+
+  return Oracle;
+}();
+
+exports.Oracle = Oracle;
+
+function createOracles() {
+  var o1 = new Oracle("0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56");
+  var o2 = new Oracle("0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca");
+  var o3 = new Oracle("0xa03cbbea9891d7961ed23fd965b6ad3109c36a30");
+  oracleArr = [o1, o2, o3];
+}
+
+function getOracleByAddress(address) {
+  for (var i = 0; i < oracleArr.length; ++i) {
+    if (oracleArr[i].address === address) {
+      return oracleArr[i];
+    }
+  }
+}
+
+},{}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

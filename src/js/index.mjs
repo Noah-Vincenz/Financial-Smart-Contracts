@@ -12,25 +12,26 @@ import {
 
 import {Contract, translateContract} from "./contract.mjs";
 
-import {createContract, depositCollateral, getSelectedMetaMaskAccount, holderBalance,
+import {depositCollateral, getSelectedMetaMaskAccount, holderBalance,
   counterPartyBalance, holderAddress, counterPartyAddress, balanceOfAddress,
-  transfer, waitForReceipt
+  transfer, waitForReceipt, setDefaultAccount, setSmartContractInstance, instantiateNew
 } from "./deploy/deploy.mjs"
 
+import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
 
 //TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
-
-// TODO: no truncate means infinite horizon!!!!!!!!!!!
-
-//TODO: check format of string ie whenever 'if' then followed by '(){}'
+//TODO: add oracles
+//TODO: add gas estimation of transfers
+//TODO: go over conditionalEvaluation to check if correct for all cases
 
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
 var contractsMap = new Map(); // map from contract id to contract object
+var agreedOracleAddress;
 
 $(function(){
     var $select = $(".custom_select");
-    for (var i = 1; i <= 100; ++i){
+    for (var i = 1; i <= 100; ++i) {
         $select.append($('<option></option>').val(i).html(i));
     }
 });
@@ -43,6 +44,7 @@ window.addEventListener('load', function() {  // commented for testing purposes
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input").disabled = true;
     */
+    createOracles();
     // start timer
     update();
     runClock();
@@ -88,6 +90,14 @@ function updateBalances() {
     retrieveBalances();
 }
 
+function getWeather() {
+    Weather.getCurrent("Kansas City", function(current) {
+      console.log(
+        ["currently:",current.temperature(),"and",current.conditions()].join(" ")
+      );
+    });
+}
+
 global.callDepositFunction = function(id) {
     document.getElementById("create_contract_status").innerHTML = "";
     var addr = "";
@@ -115,18 +125,25 @@ global.callDepositFunction = function(id) {
     }
 }
 
-global.callCreateContractFunction = function() {
+global.createContractFunction = function() {
     document.getElementById("create_contract_status").innerHTML = "";
     var holderAddressValue = document.getElementById("holder_address").value;
     var counterPartyAddressValue = document.getElementById("counter_party_address").value;
     if (getSelectedMetaMaskAccount().toUpperCase() === holderAddressValue.toUpperCase()) {
-        createContract(holderAddressValue, counterPartyAddressValue);
-        document.getElementById("create_contract_button").disabled = true;
-        document.getElementById("holder_address").disabled = true;
-        document.getElementById("counter_party_address").disabled = true;
-        document.getElementById("deposit_button1").disabled = false;
-        document.getElementById("deposit_button2").disabled = false;
-        document.getElementById("select_deposit").disabled = false;
+        setDefaultAccount(holderAddressValue);
+        instantiateNew(holderAddressValue, counterPartyAddressValue).then(instantiationTxHash => {
+            waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
+                setSmartContractInstance(instantiationReceipt.contractAddress);
+                document.getElementById("create_contract_button").disabled = true;
+                document.getElementById("select_oracle").disabled = true;
+                document.getElementById("holder_address").disabled = true;
+                document.getElementById("counter_party_address").disabled = true;
+                document.getElementById("deposit_button1").disabled = false;
+                document.getElementById("deposit_button2").disabled = false;
+                document.getElementById("select_deposit").disabled = false;
+                agreedOracleAddress = getSelectedOracle();
+            });
+        });
     } else {
         document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the contract holder account.";
     }
@@ -134,6 +151,10 @@ global.callCreateContractFunction = function() {
 
 function getSelectedDeposit() {
     return document.getElementById("select_deposit").value;
+}
+
+function getSelectedOracle() {
+    return document.getElementById("select_oracle").value;
 }
 
 global.getInputString = function() {
@@ -166,13 +187,14 @@ function evaluateConditionals(inputString) {
         } else if (term === "(" && i < termArr.length - 3) {
             if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<"
               || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "=="
-              || nextTerm === "&&" || nextTerm === "||") {
+              || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{"
+              || nextTerm === "}") {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
                 return "error";
             }
             ++openingParens;
         } else if (term === ")") {
-            if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" ) ) {
+            if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" || nextTerm === "}") ) {
                 console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
                 return "error";
             }
@@ -244,7 +266,7 @@ function evaluateConditionals(inputString) {
           && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "=="
           && term !== ">=" && term !== "<=" && term !== "<" && term !== ">" && term !== "&&"
           && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
-          && term !== "{" && term !== "and" && term !== "or") {
+          && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
             // give error
             console.error("syntax error at term " + i.toString() + ": " + term);
             return "error";
@@ -436,7 +458,10 @@ global.decomposeContract = function(inputString) {
     stringToAddToBeginning = "";
 
     // check if inputstring contains 'or' else execute right away
-    if (inputString.includes("or")) {
+
+    var matches = inputString.match(/^(.*)\sor\s(.*)$/);
+    if (matches !== null) {
+    //if (inputString.includes("or")) {
         var firstOpeningParenOcc = inputString.indexOf("(");
         var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
         if (!firstSubstring.includes("or")) {
@@ -526,7 +551,10 @@ function combineContracts(contractsStack, conjunctionStack) {
 
 function parse(inputString) {
     var recipient = 0; // by default the contract holder is the recipient
-    var amount = 1;
+    var amount = "1";
+    if (inputString.includes("zero")) {
+        amount = "0";
+    }
     var horizonDate = "infinite";
     var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
@@ -535,16 +563,15 @@ function parse(inputString) {
         var str = strArr[i];
         if (str === "give") {
             recipient = 1;
-        } else if (str === "one") {
-            amount *= 1;
-        } else if (str === "zero") {
-            amount *= 0;
-        } else if (str === "scaleK") {
+        } else if (str === "scaleK" && !inputString.includes("zero")) {
             if (strArr.length > i + 1 && (parseInt(strArr[i + 1]))) {
-                amount = amount * parseInt(strArr[i + 1]);
+                amount = ( parseInt(amount) * parseInt(strArr[i + 1]) ).toString();
+                ++i;
+            } else if (strArr.length > i + 1 && ( strArr[i + 1] === "tempInLondon" || strArr[i + 1] === "libor3m" ) ) {
+                amount = strArr[i + 1];
                 ++i;
             } else {
-                console.error("Syntax error: scaleK should be followed by an integer.");
+                console.error("Syntax error: scaleK should be followed by an integer or an observable.");
                 return;
             }
         } else if (str === "truncate") {
@@ -552,7 +579,7 @@ function parse(inputString) {
                 horizonDate = strArr[i + 1];
                 ++i;
             } else {
-                console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy-hh:mm:ss'.");
+                console.error("Syntax error: truncate should be followed by a date in the following pattern: 'dd/mm/yyyy hh:mm:ss'.");
                 return;
             }
         } else if (str === "get") {
@@ -563,15 +590,14 @@ function parse(inputString) {
     const contract = new Contract(numberOfContracts, amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
+
     createTableRow(contract);
 
     if (horizonDate !== "infinite" && beforeCurrentDate(contract)) {
         // add expired label & disable acquire button
-        console.log("It is before current date!");
         document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
         document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
     } else {
-        console.log("It is not before current date!");
         contractsMap.set(numberOfContracts, contract);
         document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
     }
@@ -635,13 +661,21 @@ function executeContract(contract) {
             return;
         }
     }
+    if (contract.amount === "tempInLondon") {
+        contract.amount = getOracleByAddress(agreedOracleAddress).getTempInLondon().toString();
+    }
+    if (contract.amount === "libor3m") {
+        contract.amount = getOracleByAddress(agreedOracleAddress).getLiborSpotRate().toString();
+    }
+    //newStr = convertObservables(newStr);
+
     holderAddress().then(holderAddress => {
         counterPartyAddress().then(counterPartyAddress => {
             if (contract.recipient == 0) { // owner receives
-                createMoveFile(counterPartyAddress, holderAddress, contract.amount);
+                createMoveFile(counterPartyAddress, holderAddress, parseFloat(contract.amount));
                 callTransferFunction(contract, counterPartyAddress, holderAddress);
             } else { // counter party receives
-                createMoveFile(holderAddress, counterPartyAddress, contract.amount);
+                createMoveFile(holderAddress, counterPartyAddress, parseFloat(contract.amount));
                 callTransferFunction(contract, holderAddress, counterPartyAddress);
             }
             if (document.getElementById("td_status_" + contract.id.toString()).innerHTML !== "successful") {
@@ -653,8 +687,8 @@ function executeContract(contract) {
 
 function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
-        if (balance >= contract.amount) {
-            transfer(fromAddress, toAddress, contract.amount).then(transferTxHash => {
+        if (balance >= parseFloat(contract.amount)) {
+            transfer(fromAddress, toAddress, parseFloat(contract.amount)).then(transferTxHash => {
                 waitForReceipt(transferTxHash).then( _ => {
                     console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
                     document.getElementById("td_status_" + contract.id.toString()).innerHTML = "successful";
@@ -729,7 +763,6 @@ function printStack(stack, name) {
 }
 
 function createTableRow(contract) {
-
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
     var td;
@@ -771,8 +804,6 @@ function createButton (contractString, buttonId) {
     bottomContainer.appendChild(button);
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        console.log("Pressed button");
-        console.log(stringToAddToBeginning + button.innerHTML);
         decomposeContract(stringToAddToBeginning + button.innerHTML);
     });
 }
