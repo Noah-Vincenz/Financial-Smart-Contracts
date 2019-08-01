@@ -216,33 +216,31 @@ function evaluateConditionals(inputString) {
         var term = termArr[i];
         var nextTerm = termArr[i + 1]; // for syntax checking
         stack.push(term);
-        if (term === "if" && i < termArr.length - 3) {
-            if (nextTerm !== "(") {
-                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+        if (term === "if") {
+            if (i >= termArr.length - 3 || nextTerm !== "(") {
                 document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++ifsToBeMatched;
             ifsStack.push(openingParens - closingParens);
-        } else if (term === "(" && i < termArr.length - 3) {
-            if (nextTerm === ")" || nextTerm === ">" || nextTerm === "<"
-              || nextTerm === ">=" || nextTerm === "<=" || nextTerm === "=="
-              || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{"
-              || nextTerm === "}") {
-                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
+        } else if (term === "(") {
+            if (i >= termArr.length - 3 || nextTerm === ")" || nextTerm === ">"
+              || nextTerm === "<" || nextTerm === ">=" || nextTerm === "<="
+              || nextTerm === "==" || nextTerm === "&&" || nextTerm === "||"
+              || nextTerm === "{" || nextTerm === "}") {
                 document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++openingParens;
         } else if (term === ")") {
             if (i < termArr.length - 1 && ( nextTerm === "if" || nextTerm === "(" || nextTerm === "}") ) {
-                console.error("syntax error at term " + (i + 1).toString() + ": " + nextTerm);
                 document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
             ++closingParens;
             //if (openingParens - ifsStack[ifsStack.length - 1] === closingParens) {
-            if ( ( ifsStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0 ) || ( openingParens - ifsStack[ifsStack.length - 1] === closingParens ) ) {
+            if ( ( ifsStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0 )
+              || ( openingParens - ifsStack[ifsStack.length - 1] === closingParens ) ) {
 
                 // pop from stack until we have read 'if'
                 // --ifsRead
@@ -310,7 +308,6 @@ function evaluateConditionals(inputString) {
           && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
           && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
             // give error
-            console.error("syntax error at term " + i.toString() + ": " + term);
             document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
             return "error";
         }
@@ -459,7 +456,6 @@ global.decomposeContract = function(inputString) {
         return;
     }
     if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
-        console.error("Parenthesis mismatch: The contract is not constructed properly.");
         document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
         return;
     }
@@ -504,7 +500,6 @@ global.decomposeContract = function(inputString) {
     inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
 
     if (inputString.includes("get") && !inputString.includes("truncate")) {
-        console.error("The contract is not constructed properly. Contract strings cannot include 'get' without 'truncate'.");
         document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Contract strings cannot include 'get' without 'truncate'.";
         return;
     }
@@ -563,7 +558,6 @@ global.decomposeContract = function(inputString) {
                 }
            }
            if (noOfClosingParens > noOfOpeningParens) {
-               console.error("Parenthesis mismatch: The contract is not constructed properly.");
                document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
                return;
            }
@@ -575,11 +569,9 @@ global.decomposeContract = function(inputString) {
         combineContracts(contractsStack, conjunctionsStack);
 
     } else {
-        // String does not include "or": execute right away
+        // String does not include "or" -> execute right away
         var outputStrings = inputString.split("and");
         for (var i = 0; i < outputStrings.length; ++i) {
-            console.log(outputStrings[i]);
-            console.log(cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
             parse(cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
         }
     }

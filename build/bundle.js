@@ -1367,7 +1367,11 @@ function createTableRow(contract) {
   btn.value = "acquire";
 
   btn.onclick = function (_) {
-    executeContract(contract);
+    if (correctUserTryingToAcquire()) {
+      executeContract(contract);
+    } else {
+      document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+    }
   };
 
   td.appendChild(btn);
@@ -1379,6 +1383,14 @@ function createTableRow(contract) {
   tr.appendChild(td = document.createElement("td"));
   td.id = "td_status_" + contract.id;
   td.innerHTML = contract.status;
+}
+
+function correctUserTryingToAcquire() {
+  if ((0, _deploy.getSelectedMetaMaskAccount)().toUpperCase() === document.getElementById("holder_address").value.toUpperCase()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 function createButton(contractString, buttonId) {

@@ -46,7 +46,7 @@
       <div id="bottom_container1">
           <p id="p_section_header">Add a Definition to the Language:</p>
           <div id="bottom_add_definitions_container">
-              <textarea id="add_input_textarea" rows="6" cols="10" type="text" placeholder="andGive = and give;"></textarea>
+              <textarea id="add_input_textarea" rows="6" cols="10" type="text" placeholder="ie. andGive = and give;"></textarea>
               <div id="arrow_button_container">
                   <button class="arrow_button" id = "arrow_button" type="button" onclick="addDefinition(getDefinitionsText())">></button>
               </div>
@@ -56,7 +56,7 @@
       </div>
       <p id="p_section_header">Construct Smart Contract Transactions:</p>
       <div id="bottom_input_container">
-          <textarea rows="13" cols="100" id="transaction_input_textarea" type="text" placeholder="give one and truncate &quot;24/11/2020-23:33:33&quot; ( one )"></textarea><br>
+          <textarea rows="13" cols="100" id="transaction_input_textarea" type="text" placeholder="ie. give one and truncate &quot;24/11/2020 23:33:33&quot; ( one )"></textarea><br>
           <p class="status" id="transaction_status"></p>
           <button class="button" id = "make_transaction_button" type="button" onclick="decomposeContract(getInputString())">Make Transaction</button>
       </div>
