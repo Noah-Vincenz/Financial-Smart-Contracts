@@ -1012,15 +1012,15 @@ function getValue(contractString) {
     var value1 = getValue(part1);
     var value2 = getValue(part2);
 
-    if (!beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+    if (!beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon1))) && !beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon2)))) {
       if (mostBalancedConjType === "and") {
         return value1 + value2;
       } else {
         return Math.max(value1, value2);
       }
-    } else if (!beforeCurrentDate(horizon1) && beforeCurrentDate(horizon2)) {
+    } else if (!beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon1))) && beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon2)))) {
       return value1;
-    } else if (beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+    } else if (beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon1))) && !beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(horizon2)))) {
       return value2;
     } else {
       // both have expired - return 0
@@ -1041,7 +1041,11 @@ function getValue(contractString) {
         }
       }
 
-      return value;
+      if (beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(getHorizon(contractString))))) {
+        return 0;
+      } else {
+        return value;
+      }
     }
   }
 }

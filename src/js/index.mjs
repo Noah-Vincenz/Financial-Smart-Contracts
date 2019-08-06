@@ -516,15 +516,15 @@ function getValue(contractString) {
         var horizon2 = getHorizon(part2);
         var value1 = getValue(part1);
         var value2 = getValue(part2);
-        if (!beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+        if (!beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon1))) && !beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon2)))) {
             if (mostBalancedConjType === "and") {
                 return value1 + value2;
             } else {
                 return Math.max(value1, value2);
             }
-        } else if (!beforeCurrentDate(horizon1) && beforeCurrentDate(horizon2)) {
+        } else if (!beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon1))) && beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon2)))) {
             return value1;
-        } else if (beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+        } else if (beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon1))) && !beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(horizon2)))) {
             return value2;
         } else { // both have expired - return 0
             return 0;
@@ -542,7 +542,11 @@ function getValue(contractString) {
                     value = -value;
                 }
             }
-            return value;
+            if (beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(getHorizon(contractString))))) {
+                return 0;
+            } else {
+                return value;
+            }
         }
     }
 }
