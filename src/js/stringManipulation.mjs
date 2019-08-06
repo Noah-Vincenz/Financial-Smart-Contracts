@@ -11,10 +11,11 @@ export function cleanParens(contractString) {
     if (contractString[0] === ")") {
         contractString = contractString.substring(1);
     }
-    while (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+    var contractStringArr = contractString.split(" ");
+    while (openingParensAmount(contractString) > closingParensAmount(contractString) && ( contractStringArr[0] === "(" || ( contractStringArr[0] === " " && contractStringArr[1] === "(" ) ) ) {
         contractString = lTrimParen(lTrimWhiteSpace(contractString));
     }
-    while (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+    while (openingParensAmount(contractString) < closingParensAmount(contractString) && ( contractStringArr[contractStringArr.length - 1] === ")" || ( contractStringArr[contractStringArr.length - 1] === " " && contractStringArr[contractStringArr.length - 2] === ")" ) ) ) {
         contractString = rTrimParen(rTrimWhiteSpace(contractString));
     }
     return contractString;

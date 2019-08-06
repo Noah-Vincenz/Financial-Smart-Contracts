@@ -572,7 +572,7 @@ function obtainContractString(array) {
 }
 
 
-
+// TODO: add syntax checking to this method
 global.decomposeContract = function(inputString) {
     document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
@@ -587,7 +587,9 @@ global.decomposeContract = function(inputString) {
     var strSplit = inputString.split(" ");
     let keys = Array.from(definitionsMap.keys());
     var intersection = strSplit.filter(value => keys.includes(value));
+    console.log(inputString);
     while(intersection.length !== 0) {
+        console.log("intersection");
         for(var i = 0; i < intersection.length; ++i) {
             const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
             var matchObj = regex.exec(inputString);
@@ -611,10 +613,15 @@ global.decomposeContract = function(inputString) {
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
     // repeat replacing the if clause while string includes if
-    inputString = evaluateConditionals(inputString);
+    console.log("evaluateConditionals");
+    var ifMatches = inputString.match(/^(.*)\sif\s(.*)$/);
+    if (ifMatches !== null) {
+        inputString = evaluateConditionals(inputString);
+    }
     if (inputString === "" || inputString === "error") {
         return;
     }
+    console.log("trimminger");
 
     inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
 
@@ -624,17 +631,14 @@ global.decomposeContract = function(inputString) {
     }
 
     removeChildren("button_choices_container");
-    stringToAddToBeginning = "";
     var noOfOpeningParens = 0;
     var noOfClosingParens = 0;
     var contractsStack = [];
     stringToAddToBeginning = "";
 
     // check if inputstring contains 'or' else execute right away
-
-    var matches = inputString.match(/^(.*)\sor\s(.*)$/);
-    if (matches !== null) {
-    //if (inputString.includes("or")) {
+    var orMatches = inputString.match(/^(.*)\sor\s(.*)$/);
+    if (orMatches !== null) {
         var firstOpeningParenOcc = inputString.indexOf("(");
         var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
         if (!firstSubstring.includes("or")) {
@@ -679,9 +683,15 @@ global.decomposeContract = function(inputString) {
 
     } else {
         // String does not include "or" -> execute right away
+        var firstOpeningParenOcc = inputString.indexOf("(");
+        var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
+        if (!firstSubstring.includes("and")) {
+            inputString = inputString.slice(firstOpeningParenOcc, inputString.length);
+            stringToAddToBeginning = firstSubstring;
+        }
         var outputStrings = inputString.split("and");
         for (var i = 0; i < outputStrings.length; ++i) {
-            createContractObject(cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
+            createContractObject(stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
         }
     }
 };
@@ -711,6 +721,7 @@ function combineContracts(contractsStack) {
 }
 
 function createContractObject(inputString) {
+    console.log("Creating contract obj");
     var recipient = 0; // by default the contract holder is the recipient
     var amount = "1";
     if (inputString.includes("zero")) {
@@ -721,6 +732,8 @@ function createContractObject(inputString) {
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
+        console.log("looping through");
+        console.log(strArr[i]);
         var str = strArr[i];
         if (str === "give") {
             recipient = 1;
