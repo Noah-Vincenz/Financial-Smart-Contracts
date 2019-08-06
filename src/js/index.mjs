@@ -148,6 +148,7 @@ global.callDepositFunction = function(id) {
         depositCollateral(senderAddress, depositAmount).then(holderDepositTxHash => {
             waitForReceipt(holderDepositTxHash).then(_ => {
                 console.log("Deposit of " + depositAmount + " Ether has been added to " + addr + " account.");
+                document.getElementById("select_deposit").disabled = true;
                 if (id === 1) {
                     account1Deposited = true;
                 } else {
@@ -155,7 +156,6 @@ global.callDepositFunction = function(id) {
                 }
                 if (account1Deposited && account2Deposited) {
                     document.getElementById("make_transaction_button").disabled = false;
-                    document.getElementById("transaction_input_textarea").disabled = false;
                 }
                 retrieveBalances();
             });
@@ -427,10 +427,6 @@ function evaluate(inputString) {
                 var part2 = strArr.slice(i + 1).join(" ");
                 var value1 = getValue(part1);
                 var value2 = getValue(part2);
-                console.log("value obtained 1");
-                console.log(value1);
-                console.log("value obtained 2");
-                console.log(value2);
                 if (term === "[>=]") {
                     return value1 >= value2;
                 } else if (term === "[>]") {
