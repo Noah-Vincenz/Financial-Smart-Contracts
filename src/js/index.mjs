@@ -24,9 +24,10 @@ import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
 //TODO: add gas estimation of transfers
 //TODO: go over conditionalEvaluation to check if correct for all cases
 
+var numberOfSubContracts = 0;
 var numberOfContracts = 0;
 var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
-var contractsMap = new Map(); // map from contract id to contract object
+var superContractsMap = new Map(); // map from superContract id to set of contract objects contained within super contract
 var agreedOracleAddress;
 var account1Deposited = false;
 var account2Deposited = false;
@@ -67,13 +68,10 @@ global.addDefinition = function(inputString) {
     var strArr = inputString.split("=");
     var part1 = rTrimWhiteSpace(strArr[0]);
     var part2 = trimSemiColon(lTrimWhiteSpace(strArr[1]));
-    console.log(part1);
-    console.log(part2);
     // check semantics of second part
     var secondArr = part2.split(" ");
     for (var i = 0; i < secondArr.length; ++i) {
         var term = secondArr[i];
-        console.log("term: " + term);
         if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
         && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "{==}"
         && term !== "{>=}" && term !== "{<=}" && term !== "{<}" && term !== "{>}" && term !== "[==]"
@@ -98,23 +96,16 @@ function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
-    for (var [key, value] of contractsMap) {
-        if (value.horizonDate !== "infinite") {
-            var horizonArr = value.horizonDate.split("-");
-            var dateArr = horizonArr[0].split("/");
-            var timeArr = horizonArr[1].split(":");
-            // +01:00 to get BST from UTC
-            var dateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2] + "+01:00";
-            var contractDate = new Date(dateString);
-            var todayDate = new Date();
-            if (contractDate.getTime() <= todayDate.getTime()) {
-                if (value.toBeExecutedAtHorizon === "yes") { // contract contains 'get'
-                    executeContract(value);
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        for (let contract of contractsSet) {
+            if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
+                if (contract.toBeExecutedAtHorizon === "yes") { // contract contains 'get' - must be executed now
+                    executeSingleContract(contract);
                 } else { // contract just contains 'truncate' and not 'get'
-                    document.getElementById("acquire_button_" + key.toString()).disabled = true;
-                    document.getElementById("td_status_" + key.toString()).innerHTML = "expired";
-                    contractsMap.delete(key);
-                    console.log("Contract " + key + " has expired.");
+                    document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+                    deleteFromSuperContracts(superContractId, contract);
+                    console.log("Contract " + contract.id + " has expired.");
+                    checkForEmptySuperContract();
                 }
             }
         }
@@ -245,7 +236,6 @@ function evaluateConditionals(inputString) {
               || ( openingParens - ifsStack[ifsStack.length - 1] === closingParens ) ) {
 
                 // pop from stack until we have read 'if'
-                // --ifsToBeMatched
                 while (stack[stack.length - 1] !== "if") {
                     if (ifCondition === "") {
                         ifCondition = stack.pop();
@@ -352,10 +342,6 @@ function evaluate(inputString) {
                 var part2 = strArr.slice(i + 1).join(" ");
                 var horizon1 = getHorizon(part1);
                 var horizon2 = getHorizon(part2);
-                console.log("horizon obtained 1");
-                console.log(horizon1);
-                console.log("horizon obtained 2");
-                console.log(horizon2);
                 if (term === "{>=}") {
                     if (horizon1 === "infinite" || horizon2 === "infinite") {
                         if (horizon1 === "infinite" && horizon2 === "infinite") {
@@ -587,9 +573,7 @@ global.decomposeContract = function(inputString) {
     var strSplit = inputString.split(" ");
     let keys = Array.from(definitionsMap.keys());
     var intersection = strSplit.filter(value => keys.includes(value));
-    console.log(inputString);
     while(intersection.length !== 0) {
-        console.log("intersection");
         for(var i = 0; i < intersection.length; ++i) {
             const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
             var matchObj = regex.exec(inputString);
@@ -613,7 +597,6 @@ global.decomposeContract = function(inputString) {
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
     // repeat replacing the if clause while string includes if
-    console.log("evaluateConditionals");
     var ifMatches = inputString.match(/^(.*)\sif\s(.*)$/);
     if (ifMatches !== null) {
         inputString = evaluateConditionals(inputString);
@@ -621,7 +604,6 @@ global.decomposeContract = function(inputString) {
     if (inputString === "" || inputString === "error") {
         return;
     }
-    console.log("trimminger");
 
     inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
 
@@ -690,9 +672,49 @@ global.decomposeContract = function(inputString) {
             stringToAddToBeginning = firstSubstring;
         }
         var outputStrings = inputString.split("and");
+        var acquireBtnToBeDisabled1 = true;
+        var acquireBtnToBeDisabled2 = true;
+        // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
         for (var i = 0; i < outputStrings.length; ++i) {
-            createContractObject(stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i]))));
+            var conString = stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i])));
+            if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
+                acquireBtnToBeDisabled1 = false;
+            }
+            if (!beforeCurrentDate(getHorizon(conString))) { // at least one subcontract has not expired yet
+                acquireBtnToBeDisabled2 = false;
+            }
+            createContractObject(conString);
         }
+        var table = document.getElementById("my_table");
+        let tr = table.insertRow(1);
+        tr.className = "super_contract_row";
+        var td;
+        tr.appendChild(td = document.createElement("td"));
+        var superContractKey = numberOfContracts.toString();
+        td.innerHTML = superContractKey;
+        for (var i = 0; i < 6; ++i) {
+            tr.appendChild(td = document.createElement("td"));
+        }
+        var btn = document.createElement('input');
+        btn.type = "button";
+        btn.className = "button acquire_button";
+        btn.id = "acquire_button_" + superContractKey;
+        btn.value = "acquire";
+        btn.onclick = _ => {
+            if (correctUserTryingToAcquire()) {
+                executeSuperContract(superContractKey);
+            } else {
+                document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+            }
+        };
+        td.appendChild(btn);
+
+        // if either of these is true then we want the acquire button to be disabled
+        if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
+            btn.disabled = true;
+        }
+        ++numberOfContracts;
+        numberOfSubContracts = 0;
     }
 };
 
@@ -721,7 +743,6 @@ function combineContracts(contractsStack) {
 }
 
 function createContractObject(inputString) {
-    console.log("Creating contract obj");
     var recipient = 0; // by default the contract holder is the recipient
     var amount = "1";
     if (inputString.includes("zero")) {
@@ -732,8 +753,6 @@ function createContractObject(inputString) {
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
-        console.log("looping through");
-        console.log(strArr[i]);
         var str = strArr[i];
         if (str === "give") {
             recipient = 1;
@@ -763,21 +782,53 @@ function createContractObject(inputString) {
         }
     }
     horizonDate = lTrimDoubleQuotes(rTrimDoubleQuotes(horizonDate));
-    const contract = new Contract(numberOfContracts, amount, recipient, inputString,
+
+    const contract = new Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
 
     createTableRow(contract);
 
     if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
-        // add expired label & disable acquire button
-        document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
-        document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
+        // add expired label
+        document.getElementById("td_status_" + contract.id).innerHTML = "expired";
     } else {
-        contractsMap.set(numberOfContracts, contract);
-        document.getElementById("td_status_" + contract.id.toString()).innerHTML = "waiting to be executed";
+        addToSuperContracts(numberOfContracts.toString(), contract); // contract is only added to pending contracts map if it is still valid
+        document.getElementById("td_status_" + contract.id).innerHTML = "waiting to be executed";
     }
-    ++numberOfContracts;
+    ++numberOfSubContracts;
+}
+
+function addToSuperContracts(superKey, contract) {
+    if (superContractsMap.has(superKey)) {
+        for (var [superContractId, contractsSet] of superContractsMap) {
+            if (superContractId === superKey) {
+                var newSet = contractsSet;
+                newSet.add(contract);
+                superContractsMap.set(superContractId, newSet);
+                break;
+            }
+        }
+    } else {
+        var newSet = new Set();
+        newSet.add(contract);
+        superContractsMap.set(superKey, newSet);
+    }
+    console.log("SupercontractsMap after adding a contract");
+    console.log(superContractsMap);
+}
+
+function deleteFromSuperContracts(superKey, contract) {
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        if (superContractId === superKey) {
+            var newSet = contractsSet;
+            newSet.delete(contract);
+            superContractsMap.set(superContractId, newSet);
+            break;
+        }
+    }
+    console.log("SupercontractsMap after deleting a contract");
+    console.log(superContractsMap);
 }
 
 function computeDateString(dateString) {
@@ -831,12 +882,23 @@ function greaterDate(dateString1, dateString2) {
     }
 }
 
-function executeContract(contract) {
+function executeSuperContract(superKey) {
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        if (superContractId === superKey) {
+            for (let contract of contractsSet) {
+                executeSingleContract(contract);
+            }
+        }
+    }
+}
+
+function executeSingleContract(contract) {
     if (contract.horizonDate !== "infinite") {
         if (beforeCurrentDate(contract.horizonDate)) {
             window.alert("The contract " + contract.id + " has expired.");
-            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "expired";
-            contractsMap.delete(contract.id);
+            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+            deleteFromSuperContracts(contract.id.split(".")[0], contract);
+            checkForEmptySuperContract();
             return;
         }
     }
@@ -846,7 +908,6 @@ function executeContract(contract) {
     if (contract.amount === "libor3m") {
         contract.amount = getOracleByAddress(agreedOracleAddress).getLiborSpotRate().toString();
     }
-    //newStr = convertObservables(newStr);
 
     holderAddress().then(holderAddress => {
         counterPartyAddress().then(counterPartyAddress => {
@@ -857,8 +918,8 @@ function executeContract(contract) {
                 createMoveFile(holderAddress, counterPartyAddress, parseFloat(contract.amount));
                 callTransferFunction(contract, holderAddress, counterPartyAddress);
             }
-            if (document.getElementById("td_status_" + contract.id.toString()).innerHTML !== "successful") {
-                document.getElementById("td_status_" + contract.id.toString()).innerHTML = "not accepted by user";
+            if (document.getElementById("td_status_" + contract.id).innerHTML !== "successful") {
+                document.getElementById("td_status_" + contract.id).innerHTML = "not accepted by user";
             }
         });
     });
@@ -870,17 +931,26 @@ function callTransferFunction(contract, fromAddress, toAddress) {
             transfer(fromAddress, toAddress, parseFloat(contract.amount)).then(transferTxHash => {
                 waitForReceipt(transferTxHash).then( _ => {
                     console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
-                    document.getElementById("td_status_" + contract.id.toString()).innerHTML = "successful";
-                    document.getElementById("acquire_button_" + contract.id.toString()).disabled = true;
-                    contractsMap.delete(contract.id);
+                    document.getElementById("td_status_" + contract.id).innerHTML = "successful";
+                    deleteFromSuperContracts(contract.id.split(".")[0], contract);
                     updateBalances();
+                    checkForEmptySuperContract();
                 });
             });
         } else {
             window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
-            document.getElementById("td_status_" + contract.id.toString()).innerHTML = "insufficient funds";
+            document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
         }
     });
+}
+
+function checkForEmptySuperContract() {
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        if (contractsSet.size === 0) {
+            superContractsMap.delete(superContractId);
+            document.getElementById("acquire_button_" + superContractId).disabled = true;
+        }
+    }
 }
 
 function createMoveFile(sender_address, recipient_address, amount) {
@@ -944,6 +1014,7 @@ function printStack(stack, name) {
 function createTableRow(contract) {
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
+    tr.className = "standard_row";
     var td;
     tr.appendChild(td = document.createElement("td"));
     td.innerHTML = contract.id;
@@ -956,25 +1027,9 @@ function createTableRow(contract) {
     tr.appendChild(td = document.createElement("td"));
     td.innerHTML = contract.toBeExecutedAtHorizon;
     tr.appendChild(td = document.createElement("td"));
-    var btn = document.createElement('input');
-    btn.type = "button";
-    btn.className = "acquire_button";
-    btn.id = "acquire_button_" + contract.id;
-    btn.value = "acquire";
-    btn.onclick = _ => {
-        if (correctUserTryingToAcquire()) {
-            executeContract(contract);
-        } else {
-            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
-        }
-    };
-    td.appendChild(btn);
-    if (contract.toBeExecutedAtHorizon === "yes") {
-        btn.disabled = true;
-    }
-    tr.appendChild(td = document.createElement("td"));
     td.id = "td_status_" + contract.id;
     td.innerHTML = contract.status;
+    tr.appendChild(td = document.createElement("td"));
 }
 
 function correctUserTryingToAcquire() {

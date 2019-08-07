@@ -15,19 +15,35 @@ h1 {
 }
 
 table {
-    color: #707070;
     border-collapse: collapse;
     width: 100%;
+    background-color: white;
 }
-td, th {
-    border: 2px solid #E4E5E5;
-    text-align: left;
+
+th {
+    background-color: lightgray;
+    text-align: center;
     font-size: 18px;
     padding: 8px;
 }
-tr:nth-child(even) {
-    background-color: #eeeeee;
+
+td {
+    padding: 8px;
+    border: 2px solid #E4E5E5;
 }
+
+.super_contract_row {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #E4E5E5;
+}
+
+.standard_row {
+    text-align: left;
+    font-size: 14px;
+}
+
 
 textarea {
     padding: 5px;
@@ -35,32 +51,36 @@ textarea {
 
 textarea:disabled,
 textarea[disabled]{
-  cursor: not-allowed;
+    cursor: not-allowed;
 }
 
 .button {
-  border: 1px solid #0066cc;
-  background-color: #0099cc;
-  color: #ffffff;
-  padding: 5px 10px;
-  font-size: 20px;
-  cursor: pointer;
-  margin: 10px;
+    border: 1px solid #0066cc;
+    background-color: #0099cc;
+    color: #ffffff;
+    padding: 5px 10px;
+    font-size: 20px;
+    cursor: pointer;
+    margin: 10px;
 }
 
 .button:hover {
-  border: 1px solid #0099cc;
-  background-color: #00aacc;
-  color: #ffffff;
-  padding: 5px 10px;
+    border: 1px solid #0099cc;
+    background-color: #00aacc;
+    color: #ffffff;
+    padding: 5px 10px;
 }
 
 .button:disabled,
 .button[disabled]{
-  border: 1px solid #999999;
-  background-color: #cccccc;
-  color: #a0a0a0;
-  cursor: not-allowed;
+    border: 1px solid #999999;
+    background-color: #cccccc;
+    color: #a0a0a0;
+    cursor: not-allowed;
+}
+
+.acquire_button {
+    font-size: 16px;
 }
 
 .address_input {
