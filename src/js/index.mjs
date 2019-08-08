@@ -96,23 +96,28 @@ function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
+    console.log("updating...");
     for (var [superContractId, contractsSet] of superContractsMap) {
+        console.log("super contract id: " + superContractId);
         for (let contract of contractsSet) {
+            console.log("Contract");
+            console.log(contract);
+            console.log(contract.horizonDate);
+            console.log(beforeCurrentDate(contract.horizonDate));
+            console.log(contract.toBeExecutedAtHorizon);
             if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
                 if (contract.toBeExecutedAtHorizon === "yes") { // contract contains 'get' - must be executed now
                     executeSingleContract(contract);
                 } else { // contract just contains 'truncate' and not 'get'
                     document.getElementById("td_status_" + contract.id).innerHTML = "expired";
                     deleteFromSuperContracts(superContractId, contract);
-                    console.log("Contract " + contract.id + " has expired.");
-                    checkForEmptySuperContract();
                 }
             }
         }
     }
 }
 
-function runClock() {
+function runClock() { // every 60 seconds we check for expired contracts
     var now = new Date();
     var timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
     setTimeout(function() {
@@ -160,6 +165,7 @@ global.createContractFunction = function() {
     document.getElementById("create_contract_status").innerHTML = "";
     var holderAddressValue = document.getElementById("holder_address").value;
     var counterPartyAddressValue = document.getElementById("counter_party_address").value;
+    // TODO: check if getSelectedMetaMaskAccount returns valid result, if not log error telling user to log in
     if (getSelectedMetaMaskAccount().toUpperCase() === holderAddressValue.toUpperCase()) {
         setDefaultAccount(holderAddressValue);
         instantiateNew(holderAddressValue, counterPartyAddressValue).then(instantiationTxHash => {
@@ -675,7 +681,7 @@ global.decomposeContract = function(inputString) {
             if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
                 acquireBtnToBeDisabled1 = false;
             }
-            if (!beforeCurrentDate(getHorizon(conString))) { // at least one subcontract has not expired yet
+            if (!beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(getHorizon(conString))))) { // at least one subcontract has not expired yet
                 acquireBtnToBeDisabled2 = false;
             }
             createContractObject(conString);
@@ -692,7 +698,7 @@ global.decomposeContract = function(inputString) {
         }
         var btn = document.createElement('input');
         btn.type = "button";
-        btn.className = "button acquire_button";
+        btn.className = "acquire_button button";
         btn.id = "acquire_button_" + superContractKey;
         btn.value = "acquire";
         btn.onclick = _ => {
@@ -881,6 +887,10 @@ function deleteFromSuperContracts(superKey, contract) {
             var newSet = contractsSet;
             newSet.delete(contract);
             superContractsMap.set(superContractId, newSet);
+            if (newSet.size === 0) {
+                superContractsMap.delete(superContractId);
+                document.getElementById("acquire_button_" + superContractId).disabled = true;
+            }
             break;
         }
     }
@@ -895,7 +905,7 @@ function computeDateString(dateString) {
     // +01:00 to get BST from UTC
     var finalDateString = dateArr[2] + "-" + dateArr[1] + "-"
     + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
-    + (parseInt(timeArr[2]) + 15).toString() + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
+    + timeArr[2] + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
     return finalDateString;
 }
 
@@ -943,22 +953,16 @@ function executeSuperContract(superKey) {
     for (var [superContractId, contractsSet] of superContractsMap) {
         if (superContractId === superKey) {
             for (let contract of contractsSet) {
-                executeSingleContract(contract);
+                console.log(contract);
+                if (contract.toBeExecutedAtHorizon !== "yes") {
+                    executeSingleContract(contract);
+                }
             }
         }
     }
 }
 
 function executeSingleContract(contract) {
-    if (contract.horizonDate !== "infinite") {
-        if (beforeCurrentDate(contract.horizonDate)) {
-            window.alert("The contract " + contract.id + " has expired.");
-            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-            deleteFromSuperContracts(contract.id.split(".")[0], contract);
-            checkForEmptySuperContract();
-            return;
-        }
-    }
     if (contract.amount === "tempInLondon") {
         contract.amount = getOracleByAddress(agreedOracleAddress).getTempInLondon().toString();
     }
@@ -991,7 +995,6 @@ function callTransferFunction(contract, fromAddress, toAddress) {
                     document.getElementById("td_status_" + contract.id).innerHTML = "successful";
                     deleteFromSuperContracts(contract.id.split(".")[0], contract);
                     updateBalances();
-                    checkForEmptySuperContract();
                 });
             });
         } else {
@@ -999,15 +1002,6 @@ function callTransferFunction(contract, fromAddress, toAddress) {
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
         }
     });
-}
-
-function checkForEmptySuperContract() {
-    for (var [superContractId, contractsSet] of superContractsMap) {
-        if (contractsSet.size === 0) {
-            superContractsMap.delete(superContractId);
-            document.getElementById("acquire_button_" + superContractId).disabled = true;
-        }
-    }
 }
 
 function createMoveFile(sender_address, recipient_address, amount) {

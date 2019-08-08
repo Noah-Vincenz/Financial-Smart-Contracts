@@ -527,6 +527,7 @@ function update() {
   // loop through all contracts and check if their time == current time and if so check if get or not
   // if get: then execute
   // if not get: then disable acquire button
+  console.log("updating...");
   var _iteratorNormalCompletion2 = true;
   var _didIteratorError2 = false;
   var _iteratorError2 = undefined;
@@ -537,6 +538,7 @@ function update() {
           superContractId = _step2$value[0],
           contractsSet = _step2$value[1];
 
+      console.log("super contract id: " + superContractId);
       var _iteratorNormalCompletion3 = true;
       var _didIteratorError3 = false;
       var _iteratorError3 = undefined;
@@ -544,6 +546,11 @@ function update() {
       try {
         for (var _iterator3 = contractsSet[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
           var contract = _step3.value;
+          console.log("Contract");
+          console.log(contract);
+          console.log(contract.horizonDate);
+          console.log(beforeCurrentDate(contract.horizonDate));
+          console.log(contract.toBeExecutedAtHorizon);
 
           if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
             if (contract.toBeExecutedAtHorizon === "yes") {
@@ -553,8 +560,6 @@ function update() {
               // contract just contains 'truncate' and not 'get'
               document.getElementById("td_status_" + contract.id).innerHTML = "expired";
               deleteFromSuperContracts(superContractId, contract);
-              console.log("Contract " + contract.id + " has expired.");
-              checkForEmptySuperContract();
             }
           }
         }
@@ -590,6 +595,7 @@ function update() {
 }
 
 function runClock() {
+  // every 60 seconds we check for expired contracts
   var now = new Date();
   var timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
   setTimeout(function () {
@@ -642,7 +648,7 @@ global.callDepositFunction = function (id) {
 global.createContractFunction = function () {
   document.getElementById("create_contract_status").innerHTML = "";
   var holderAddressValue = document.getElementById("holder_address").value;
-  var counterPartyAddressValue = document.getElementById("counter_party_address").value;
+  var counterPartyAddressValue = document.getElementById("counter_party_address").value; // TODO: check if getSelectedMetaMaskAccount returns valid result, if not log error telling user to log in
 
   if ((0, _deploy.getSelectedMetaMaskAccount)().toUpperCase() === holderAddressValue.toUpperCase()) {
     (0, _deploy.setDefaultAccount)(holderAddressValue);
@@ -1217,7 +1223,7 @@ global.decomposeContract = function (inputString) {
         acquireBtnToBeDisabled1 = false;
       }
 
-      if (!beforeCurrentDate(getHorizon(conString))) {
+      if (!beforeCurrentDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(getHorizon(conString))))) {
         // at least one subcontract has not expired yet
         acquireBtnToBeDisabled2 = false;
       }
@@ -1239,7 +1245,7 @@ global.decomposeContract = function (inputString) {
 
     var btn = document.createElement('input');
     btn.type = "button";
-    btn.className = "button acquire_button";
+    btn.className = "acquire_button button";
     btn.id = "acquire_button_" + superContractKey;
     btn.value = "acquire";
 
@@ -1481,6 +1487,12 @@ function deleteFromSuperContracts(superKey, contract) {
         var newSet = contractsSet;
         newSet["delete"](contract);
         superContractsMap.set(superContractId, newSet);
+
+        if (newSet.size === 0) {
+          superContractsMap["delete"](superContractId);
+          document.getElementById("acquire_button_" + superContractId).disabled = true;
+        }
+
         break;
       }
     }
@@ -1508,7 +1520,7 @@ function computeDateString(dateString) {
   var dateArr = horizonArr[0].split("/");
   var timeArr = horizonArr[1].split(":"); // +01:00 to get BST from UTC
 
-  var finalDateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + (parseInt(timeArr[2]) + 15).toString() + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
+  var finalDateString = dateArr[2] + "-" + dateArr[1] + "-" + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2] + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
 
   return finalDateString;
 }
@@ -1574,7 +1586,11 @@ function executeSuperContract(superKey) {
         try {
           for (var _iterator7 = contractsSet[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
             var contract = _step7.value;
-            executeSingleContract(contract);
+            console.log(contract);
+
+            if (contract.toBeExecutedAtHorizon !== "yes") {
+              executeSingleContract(contract);
+            }
           }
         } catch (err) {
           _didIteratorError7 = true;
@@ -1609,16 +1625,6 @@ function executeSuperContract(superKey) {
 }
 
 function executeSingleContract(contract) {
-  if (contract.horizonDate !== "infinite") {
-    if (beforeCurrentDate(contract.horizonDate)) {
-      window.alert("The contract " + contract.id + " has expired.");
-      document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-      deleteFromSuperContracts(contract.id.split(".")[0], contract);
-      checkForEmptySuperContract();
-      return;
-    }
-  }
-
   if (contract.amount === "tempInLondon") {
     contract.amount = (0, _oracles.getOracleByAddress)(agreedOracleAddress).getTempInLondon().toString();
   }
@@ -1655,7 +1661,6 @@ function callTransferFunction(contract, fromAddress, toAddress) {
           document.getElementById("td_status_" + contract.id).innerHTML = "successful";
           deleteFromSuperContracts(contract.id.split(".")[0], contract);
           updateBalances();
-          checkForEmptySuperContract();
         });
       });
     } else {
@@ -1663,38 +1668,6 @@ function callTransferFunction(contract, fromAddress, toAddress) {
       document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
     }
   });
-}
-
-function checkForEmptySuperContract() {
-  var _iteratorNormalCompletion8 = true;
-  var _didIteratorError8 = false;
-  var _iteratorError8 = undefined;
-
-  try {
-    for (var _iterator8 = superContractsMap[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-      var _step8$value = _slicedToArray(_step8.value, 2),
-          superContractId = _step8$value[0],
-          contractsSet = _step8$value[1];
-
-      if (contractsSet.size === 0) {
-        superContractsMap["delete"](superContractId);
-        document.getElementById("acquire_button_" + superContractId).disabled = true;
-      }
-    }
-  } catch (err) {
-    _didIteratorError8 = true;
-    _iteratorError8 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
-        _iterator8["return"]();
-      }
-    } finally {
-      if (_didIteratorError8) {
-        throw _iteratorError8;
-      }
-    }
-  }
 }
 
 function createMoveFile(sender_address, recipient_address, amount) {
