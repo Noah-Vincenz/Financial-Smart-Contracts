@@ -52,6 +52,27 @@ textarea {
 textarea:disabled,
 textarea[disabled]{
     cursor: not-allowed;
+    color: #DCDAD1;
+    padding: 2px;
+    margin: 0 0 0 0;
+    background-color: #F0F8FF;
+    background-image: none;
+}
+
+input[disabled] {
+    color: #DCDAD1;
+    padding: 2px;
+    margin: 0 0 0 0;
+    background-color: #F0F8FF;
+    background-image: none;
+}
+
+select[disabled] {
+    color: #DCDAD1;
+    padding: 2px;
+    margin: 0 0 0 0;
+    background-color: #F0F8FF;
+    background-image: none;
 }
 
 .button {
@@ -74,9 +95,10 @@ textarea[disabled]{
 .button:disabled,
 .button[disabled]{
     border: 1px solid #999999;
-    background-color: #cccccc;
-    color: #a0a0a0;
     cursor: not-allowed;
+    color: #DCDAD1;
+    background-color: #F0F8FF;
+    background-image: none;
 }
 
 .acquire_button {
