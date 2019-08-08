@@ -555,6 +555,8 @@ function update() {
           if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
             if (contract.toBeExecutedAtHorizon === "yes") {
               // contract contains 'get' - must be executed now
+              // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
+              sleep(5000);
               executeSingleContract(contract);
             } else {
               // contract just contains 'truncate' and not 'get'
@@ -1635,6 +1637,9 @@ function executeSingleContract(contract) {
 
   (0, _deploy.holderAddress)().then(function (holderAddress) {
     (0, _deploy.counterPartyAddress)().then(function (counterPartyAddress) {
+      // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
+      sleep(5000);
+
       if (contract.recipient == 0) {
         // owner receives
         createMoveFile(counterPartyAddress, holderAddress, parseFloat(contract.amount));
@@ -1653,6 +1658,8 @@ function executeSingleContract(contract) {
 }
 
 function callTransferFunction(contract, fromAddress, toAddress) {
+  // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
+  sleep(5000);
   (0, _deploy.balanceOfAddress)(fromAddress).then(function (balance) {
     if (balance >= parseFloat(contract.amount)) {
       (0, _deploy.transfer)(fromAddress, toAddress, parseFloat(contract.amount)).then(function (transferTxHash) {
@@ -1666,8 +1673,23 @@ function callTransferFunction(contract, fromAddress, toAddress) {
     } else {
       window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
       document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
+
+      if (beforeCurrentDate(contract.horizonDate)) {
+        document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+        deleteFromSuperContracts(contract.id.split(".")[0], contract);
+      }
     }
   });
+}
+
+function sleep(ms) {
+  var start = new Date().getTime();
+
+  for (var i = 0; i < 1e7; i++) {
+    if (new Date().getTime() - start > ms) {
+      break;
+    }
+  }
 }
 
 function createMoveFile(sender_address, recipient_address, amount) {
