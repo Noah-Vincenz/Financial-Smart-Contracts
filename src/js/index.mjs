@@ -558,7 +558,7 @@ function obtainContractString(array) {
 }
 
 
-// TODO: add syntax checking to this method
+// TODO: add syntax checking to this method - right now this happens in createContract object: too late as other correct contracts get added anyways
 global.decomposeContract = function(inputString) {
     document.getElementById("transaction_status").innerHTML = "";
     if (inputString === "") {
@@ -665,18 +665,13 @@ global.decomposeContract = function(inputString) {
 
     } else {
         // String does not include "or" -> execute right away
-        var firstOpeningParenOcc = inputString.indexOf("(");
-        var firstSubstring = inputString.slice(0, firstOpeningParenOcc);
-        if (!firstSubstring.includes("and")) {
-            inputString = inputString.slice(firstOpeningParenOcc, inputString.length);
-            stringToAddToBeginning = firstSubstring;
-        }
-        var outputStrings = inputString.split("and");
         var acquireBtnToBeDisabled1 = true;
         var acquireBtnToBeDisabled2 = true;
+
+        var contractsArr = decomposeAnds(inputString);
         // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
-        for (var i = 0; i < outputStrings.length; ++i) {
-            var conString = stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(outputStrings[i])));
+        for (var i = 0; i < contractsArr.length; ++i) {
+            var conString = stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(contractsArr[i])));
             if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
                 acquireBtnToBeDisabled1 = false;
             }
@@ -717,6 +712,68 @@ global.decomposeContract = function(inputString) {
         numberOfSubContracts = 0;
     }
 };
+
+function decomposeAnds(contractString) {
+    // NOTE: as soon as closing paren is read we have found a contract
+
+    var outputArr = contractString.split(" ");
+    var openingParens = 0;
+    var contractString = "";
+    var finalContractsArr = [];
+    var operatorsStack = [];
+    for (var i = 0; i < outputArr.length; ++i) {
+        var term = outputArr[i];
+        if (term === "and") { // we have reached the end of a subcontract whenever 'and' is read
+            if (openingParens === 0 && contractString !== "") {
+                finalContractsArr.push(contractString);
+                contractString = "";
+            } else if (openingParens > 0) {
+                // apply all operators on the stack to this sub contract, without popping them
+                for (var j = operatorsStack.length - 1; j >= 0; --j) {
+                    contractString = operatorsStack[j] + " ( " + contractString + " )";
+                }
+                finalContractsArr.push(contractString);
+                contractString = "";
+            }
+        } else if (term === ")") {
+            --openingParens;
+            // cut ')' off contractString
+            //contractString = contractString.slice(0, contractString.lastIndexOf(" "));
+            if (outputArr[i + 1] === "and" && operatorsStack.length > 0) {
+                finalContractsArr.push(operatorsStack.pop() + " ( " + contractString + " )");
+                contractString = "";
+            } else { // next item is ')' OR we are at last item
+                if (operatorsStack.length > 0) {
+                    contractString = operatorsStack.pop() + " ( " + contractString + " )";
+                }
+            }
+        } else if (term === "(") {
+            ++openingParens;
+            if (contractString !== "") { // to handle case where 'and' is followed by '('
+                operatorsStack.push(contractString);
+                contractString = "";
+            }
+        } else {
+            if (contractString === "") {
+                contractString = term;
+            } else {
+                contractString = contractString + " " + term;
+            }
+        }
+    }
+    // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
+    if (contractString !== "") {
+        finalContractsArr.push(contractString);
+    }
+    return finalContractsArr;
+}
+
+function concatenate(arr1, arr2) {
+    for (var i = 0; i < arr2.length; ++i) {
+        arr1.push(arr2[i]);
+    }
+    return arr1;
+}
 
 function splitContract(contractStringArr, indexOfMostBalancedOr) {
     // do not split by "or" because this will split by first 'or' occurence
