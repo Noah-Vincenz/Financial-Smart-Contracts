@@ -77,7 +77,7 @@ global.addDefinition = function(inputString) {
         && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "{==}"
         && term !== "{>=}" && term !== "{<=}" && term !== "{<}" && term !== "{>}" && term !== "[==]"
         && term !== "[>=]" && term !== "[<=]" && term !== "[<]" && term !== "[>]" && term !== "&&"
-        && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
+        && term !== "||" && !parseFloat(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
         && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon" && !definitionsMap.has(term)) {
             document.getElementById("add_definitions_status").innerHTML = "The format of the given definition is incorrect.";
             return;
@@ -205,7 +205,10 @@ function evaluateConditionals(inputString) {
         var nextTerm = termArr[i + 1]; // for syntax checking
         stack.push(term);
         if (term === "if") {
-            if (i >= termArr.length - 3 || nextTerm !== "(") {
+            if (i >= termArr.length - 3 || nextTerm !== "("
+              || (i > 0
+              && ( termArr[i - 1] === ")" || termArr[i - 1] === "truncate" || termArr[i - 1] === "scaleK"
+              || termArr[i - 1] === "get" || termArr[i - 1] === "truncate" || termArr[i - 1] === "}" ) ) ) {
                 document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
@@ -217,7 +220,8 @@ function evaluateConditionals(inputString) {
               || nextTerm === "{==}" || nextTerm === "[>]"
               || nextTerm === "[<]" || nextTerm === "[>=]" || nextTerm === "[<=]"
               || nextTerm === "[==]" || nextTerm === "{&&}" || nextTerm === "||"
-              || nextTerm === "{" || nextTerm === "}") {
+              || nextTerm === "{" || nextTerm === "}"
+              || (i > 0 && (termArr[i - 1] === ")" || termArr[i - 1] === "one" || termArr[i - 1] === "zero") ) ) {
                 document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
                 return "error";
             }
@@ -294,7 +298,7 @@ function evaluateConditionals(inputString) {
           && term !== "zero" && term !== "scaleK" && term !== "one" && term !== "{==}"
           && term !== "{>=}" && term !== "{<=}" && term !== "{<}" && term !== "{>}"
           && term !== "[==]" && term !== "[>=]" && term !== "[<=]" && term !== "[<]" && term !== "[>]"
-          && term !== "&&" && term !== "||" && !parseInt(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))
+          && term !== "&&" && term !== "||" && !parseFloat(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))
           && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && term !== "libor3m" && term !== "tempInLondon") {
             // give error
             document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
@@ -553,19 +557,27 @@ function obtainContractString(array) {
     }
 }
 
-
-// TODO: add syntax checking to this method - right now this happens in createContract object: too late as other correct contracts get added anyways
-global.decomposeContract = function(inputString) {
-    document.getElementById("transaction_status").innerHTML = "";
+function correctSyntax(inputString) {
     if (inputString === "") {
         document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
-        return;
+        return false;
     }
     if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
-        document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
-        return;
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Parenthesis mismatch.";
+        return false;
     }
-    // replacing own definitions with map values
+    if (!inputString.includes("one") && !inputString.includes("zero")) {
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract must include either 'one' or 'zero'.";
+        return false;
+    }
+    if (inputString.includes("get") && !inputString.includes("truncate")) {
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract cannot contain 'get' without 'truncate'.";
+        return false;
+    }
+    return true;
+}
+
+function replaceUserDefinitions(inputString) {
     var strSplit = inputString.split(" ");
     let keys = Array.from(definitionsMap.keys());
     var intersection = strSplit.filter(value => keys.includes(value));
@@ -574,10 +586,12 @@ global.decomposeContract = function(inputString) {
             const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
             var matchObj = regex.exec(inputString);
             var value = definitionsMap.get(intersection[i]);
-            if (value.indexOf("one") !== value.lastIndexOf("one") ||
-              value.indexOf("zero") !== value.lastIndexOf("zero") ||
-              ( value.includes("one") && value.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
+            if (value.indexOf("one") !== value.lastIndexOf("one")
+              || value.indexOf("zero") !== value.lastIndexOf("zero")
+              || ( value.includes("one") && value.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
+
                 inputString = matchObj[1] + "( " + definitionsMap.get(intersection[i]) + " )" + matchObj[3];
+
             } else {
                 inputString = matchObj[1] + definitionsMap.get(intersection[i]) + matchObj[3];
             }
@@ -585,14 +599,25 @@ global.decomposeContract = function(inputString) {
         strSplit = inputString.split(" ");
         intersection = strSplit.filter(value => keys.includes(value));
     }
+    return inputString;
+}
+
+
+// TODO: add syntax checking to this method - right now this happens in createContract object: too late as other correct contracts get added anyways
+global.decomposeOrs = function(inputString) {
+    document.getElementById("transaction_status").innerHTML = "";
+    if (!correctSyntax(inputString)) {
+        return;
+    }
+    // replacing own definitions with map values
+    inputString = replaceUserDefinitions(inputString);
+    // add dash between date day and time for processing purposes
     inputString = changeDateFormat(inputString);
-    // remove linebreaks
-    inputString = inputString.replace(/(\r\n|\n|\r)/gm," ");
-    // remove multiple whitespaces
-    inputString = inputString.replace(/  +/g, ' ');
+    // remove linebreaks, then multiple whitespaces
+    inputString = inputString.replace(/(\r\n|\n|\r)/gm," ").replace(/  +/g, ' ');
     // add spacing before and after parenthesis
     inputString = addSpacing(inputString);
-    // repeat replacing the if clause while string includes if
+    // evaluate & replace if clauses
     var ifMatches = inputString.match(/^(.*)\sif\s(.*)$/);
     if (ifMatches !== null) {
         inputString = evaluateConditionals(inputString);
@@ -602,18 +627,11 @@ global.decomposeContract = function(inputString) {
     }
 
     inputString = rTrimWhiteSpace(lTrimWhiteSpace(inputString));
-
-    if (inputString.includes("get") && !inputString.includes("truncate")) {
-        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract cannot contain 'get' without 'truncate'.";
-        return;
-    }
-
     removeChildren("button_choices_container");
     var noOfOpeningParens = 0;
     var noOfClosingParens = 0;
     var contractsStack = [];
     stringToAddToBeginning = "";
-
     // check if inputstring contains 'or' else execute right away
     var orMatches = inputString.match(/^(.*)\sor\s(.*)$/);
     if (orMatches !== null) {
@@ -633,24 +651,64 @@ global.decomposeContract = function(inputString) {
                    contractsStack.push(strArr.slice(0, i).join(' '));
                    contractsStack.push(strArr.slice(i + 1).join(' '));
                    break;
-               } else if (noOfOpeningParens > noOfClosingParens) {
-                   if ( (noOfOpeningParens - noOfClosingParens) < mostBalancedOr ) {
-                      mostBalancedOr = noOfOpeningParens - noOfClosingParens;
-                      indexOfMostBalancedOr = i;
-                   }
+               } else if (noOfOpeningParens > noOfClosingParens && (noOfOpeningParens - noOfClosingParens) < mostBalancedOr) {
+                   mostBalancedOr = noOfOpeningParens - noOfClosingParens;
+                   indexOfMostBalancedOr = i;
                }
            } else {
                 if (term === "(") {
+                    if (i === strArr.length - 1 || (i > 0 && ( strArr[i - 1] === ")" || strArr[i - 1] === "one" || strArr[i - 1] === "zero" ) )
+                      || strArr[i + 1] === "and" || strArr[i + 1] === "or" || strArr[i + 1] === ")") {
+
+                        document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                        return;
+
+                    }
                     ++noOfOpeningParens;
                 } else if (term === ")") {
+                    if ( ( i < strArr.length - 1 && strArr[i + 1] !== "and" && strArr[i + 1] !== "or" )
+                      || i <= 1 || ( strArr[i - 1] !== "one" && strArr[i - 1] !== "zero" ) ) {
+
+                        document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                        return;
+
+                    }
                     ++noOfClosingParens;
                     if (i === strArr.length - 1) {
                         contractsStack.push(inputString);
                     }
+                } else if (term === "give") {
+                    if (i === strArr.length - 1 || (strArr[i + 1] !== "one" && strArr[i + 1] !== "zero") ) {
+                        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. 'give' should be followed by 'one' or 'zero'.";
+                        //document.getElementById("transaction_status").innerHTML = "syntax error at term " + (i + 1).toString() + ": " + nextTerm;
+                        return;
+                    }
+                } else if (term === "truncate") {
+                    if (i > strArr.length - 3 || !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(strArr[i + 1]) ) ) ) {
+                        document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                        return;
+                    }
+                } else if (term === "scaleK") {
+                    if (i > strArr.length - 3 || !parseFloat(strArr[i + 1]) ) {
+                        document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                        return;
+                    }
+                } else if (term === "get") {
+                } else if (term === "zero" || "term" === "one") {
+                    if (i < strArr.length - 1 && ( strArr[i + 1] !== "and" || strArr[i + 1] !== "or" || strArr[i + 1] !== ")") ) {
+                        document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                        return;
+                    }
+                } else if (!parseFloat(term)
+                  && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))
+                  && term !== "and" && term !== "libor3m" && term !== "tempInLondon") {
+                    // give error
+                    document.getElementById("transaction_status").innerHTML = "syntax error at term " + i.toString() + ": " + term;
+                    return;
                 }
            }
            if (noOfClosingParens > noOfOpeningParens) {
-               document.getElementById("transaction_status").innerHTML = "Parenthesis mismatch: The contract is not constructed properly.";
+               document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Parenthesis mismatch.";
                return;
            }
         }
@@ -661,57 +719,56 @@ global.decomposeContract = function(inputString) {
 
     } else {
         // String does not include "or" -> execute right away
-        var acquireBtnToBeDisabled1 = true;
-        var acquireBtnToBeDisabled2 = true;
-
         var contractsArr = decomposeAnds(inputString);
-        // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
-        for (var i = 0; i < contractsArr.length; ++i) {
-            var conString = stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(contractsArr[i])));
-            if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
-                acquireBtnToBeDisabled1 = false;
-            }
-            if (!beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(getHorizon(conString))))) { // at least one subcontract has not expired yet
-                acquireBtnToBeDisabled2 = false;
-            }
-            createContractObject(conString);
-        }
-        var table = document.getElementById("my_table");
-        let tr = table.insertRow(1);
-        tr.className = "super_contract_row";
-        var td;
-        tr.appendChild(td = document.createElement("td"));
-        var superContractKey = numberOfContracts.toString();
-        td.innerHTML = superContractKey;
-        for (var i = 0; i < 6; ++i) {
-            tr.appendChild(td = document.createElement("td"));
-        }
-        var btn = document.createElement('input');
-        btn.type = "button";
-        btn.className = "acquire_button button";
-        btn.id = "acquire_button_" + superContractKey;
-        btn.value = "acquire";
-        btn.onclick = _ => {
-            if (correctUserTryingToAcquire()) {
-                executeSuperContract(superContractKey);
-            } else {
-                document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
-            }
-        };
-        td.appendChild(btn);
-
-        // if either of these is true then we want the acquire button to be disabled
-        if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
-            btn.disabled = true;
-        }
+        createContractEntries(contractsArr);
         ++numberOfContracts;
         numberOfSubContracts = 0;
     }
 };
 
-function decomposeAnds(contractString) {
-    // NOTE: as soon as closing paren is read we have found a contract
+function createContractEntries(contractsArr) {
+    // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
+    var acquireBtnToBeDisabled1 = true;
+    var acquireBtnToBeDisabled2 = true;
+    for (var i = 0; i < contractsArr.length; ++i) {
+        var conString = stringToAddToBeginning + cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(contractsArr[i])));
+        if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
+            acquireBtnToBeDisabled1 = false;
+        }
+        if (!beforeCurrentDate(lTrimDoubleQuotes(rTrimDoubleQuotes(getHorizon(conString))))) { // at least one subcontract has not expired yet
+            acquireBtnToBeDisabled2 = false;
+        }
+        createContractObject(conString);
+    }
+    let tr = document.getElementById("my_table").insertRow(1);
+    tr.className = "super_contract_row";
+    var td;
+    tr.appendChild(td = document.createElement("td"));
+    var superContractKey = numberOfContracts.toString();
+    td.innerHTML = superContractKey;
+    for (var i = 0; i < 6; ++i) {
+        tr.appendChild(td = document.createElement("td"));
+    }
+    var btn = document.createElement('input');
+    btn.type = "button";
+    btn.className = "acquire_button button";
+    btn.id = "acquire_button_" + superContractKey;
+    btn.value = "acquire";
+    btn.onclick = _ => {
+        if (correctUserTryingToAcquire()) {
+            executeSuperContract(superContractKey);
+        } else {
+            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+        }
+    };
+    td.appendChild(btn);
+    // if either of these is true then we want the acquire button to be disabled
+    if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
+        btn.disabled = true;
+    }
+}
 
+function decomposeAnds(contractString) {
     var outputArr = contractString.split(" ");
     var openingParens = 0;
     var contractString = "";
@@ -732,9 +789,8 @@ function decomposeAnds(contractString) {
                 contractString = "";
             }
         } else if (term === ")") {
+            // as soon as closing paren is read we have found a contract
             --openingParens;
-            // cut ')' off contractString
-            //contractString = contractString.slice(0, contractString.lastIndexOf(" "));
             if (outputArr[i + 1] === "and" && operatorsStack.length > 0) {
                 finalContractsArr.push(operatorsStack.pop() + " ( " + contractString + " )");
                 contractString = "";
@@ -810,8 +866,8 @@ function createContractObject(inputString) {
         if (str === "give") {
             recipient = 1;
         } else if (str === "scaleK" && !inputString.includes("zero")) {
-            if (strArr.length > i + 1 && (parseInt(strArr[i + 1]))) {
-                amount = ( parseInt(amount) * parseInt(strArr[i + 1]) ).toString();
+            if (strArr.length > i + 1 && (parseFloat(strArr[i + 1]))) {
+                amount = ( parseFloat(amount) * parseFloat(strArr[i + 1]) ).toString();
                 ++i;
             } else if (strArr.length > i + 1 && ( strArr[i + 1] === "tempInLondon" || strArr[i + 1] === "libor3m" ) ) {
                 amount = strArr[i + 1];
@@ -950,6 +1006,45 @@ function executeSuperContract(superKey) {
         }
     }
 }
+
+/*
+function regex(inputString) {
+    var WHITESPACE =  "\\s";
+    var OPENINGPAREN = "\\(";
+    var CLOSINGPAREN = "\\)";
+
+    var DATE = /((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])/;
+    var NUM = /([1-9][0-9]*(.[0-9]*[1-9])?)|(0(.[0-9]*[1-9])?)/;
+    var CONJ = /(and|or)/;
+    var TERMITEMS = /(one|zero)/;
+
+
+    var TERM = new RegExp(TERMITEMS.source + "|(" + OPENINGPAREN + WHITESPACE + TERMITEMS.source + WHITESPACE + CLOSINGPAREN + ")|("
+        + OPENINGPAREN + WHITESPACE + "give" + WHITESPACE + TERMITEMS.source + WHITESPACE + CLOSINGPAREN + ")|("
+        + "give" + WHITESPACE + TERMITEMS.source + ")");
+
+
+    var EXPR = new RegExp("(scaleK" + WHITESPACE + NUM.source + WHITESPACE + OPENINGPAREN + WHITESPACE + "get" + WHITESPACE + OPENINGPAREN + WHITESPACE + "truncate" + WHITESPACE + DATE.source + WHITESPACE + OPENINGPAREN + WHITESPACE + TERM.source + WHITESPACE + CLOSINGPAREN + WHITESPACE + CLOSINGPAREN + WHITESPACE + CLOSINGPAREN + ")|("
+        + "get" + WHITESPACE + OPENINGPAREN + WHITESPACE + "truncate" + WHITESPACE + DATE.source + WHITESPACE + OPENINGPAREN + WHITESPACE + TERM.source + WHITESPACE + CLOSINGPAREN + WHITESPACE + CLOSINGPAREN + ")|("
+        + "truncate" + WHITESPACE + DATE.source + WHITESPACE + OPENINGPAREN + WHITESPACE + TERM.source + WHITESPACE + CLOSINGPAREN + ")|("
+        + "scaleK" + WHITESPACE + NUM.source + WHITESPACE + OPENINGPAREN + WHITESPACE + TERM.source + WHITESPACE + CLOSINGPAREN + ")|("
+        + "scaleK" + WHITESPACE + NUM.source + WHITESPACE + OPENINGPAREN + WHITESPACE + "truncate" + WHITESPACE + DATE.source + WHITESPACE + OPENINGPAREN + TERM.source + WHITESPACE + CLOSINGPAREN + WHITESPACE + CLOSINGPAREN + ")|"
+        + TERM.source);
+
+    const FINAL = new RegExp("(" + EXPR.source + WHITESPACE + CONJ.source + WHITESPACE + EXPR.source + ")|" + EXPR.source);
+
+    console.log("(" + EXPR.source + WHITESPACE + CONJ.source + WHITESPACE + EXPR.source + ")|" + EXPR.source);
+
+    var matches = inputString.match(FINAL);
+    if (matches === null) {
+        return false;
+    } else if (matches[0] === inputString) {
+        return true;
+    } else {
+        return false;
+    }
+}
+*/
 
 function executeSingleContract(contract) {
     if (contract.amount === "tempInLondon") {
@@ -1122,7 +1217,7 @@ function createButton (contractString, buttonId) {
     bottomContainer.appendChild(button);
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        decomposeContract(stringToAddToBeginning + button.innerHTML);
+        decomposeOrs(stringToAddToBeginning + button.innerHTML);
     });
 }
 
@@ -1164,38 +1259,38 @@ function isDate(stringInput) {
 }
 
 global.testReachability = function() {
-    decomposeContract("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero and truncate \"26/12/2019-23:33:33\" ( give zero ) )");
+    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero and truncate \"26/12/2019-23:33:33\" ( give zero ) )");
     removeChildren("button_choices_container");
-    decomposeContract("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero or truncate \"26/12/2019-23:33:33\" ( give zero ) )");
+    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero or truncate \"26/12/2019-23:33:33\" ( give zero ) )");
     removeChildren("button_choices_container");
-    decomposeContract("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or zero");
+    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or zero");
     removeChildren("button_choices_container");
-    decomposeContract("zero or give one");
+    decomposeOrs("zero or give one");
     removeChildren("button_choices_container");
-    decomposeContract("( ( zero or give one ) or scaleK 10 ( one ) ) or zero");
+    decomposeOrs("( ( zero or give one ) or scaleK 10 ( one ) ) or zero");
     removeChildren("button_choices_container");
-    decomposeContract("( zero or give one ) or ( scaleK 10 one or zero )");
+    decomposeOrs("( zero or give one ) or ( scaleK 10 one or zero )");
     removeChildren("button_choices_container");
-    decomposeContract("( zero or one ) or scaleK 10 ( one )");
+    decomposeOrs("( zero or one ) or scaleK 10 ( one )");
     removeChildren("button_choices_container");
-    decomposeContract("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) and give zero )");
+    decomposeOrs("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) and give zero )");
     removeChildren("button_choices_container");
-    decomposeContract("( zero or give one ) or ( ( scaleK 10 one ) or zero )");
+    decomposeOrs("( zero or give one ) or ( ( scaleK 10 one ) or zero )");
     removeChildren("button_choices_container");
-    decomposeContract("( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )");
+    decomposeOrs("( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )");
     removeChildren("button_choices_container");
-    decomposeContract("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) or give zero )");
+    decomposeOrs("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) or give zero )");
     removeChildren("button_choices_container");
-    decomposeContract("truncate \"24/12/2019-23:33:33\" ( one or give zero )");
+    decomposeOrs("truncate \"24/12/2019-23:33:33\" ( one or give zero )");
     removeChildren("button_choices_container");
-    decomposeContract("truncate \"24/12/2019-23:33:33\" ( one ) or truncate \"24/12/2019-23:33:33\" ( zero )");
+    decomposeOrs("truncate \"24/12/2019-23:33:33\" ( one ) or truncate \"24/12/2019-23:33:33\" ( zero )");
     removeChildren("button_choices_container");
-    decomposeContract("( scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give one ) ) ) ) or ( ( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give one ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give one ) ) ) ) )");
+    decomposeOrs("( scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give one ) ) ) ) or ( ( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give one ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give one ) ) ) ) )");
     removeChildren("button_choices_container");
-    decomposeContract("( scaleK 100 one and scaleK 101 one ) or ( ( scaleK 102 one and scaleK 103 one ) or ( scaleK 104 one and scaleK 105 one ) )");
+    decomposeOrs("( scaleK 100 one and scaleK 101 one ) or ( ( scaleK 102 one and scaleK 103 one ) or ( scaleK 104 one and scaleK 105 one ) )");
     removeChildren("button_choices_container");
-    decomposeContract("( one and give one ) or ( ( zero and give zero ) or ( give one and give zero ) )");
+    decomposeOrs("( one and give one ) or ( ( zero and give zero ) or ( give one and give zero ) )");
     removeChildren("button_choices_container");
-    decomposeContract("( zero or give one ) or ( scaleK 10 ( one ) or zero )");
+    decomposeOrs("( zero or give one ) or ( scaleK 10 ( one ) or zero )");
     removeChildren("button_choices_container");
 };
