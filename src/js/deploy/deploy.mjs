@@ -145,6 +145,18 @@ export function balanceOfAddress(address) {
     });
 }
 
+export function watchTransferEvent() {
+    return new Promise (function (resolve, reject) {
+        smartContractInstance.TransferEvent({}, function (err, event) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(event.args.boolean); // returns true iff transfer was successful
+            }
+        });
+    });
+}
+
 
 export function transfer(fromAddress, toAddress, amount) {
   return new Promise (function (resolve, reject) {

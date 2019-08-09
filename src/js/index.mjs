@@ -15,7 +15,8 @@ import {Contract, translateContract} from "./contract.mjs";
 
 import {depositCollateral, getSelectedMetaMaskAccount, holderBalance,
   counterPartyBalance, holderAddress, counterPartyAddress, balanceOfAddress,
-  transfer, waitForReceipt, setDefaultAccount, setSmartContractInstance, instantiateNew
+  transfer, waitForReceipt, setDefaultAccount, setSmartContractInstance, instantiateNew,
+  watchTransferEvent
 } from "./deploy/deploy.mjs"
 
 import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
@@ -96,19 +97,10 @@ function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
-    console.log("updating...");
     for (var [superContractId, contractsSet] of superContractsMap) {
-        console.log("super contract id: " + superContractId);
         for (let contract of contractsSet) {
-            console.log("Contract");
-            console.log(contract);
-            console.log(contract.horizonDate);
-            console.log(beforeCurrentDate(contract.horizonDate));
-            console.log(contract.toBeExecutedAtHorizon);
             if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
                 if (contract.toBeExecutedAtHorizon === "yes") { // contract contains 'get' - must be executed now
-                    // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
-                    sleep(5000);
                     executeSingleContract(contract);
                 } else { // contract just contains 'truncate' and not 'get'
                     document.getElementById("td_status_" + contract.id).innerHTML = "expired";
@@ -126,10 +118,6 @@ function runClock() { // every 60 seconds we check for expired contracts
         update();
         runClock();
     }, timeToNextTick);
-}
-
-function updateBalances() {
-    retrieveBalances();
 }
 
 global.callDepositFunction = function(id) {
@@ -165,12 +153,12 @@ global.callDepositFunction = function(id) {
 
 global.createContractFunction = function() {
     document.getElementById("create_contract_status").innerHTML = "";
-    var holderAddressValue = document.getElementById("holder_address").value;
-    var counterPartyAddressValue = document.getElementById("counter_party_address").value;
+    var localHolderAddress = document.getElementById("holder_address").value;
+    var localCounterPartyAddress = document.getElementById("counter_party_address").value;
     // TODO: check if getSelectedMetaMaskAccount returns valid result, if not log error telling user to log in
-    if (getSelectedMetaMaskAccount().toUpperCase() === holderAddressValue.toUpperCase()) {
-        setDefaultAccount(holderAddressValue);
-        instantiateNew(holderAddressValue, counterPartyAddressValue).then(instantiationTxHash => {
+    if (getSelectedMetaMaskAccount().toUpperCase() === localHolderAddress.toUpperCase()) {
+        setDefaultAccount(localHolderAddress);
+        instantiateNew(localHolderAddress, localCounterPartyAddress).then(instantiationTxHash => {
             waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
                 setSmartContractInstance(instantiationReceipt.contractAddress);
                 document.getElementById("create_contract_button").disabled = true;
@@ -955,7 +943,6 @@ function executeSuperContract(superKey) {
     for (var [superContractId, contractsSet] of superContractsMap) {
         if (superContractId === superKey) {
             for (let contract of contractsSet) {
-                console.log(contract);
                 if (contract.toBeExecutedAtHorizon !== "yes") {
                     executeSingleContract(contract);
                 }
@@ -974,8 +961,6 @@ function executeSingleContract(contract) {
 
     holderAddress().then(holderAddress => {
         counterPartyAddress().then(counterPartyAddress => {
-            // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
-            sleep(5000);
             if (contract.recipient == 0) { // owner receives
                 createMoveFile(counterPartyAddress, holderAddress, parseFloat(contract.amount));
                 callTransferFunction(contract, counterPartyAddress, holderAddress);
@@ -991,20 +976,37 @@ function executeSingleContract(contract) {
 }
 
 function callTransferFunction(contract, fromAddress, toAddress) {
-    // wait 5 seconds for balance to update when multiple transactions are happening quickly one after another
-    sleep(5000);
     balanceOfAddress(fromAddress).then(balance => {
+        // do local balance check as contract does not update as quickly
         if (balance >= parseFloat(contract.amount)) {
             transfer(fromAddress, toAddress, parseFloat(contract.amount)).then(transferTxHash => {
-                waitForReceipt(transferTxHash).then( _ => {
-                    console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
-                    document.getElementById("td_status_" + contract.id).innerHTML = "successful";
-                    deleteFromSuperContracts(contract.id.split(".")[0], contract);
-                    updateBalances();
+                watchTransferEvent().then(boolean => {
+                    var bool = parseInt(boolean);
+                    console.log("booooolean: " + bool);
+                    if (bool === 0) {
+                        document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
+                        if (beforeCurrentDate(contract.horizonDate)) {
+                            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                        }
+                    } else if (bool === 1) {
+                        document.getElementById("td_status_" + contract.id).innerHTML = "failed: sender address and recipient address are the same";
+                        if (beforeCurrentDate(contract.horizonDate)) {
+                            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                        }
+                    } else if (bool === 2) {
+                        waitForReceipt(transferTxHash).then( _ => {
+                            console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
+                            document.getElementById("td_status_" + contract.id).innerHTML = "successful";
+                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                            retrieveBalances();
+                        });
+                    }
                 });
             });
         } else {
-            window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
+            //window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
             if (beforeCurrentDate(contract.horizonDate)) {
                 document.getElementById("td_status_" + contract.id).innerHTML = "expired";

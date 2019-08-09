@@ -131,37 +131,11 @@
   },
   {
     "type": "event",
-    "name": "SmartContract",
+    "name": "TransferEvent",
     "inputs": [
       {
-        "name": "indexed_from",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "_value",
-        "type": "uint256",
-        "indexed": false
-      }
-    ]
-  },
-  {
-    "type": "event",
-    "name": "Transfer",
-    "inputs": [
-      {
-        "name": "indexed_from",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "indexed_to",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "_value",
-        "type": "uint256",
+        "name": "boolean",
+        "type": "int32",
         "indexed": false
       }
     ]
