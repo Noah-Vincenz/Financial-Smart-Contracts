@@ -30,6 +30,10 @@ export function getSelectedMetaMaskAccount() {
     return web3.eth.accounts[0];
 }
 
+export function getSelectedNetwork() {
+    return web3.version.network;
+}
+
 export function setDefaultAccount(address) {
     web3.eth.defaultAccount = address;
 }
