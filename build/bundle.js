@@ -1360,17 +1360,15 @@ function createContractEntries(contractsArr) {
 }
 
 function decomposeAnds(contractString) {
+  // only push current combinators if we read openingParen
   var outputArr = contractString.split(" ");
   var openingParens = 0;
   var contractString = "";
+  var combinatorsString = "";
   var finalContractsArr = [];
-  var operatorsStack = [];
 
   for (var i = 0; i < outputArr.length; ++i) {
     var term = outputArr[i];
-    var nextTerm = outputArr[i + 1]; // for syntax checking
-
-    var prevTerm = outputArr[i - 1]; // for syntax checking
 
     if (term === "and") {
       // we have reached the end of a subcontract whenever 'and' is read
@@ -1378,25 +1376,22 @@ function decomposeAnds(contractString) {
         finalContractsArr.push(contractString);
         contractString = "";
       } else if (openingParens > 0) {
-        // apply all operators on the stack to this sub contract, without popping them
-        for (var j = operatorsStack.length - 1; j >= 0; --j) {
-          contractString = operatorsStack[j] + " ( " + contractString + " )";
-        }
-
-        finalContractsArr.push(contractString);
+        finalContractsArr.push(combinatorsString + " ( " + contractString + " )");
         contractString = "";
       }
     } else if (term === ")") {
       // as soon as closing paren is read we have found a contract
       --openingParens;
+      contractString += " )";
 
-      if (outputArr[i + 1] === "and" && operatorsStack.length > 0) {
-        finalContractsArr.push(operatorsStack.pop() + " ( " + contractString + " )");
+      if (outputArr[i + 1] === "and" && combinatorsString !== "") {
+        finalContractsArr.push(combinatorsString + " ( " + contractString + " )");
         contractString = "";
       } else {
         // next item is ')' OR we are at last item
-        if (operatorsStack.length > 0) {
-          contractString = operatorsStack.pop() + " ( " + contractString + " )";
+        if (combinatorsString !== "") {
+          contractString = combinatorsString + " ( " + contractString + " )";
+          combinatorsString = "";
         }
       }
     } else if (term === "(") {
@@ -1404,7 +1399,13 @@ function decomposeAnds(contractString) {
 
       if (contractString !== "") {
         // to handle case where 'and' is followed by '('
-        operatorsStack.push(contractString);
+        //operatorsStack.push(contractString);
+        if (combinatorsString === "") {
+          combinatorsString = contractString;
+        } else {
+          combinatorsString = combinatorsString + " ( " + contractString;
+        }
+
         contractString = "";
       }
     } else {
