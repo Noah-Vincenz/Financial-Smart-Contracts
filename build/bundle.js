@@ -1300,6 +1300,7 @@ global.decomposeOrs = function (inputString) {
   } else {
     // String does not include "or" -> execute right away
     var contractsArr = decomposeAnds(inputString);
+    console.log(contractsArr);
     createContractEntries(contractsArr);
     ++numberOfContracts;
     numberOfSubContracts = 0;
@@ -1360,60 +1361,66 @@ function createContractEntries(contractsArr) {
 }
 
 function decomposeAnds(contractString) {
-  // only push current combinators if we read openingParen
-  var outputArr = contractString.split(" ");
+  // keep two stacks: one for combinators and one for closing parenthesis to be added
+  var termArr = contractString.split(" ");
   var openingParens = 0;
   var contractString = "";
-  var combinatorsString = "";
+  var parseStack = [];
   var finalContractsArr = [];
+  var closingParensStack = [];
 
-  for (var i = 0; i < outputArr.length; ++i) {
-    var term = outputArr[i];
+  for (var i = 0; i < termArr.length; ++i) {
+    var term = termArr[i];
 
     if (term === "and") {
       // we have reached the end of a subcontract whenever 'and' is read
-      if (openingParens === 0 && contractString !== "") {
-        finalContractsArr.push(contractString);
-        contractString = "";
-      } else if (openingParens > 0) {
-        finalContractsArr.push(combinatorsString + " ( " + contractString + " )");
+      if (contractString !== "") {
+        if (openingParens === 0) {
+          finalContractsArr.push(contractString);
+        } else if (parseStack.length > 0) {
+          finalContractsArr.push(parseStack[parseStack.length - 1] + " ( " + contractString + closingParensStack[closingParensStack.length - 1]);
+        } else if (closingParensStack.length > 0) {
+          finalContractsArr.push(contractString + closingParensStack[closingParensStack.length - 1]);
+        } else {
+          finalContractsArr.push(contractString);
+        }
+
         contractString = "";
       }
     } else if (term === ")") {
       // as soon as closing paren is read we have found a contract
       --openingParens;
-      contractString += " )";
+      var combinatorString = parseStack.pop();
+      var closingParensString = closingParensStack.pop();
 
-      if (outputArr[i + 1] === "and" && combinatorsString !== "") {
-        finalContractsArr.push(combinatorsString + " ( " + contractString + " )");
+      if (contractString !== "") {
+        finalContractsArr.push(combinatorString + " ( " + contractString + closingParensString);
         contractString = "";
-      } else {
-        // next item is ')' OR we are at last item
-        if (combinatorsString !== "") {
-          contractString = combinatorsString + " ( " + contractString + " )";
-          combinatorsString = "";
-        }
       }
     } else if (term === "(") {
       ++openingParens;
 
       if (contractString !== "") {
-        // to handle case where 'and' is followed by '('
-        //operatorsStack.push(contractString);
-        if (combinatorsString === "") {
-          combinatorsString = contractString;
+        if (parseStack.length > 0) {
+          parseStack.push(parseStack[parseStack.length - 1] + " ( " + contractString);
         } else {
-          combinatorsString = combinatorsString + " ( " + contractString;
+          parseStack.push(contractString);
         }
 
         contractString = "";
       }
-    } else {
-      if (contractString === "") {
-        contractString = term;
-      } else {
-        contractString = contractString + " " + term;
+
+      if (termArr[i - 1] !== "and" && i !== 0) {
+        if (closingParensStack.length === 0) {
+          closingParensStack.push(" )");
+        } else {
+          closingParensStack.push(closingParensStack[closingParensStack.length - 1] + " )");
+        }
       }
+    } else if (contractString === "") {
+      contractString = term;
+    } else {
+      contractString = contractString + " " + term;
     }
   } // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
 
@@ -2325,9 +2332,11 @@ function addSpacing(string) {
 }
 
 function addParens(contractString) {
-  if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+  while (openingParensAmount(contractString) > closingParensAmount(contractString)) {
     contractString = contractString + " )";
-  } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+  }
+
+  while (openingParensAmount(contractString) < closingParensAmount(contractString)) {
     contractString = "( " + contractString;
   }
 

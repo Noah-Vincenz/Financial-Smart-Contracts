@@ -96,9 +96,10 @@ export function addSpacing(string) {
 }
 
 export function addParens(contractString) {
-    if (openingParensAmount(contractString) > closingParensAmount(contractString)) {
+    while (openingParensAmount(contractString) > closingParensAmount(contractString)) {
         contractString = contractString + " )";
-    } else if (openingParensAmount(contractString) < closingParensAmount(contractString)) {
+    }
+    while (openingParensAmount(contractString) < closingParensAmount(contractString)) {
         contractString = "( " + contractString;
     }
     return contractString;
