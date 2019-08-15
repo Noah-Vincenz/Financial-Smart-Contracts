@@ -85,7 +85,7 @@ global.addDefinition = function(inputString) {
     for (var i = 0; i < secondArr.length; ++i) {
         var term = secondArr[i];
         if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
-        && term !== "zero" && term !== "scaleK" && term !== "one" && !isComparisonOperator(term)
+        && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
         && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term)
         && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
         && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)
@@ -236,7 +236,7 @@ function evaluateConditionals(inputString) {
                 return "error";
             }
         } else if (term === "{") {
-            if (i > termArr.length - 3 || i < 6 || nextTerm === ")" || isComparisonOperator(nextTerm)
+            if (i > termArr.length - 3 || i < 6 || nextTerm === ")" || COMPARISONOPERATOR(nextTerm)
                 || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
                 || nextTerm === "or" || nextTerm === "and" || nextTerm === "else"
                 || parseFloat(nextTerm) || observablesArr.includes(nextTerm)
@@ -250,7 +250,7 @@ function evaluateConditionals(inputString) {
                 return "error";
             }
         } else if (term === "(") {
-            if (i > termArr.length - 3 || nextTerm === ")" || isComparisonOperator(nextTerm)
+            if (i > termArr.length - 3 || nextTerm === ")" || COMPARISONOPERATOR(nextTerm)
               || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
               || nextTerm === "}" || nextTerm === "or" || nextTerm === "and" || nextTerm === "else"
               || parseFloat(nextTerm) || observablesArr.includes(nextTerm)
@@ -261,7 +261,7 @@ function evaluateConditionals(inputString) {
             }
             ++openingParens;
         } else if (term === ")") {
-            if ((i < termArr.length - 1 && nextTerm !== ")" && nextTerm !== "and" && nextTerm !== "or" && nextTerm !== "{" && !isComparisonOperator(nextTerm))
+            if ((i < termArr.length - 1 && nextTerm !== ")" && nextTerm !== "and" && nextTerm !== "or" && nextTerm !== "{" && !COMPARISONOPERATOR(nextTerm))
               || i < 2 || ( i > 0 && prevTerm !== "one" && prevTerm !== "zero" && prevTerm !== "}" && prevTerm !== ")" )) {
                 document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                 return "error";
@@ -333,7 +333,7 @@ function evaluateConditionals(inputString) {
             ifsStack.pop();
             ifCondition = "";
         } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "else"
-          && term !== "zero" && term !== "scaleK" && term !== "one" && !isComparisonOperator(term)
+          && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
           && term !== "&&" && term !== "||" && !parseFloat(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))
           && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
             // give error
@@ -374,7 +374,7 @@ function evaluate(inputString) {
             ++openingParens;
         } else if (term === ")") {
             --openingParens;
-        } else if (openingParens === 0 && (term === "||" || term === "&&" || isComparisonOperator(term))) {
+        } else if (openingParens === 0 && (term === "||" || term === "&&" || COMPARISONOPERATOR(term))) {
             var part1 = strArr.slice(0, i).join(" ");
             var part2 = strArr.slice(i + 1).join(" ");
             if (term === "||" || term === "&&") {
@@ -426,14 +426,35 @@ function evaluate(inputString) {
                         return value1 === value2;
                     default:
                 }
+            } else if (term === ">=") {
+                // Dominance
+                var horizon1 = getHorizon(part1);
+                var horizon2 = getHorizon(part2);
+                if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
+                    var horizonsSet = extractAllSubHorizons(part1, part2);
+                }
             }
         }
     }
 }
 
-function isComparisonOperator(string) {
+function extractAllSubHorizons(contract1, contract2) {
+    var set1 = new Set();
+    // whenever we reach one or zero we need to find their horizon
+    var maxHorizon = getHorizon(contract2); // we only want to check for times <= maxHorizon
+    var contract1HorArr = contract1.split(" ");
+    var contract2HorArr = contract2.split(" ");
+    for (var i = 0; i < contract1HorArr.length; ++i) {
+
+    }
+    for (var i = 0; i < contract1HorArr.length; ++i) {
+
+    }
+}
+
+function COMPARISONOPERATOR(string) {
     if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}"
-      || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]") {
+      || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]" || string === ">=") {
         return true;
     }
     return false;
@@ -473,6 +494,8 @@ function getHorizon(contractString) {
                     return "infinite";
                 }
                 comeAcrossTruncate = false;
+            } else if (i === strArr.length - 1 && !comeAcrossTruncate) {
+                return "infinite";
             }
         }
         return lTrimDoubleQuotes(rTrimDoubleQuotes(maxHorizon));
@@ -525,7 +548,7 @@ function getValue(contractString) {
             return 0;
         }
     } else {
-        // string does not contain conjunction
+        // string does not contain connective
         var value = 1;
         if (contractString.includes("zero")) {
             return 0;

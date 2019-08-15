@@ -464,7 +464,26 @@ window.addEventListener('load', function () {
   (0, _oracles.createOracles)(); // start timer
 
   update();
-  runClock();
+  runClock(); //console.log(getValue("( one or zero ) and ( scaleK 10 one and zero )")); // sum(max(1,0), sum(10,0)) -> 11
+  //console.log(getValue("one or ( zero and ( scaleK 10 one and zero ) )")); // max(1, sum(0, sum(10, 0))) -> 10
+  //console.log(getValue("( one or ( zero and scaleK 10 one ) ) and zero")); // sum(max(1, sum(0,10)), 0) -> 10
+  //console.log(getValue("one")); // 1
+  //console.log(getValue("scaleK 10 one and one")); // 11
+  //console.log(getValue("truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one")); // 10
+  //console.log(getValue("one or scaleK 10 one")); // 10
+  //console.log(getValue("one or ( zero and scaleK 10 one )")); // 10
+  //console.log(getValue("truncate \"24/12/2017-23:33:33\" ( one )")); // 0
+  //console.log(getValue("one and ( zero and scaleK 10 one )")); // 11
+
+  console.log(getHorizon("truncate \"24/12/2017-23:33:33\" ( zero ) and scaleK 10 ( one )"));
+  console.log(getHorizon("( truncate \"24/12/2017-23:33:33\" ( zero ) and scaleK 10 ( one ) )"));
+  console.log(getValue("one and ( truncate \"24/12/2017-23:33:33\" zero and scaleK 10 one )")); // 11
+
+  console.log(getValue("one or ( truncate \"24/12/2017-23:33:33\" one and scaleK 10 one )")); // 10 -- Error, returns 1
+  //console.log(getValue("one or ( truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one )")); // 10 -- Error, returns 1
+  //console.log(getValue("( one or ( truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one ) ) and one")); // sum(max(1, sum(0, 10)), 1) -> 11
+  //console.log(getValue("( one or ( one and scaleK 10 one ) ) and truncate \"24/12/2017-23:33:33\" ( one )")); // sum(max(1, sum(1,10)), 0) -> 11
+  //console.log(getValue("( one or ( one and scaleK 10 one ) ) and one")); // sum(max(1, sum(1,10)), 1) -> 12
 }); // TODO: transform input ie decrease spaces
 
 global.addDefinition = function (inputString) {
@@ -494,7 +513,7 @@ global.addDefinition = function (inputString) {
   for (var i = 0; i < secondArr.length; ++i) {
     var term = secondArr[i];
 
-    if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && !isComparisonOperator(term) && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term) && !definitionsMap.has(term)) {
+    if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term) && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "else" && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term) && !definitionsMap.has(term)) {
       document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
       return;
     }
@@ -727,7 +746,7 @@ function evaluateConditionals(inputString) {
         return "error";
       }
     } else if (term === "{") {
-      if (i > termArr.length - 3 || i < 6 || nextTerm === ")" || isComparisonOperator(nextTerm) || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(nextTerm))) || nextTerm === "or" || nextTerm === "and" || nextTerm === "else" || parseFloat(nextTerm) || observablesArr.includes(nextTerm) || prevTerm !== ")" && prevTerm !== "else") {
+      if (i > termArr.length - 3 || i < 6 || nextTerm === ")" || COMPARISONOPERATOR(nextTerm) || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(nextTerm))) || nextTerm === "or" || nextTerm === "and" || nextTerm === "else" || parseFloat(nextTerm) || observablesArr.includes(nextTerm) || prevTerm !== ")" && prevTerm !== "else") {
         document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
         return "error";
       }
@@ -737,14 +756,14 @@ function evaluateConditionals(inputString) {
         return "error";
       }
     } else if (term === "(") {
-      if (i > termArr.length - 3 || nextTerm === ")" || isComparisonOperator(nextTerm) || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(nextTerm))) || nextTerm === "}" || nextTerm === "or" || nextTerm === "and" || nextTerm === "else" || parseFloat(nextTerm) || observablesArr.includes(nextTerm) || i > 0 && (prevTerm === ")" || prevTerm === "one" || prevTerm === "zero" || prevTerm === "truncate" || prevTerm === "scaleK" || prevTerm === "else" || prevTerm === "}")) {
+      if (i > termArr.length - 3 || nextTerm === ")" || COMPARISONOPERATOR(nextTerm) || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(nextTerm))) || nextTerm === "}" || nextTerm === "or" || nextTerm === "and" || nextTerm === "else" || parseFloat(nextTerm) || observablesArr.includes(nextTerm) || i > 0 && (prevTerm === ")" || prevTerm === "one" || prevTerm === "zero" || prevTerm === "truncate" || prevTerm === "scaleK" || prevTerm === "else" || prevTerm === "}")) {
         document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
         return "error";
       }
 
       ++openingParens;
     } else if (term === ")") {
-      if (i < termArr.length - 1 && nextTerm !== ")" && nextTerm !== "and" && nextTerm !== "or" && nextTerm !== "{" && !isComparisonOperator(nextTerm) || i < 2 || i > 0 && prevTerm !== "one" && prevTerm !== "zero" && prevTerm !== "}" && prevTerm !== ")") {
+      if (i < termArr.length - 1 && nextTerm !== ")" && nextTerm !== "and" && nextTerm !== "or" && nextTerm !== "{" && !COMPARISONOPERATOR(nextTerm) || i < 2 || i > 0 && prevTerm !== "one" && prevTerm !== "zero" && prevTerm !== "}" && prevTerm !== ")") {
         document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
         return "error";
       }
@@ -829,7 +848,7 @@ function evaluateConditionals(inputString) {
 
       ifsStack.pop();
       ifCondition = "";
-    } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "else" && term !== "zero" && term !== "scaleK" && term !== "one" && !isComparisonOperator(term) && term !== "&&" && term !== "||" && !parseFloat(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
+    } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "else" && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term) && term !== "&&" && term !== "||" && !parseFloat(term) && !isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term))) && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
       // give error
       document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
       return "error";
@@ -876,7 +895,7 @@ function evaluate(inputString) {
       ++openingParens;
     } else if (term === ")") {
       --openingParens;
-    } else if (openingParens === 0 && (term === "||" || term === "&&" || isComparisonOperator(term))) {
+    } else if (openingParens === 0 && (term === "||" || term === "&&" || COMPARISONOPERATOR(term))) {
       var part1 = strArr.slice(0, i).join(" ");
       var part2 = strArr.slice(i + 1).join(" ");
 
@@ -938,13 +957,34 @@ function evaluate(inputString) {
 
           default:
         }
+      } else if (term === ">=") {
+        // Dominance
+        var horizon1 = getHorizon(part1);
+        var horizon2 = getHorizon(part2);
+
+        if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
+          var horizonsSet = extractAllSubHorizons(part1, part2);
+        }
       }
     }
   }
 }
 
-function isComparisonOperator(string) {
-  if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}" || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]") {
+function extractAllSubHorizons(contract1, contract2) {
+  var set1 = new Set(); // whenever we reach one or zero we need to find their horizon
+
+  var maxHorizon = getHorizon(contract2); // we only want to check for times <= maxHorizon
+
+  var contract1HorArr = contract1.split(" ");
+  var contract2HorArr = contract2.split(" ");
+
+  for (var i = 0; i < contract1HorArr.length; ++i) {}
+
+  for (var i = 0; i < contract1HorArr.length; ++i) {}
+}
+
+function COMPARISONOPERATOR(string) {
+  if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}" || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]" || string === ">=") {
     return true;
   }
 
@@ -994,6 +1034,8 @@ function getHorizon(contractString) {
         }
 
         comeAcrossTruncate = false;
+      } else if (i === strArr.length - 1 && !comeAcrossTruncate) {
+        return "infinite";
       }
     }
 
@@ -1002,6 +1044,7 @@ function getHorizon(contractString) {
 }
 
 function getValue(contractString) {
+  console.log("string = " + contractString);
   var strArr = contractString.split(" "); // check if string contains conjunction
 
   if (contractString.includes("and") || contractString.includes("or")) {
@@ -1032,26 +1075,37 @@ function getValue(contractString) {
     var horizon2 = getHorizon(part2);
     var value1 = getValue(part1);
     var value2 = getValue(part2);
+    console.log("comparing horizons");
+    console.log(horizon1);
+    console.log(horizon2);
 
     if (!beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+      console.log("both are infinite");
+
       if (mostBalancedConjType === "and") {
         return value1 + value2;
       } else {
         return Math.max(value1, value2);
       }
     } else if (!beforeCurrentDate(horizon1) && beforeCurrentDate(horizon2)) {
+      console.log("first one is infinite");
       return value1;
     } else if (beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
+      console.log("second one is infinite");
       return value2;
     } else {
       // both have expired - return 0
+      console.log("none are infinite");
       return 0;
     }
   } else {
-    // string does not contain conjunction
+    // string does not contain connective
+    console.log("String does not have connective");
+    console.log(contractString);
     var value = 1;
 
     if (contractString.includes("zero")) {
+      console.log("returning 0");
       return 0;
     } else {
       for (var i = 0; i < strArr.length; ++i) {
@@ -1064,8 +1118,10 @@ function getValue(contractString) {
       }
 
       if (beforeCurrentDate(getHorizon(contractString))) {
+        console.log("returning 0");
         return 0;
       } else {
+        console.log("returning " + value);
         return value;
       }
     }
