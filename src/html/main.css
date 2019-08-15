@@ -133,6 +133,7 @@ select[disabled] {
     color: gray;
     background-color: white;
     border-radius: 12px;
+    cursor: pointer;
     border: 1px solid #707070;
     font-size: 14px;
 }
@@ -141,7 +142,6 @@ select[disabled] {
     border: 1px solid gray;
     background-color: lightgray;
     color: gray;
-    padding: 5px 5px 5px 5px;
 }
 
 .status {

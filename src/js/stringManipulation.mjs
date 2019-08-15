@@ -68,28 +68,28 @@ export function addSpacing(string) {
         matchObj = regex4.exec(string)
     }
     // braces spacing
-    const regex5 = /(.*\S)({)([^<>=].*)/;
+    const regex5 = /(.*\S)({.*)/;
     var matchObj = regex5.exec(string);
     while (matchObj !== null) {
-        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        string = matchObj[1] + " " + matchObj[2];
         matchObj = regex5.exec(string)
     }
-    const regex6 = /(.*\S[^<>=\S])(})(.*)/;
+    const regex6 = /(.*{)([^<>=\s].*)/;
     matchObj = regex6.exec(string);
     while (matchObj !== null) {
-        string = matchObj[1] + " " + matchObj[2] + matchObj[3];
+        string = matchObj[1] + " " + matchObj[2];
         matchObj = regex6.exec(string)
     }
-    const regex7 = /(.*)({)([^<>=\S]\S.*)/;
+    const regex7 = /(.*[^<>=\s])(}.*)/;
     matchObj = regex7.exec(string);
     while (matchObj !== null) {
-        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        string = matchObj[1] + " " + matchObj[2];
         matchObj = regex7.exec(string)
     }
-    const regex8 = /(.*[^<>=])(})(\S.*)/;
+    const regex8 = /(.*})(\S.*)/;
     matchObj = regex8.exec(string);
     while (matchObj !== null) {
-        string = matchObj[1] + matchObj[2] + " " + matchObj[3];
+        string = matchObj[1] + " " + matchObj[2];
         matchObj = regex8.exec(string)
     }
     return string;
