@@ -835,6 +835,11 @@ function createValuationSelect(tr, id) {
     td.appendChild(div);
     div.className = "valuation_cell_data";
 
+    var date = new Date();
+    var d = date.getDate();
+    var m = date.getMonth();
+    var y = date.getFullYear();
+
     var selectDay = document.createElement("select");
     selectDay.className = "select_valuation";
     selectDay.id = "day_select_" + id;
@@ -848,6 +853,7 @@ function createValuationSelect(tr, id) {
         option.text = i;
         selectDay.appendChild(option);
     }
+    selectDay.value = d;
 
     var selectMonth = document.createElement("select");
     selectMonth.className = "select_valuation";
@@ -864,6 +870,7 @@ function createValuationSelect(tr, id) {
         option.text = i;
         selectMonth.appendChild(option);
     }
+    selectMonth.value = m + 1;
 
     var selectYear = document.createElement("select");
     selectYear.className = "select_valuation_year";
@@ -880,6 +887,8 @@ function createValuationSelect(tr, id) {
         option.text = i;
         selectYear.appendChild(option);
     }
+    selectYear.value = y;
+
     var valueLabel = document.createElement("p");
     td.appendChild(valueLabel);
     valueLabel.id = "p_value_" + id;
@@ -898,18 +907,22 @@ function updateValuationValue(id) {
 // TODO: superContractsMap does not store expired contracts, so cannot go back in time
 function getAllSubcontracts(superKey) {
     var finalContractString = "";
-    for (var [superContractId, contractsSet] of superContractsMap) {
-        if (superContractId === superKey) {
-            for (let contract of contractsSet) {
-                if (finalContractString === "") {
-                    finalContractString = contract.contractString;
-                } else {
-                    finalContractString = finalContractString + " and " + contract.contractString;
+    if (superContractsMap.has(superKey)) {
+        for (var [superContractId, contractsSet] of superContractsMap) {
+            if (superContractId === superKey) {
+                for (let contract of contractsSet) {
+                    if (finalContractString === "") {
+                        finalContractString = contract.contractString;
+                    } else {
+                        finalContractString = finalContractString + " and " + contract.contractString;
+                    }
                 }
             }
         }
+        return finalContractString;
+    } else {
+        return "zero"; // all contracts have already expired
     }
-    return finalContractString;
 }
 
 function updateSelectableDaysFromMonth(selectedMonth, id) {
@@ -926,7 +939,8 @@ function updateSelectableDaysFromMonth(selectedMonth, id) {
         }
     }
     else if (selectedMonth === "2") {
-        if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028" || selectYear === "2026") { // leap year - 29 days in Feb
+        if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028"
+          || selectYear === "2032" || selectYear === "2036" || selectYear === "2040") { // leap year - 29 days in Feb
             if (parseInt(selectDay.value) > 29) {
                 selectDay.value = 29;
             }
@@ -968,7 +982,8 @@ function updateSelectableDaysFromYear(selectedYear, id) {
     var selectDay = document.getElementById("day_select_" + id);
     var selectMonth = document.getElementById("month_select_" + id);
     if (selectMonth.value === "2") {
-        if (selectedYear === "2016" || selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028" || selectedYear === "2026") { // leap year - 29 days in Feb
+        if (selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028"
+          || selectedYear === "2032" || selectedYear === "2036" || selectedYear === "2040") { // leap year - 29 days in Feb
             if (parseInt(selectDay.value) > 29) {
                 selectDay.value = 29;
             }

@@ -1433,6 +1433,10 @@ function createValuationSelect(tr, id) {
   var div = document.createElement("div");
   td.appendChild(div);
   div.className = "valuation_cell_data";
+  var date = new Date();
+  var d = date.getDate();
+  var m = date.getMonth();
+  var y = date.getFullYear();
   var selectDay = document.createElement("select");
   selectDay.className = "select_valuation";
   selectDay.id = "day_select_" + id;
@@ -1450,6 +1454,7 @@ function createValuationSelect(tr, id) {
     selectDay.appendChild(option);
   }
 
+  selectDay.value = d;
   var selectMonth = document.createElement("select");
   selectMonth.className = "select_valuation";
   selectMonth.id = "month_select_" + id;
@@ -1469,6 +1474,7 @@ function createValuationSelect(tr, id) {
     selectMonth.appendChild(option);
   }
 
+  selectMonth.value = m + 1;
   var selectYear = document.createElement("select");
   selectYear.className = "select_valuation_year";
   selectYear.id = "year_select_" + id;
@@ -1488,6 +1494,7 @@ function createValuationSelect(tr, id) {
     selectYear.appendChild(option);
   }
 
+  selectYear.value = y;
   var valueLabel = document.createElement("p");
   td.appendChild(valueLabel);
   valueLabel.id = "p_value_" + id;
@@ -1506,63 +1513,68 @@ function updateValuationValue(id) {
 
 function getAllSubcontracts(superKey) {
   var finalContractString = "";
-  var _iteratorNormalCompletion5 = true;
-  var _didIteratorError5 = false;
-  var _iteratorError5 = undefined;
 
-  try {
-    for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-      var _step5$value = _slicedToArray(_step5.value, 2),
-          superContractId = _step5$value[0],
-          contractsSet = _step5$value[1];
+  if (superContractsMap.has(superKey)) {
+    var _iteratorNormalCompletion5 = true;
+    var _didIteratorError5 = false;
+    var _iteratorError5 = undefined;
 
-      if (superContractId === superKey) {
-        var _iteratorNormalCompletion6 = true;
-        var _didIteratorError6 = false;
-        var _iteratorError6 = undefined;
+    try {
+      for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+        var _step5$value = _slicedToArray(_step5.value, 2),
+            superContractId = _step5$value[0],
+            contractsSet = _step5$value[1];
 
-        try {
-          for (var _iterator6 = contractsSet[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-            var contract = _step6.value;
+        if (superContractId === superKey) {
+          var _iteratorNormalCompletion6 = true;
+          var _didIteratorError6 = false;
+          var _iteratorError6 = undefined;
 
-            if (finalContractString === "") {
-              finalContractString = contract.contractString;
-            } else {
-              finalContractString = finalContractString + " and " + contract.contractString;
-            }
-          }
-        } catch (err) {
-          _didIteratorError6 = true;
-          _iteratorError6 = err;
-        } finally {
           try {
-            if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-              _iterator6["return"]();
+            for (var _iterator6 = contractsSet[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+              var contract = _step6.value;
+
+              if (finalContractString === "") {
+                finalContractString = contract.contractString;
+              } else {
+                finalContractString = finalContractString + " and " + contract.contractString;
+              }
             }
+          } catch (err) {
+            _didIteratorError6 = true;
+            _iteratorError6 = err;
           } finally {
-            if (_didIteratorError6) {
-              throw _iteratorError6;
+            try {
+              if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+                _iterator6["return"]();
+              }
+            } finally {
+              if (_didIteratorError6) {
+                throw _iteratorError6;
+              }
             }
           }
         }
       }
-    }
-  } catch (err) {
-    _didIteratorError5 = true;
-    _iteratorError5 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
-        _iterator5["return"]();
-      }
+    } catch (err) {
+      _didIteratorError5 = true;
+      _iteratorError5 = err;
     } finally {
-      if (_didIteratorError5) {
-        throw _iteratorError5;
+      try {
+        if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
+          _iterator5["return"]();
+        }
+      } finally {
+        if (_didIteratorError5) {
+          throw _iteratorError5;
+        }
       }
     }
-  }
 
-  return finalContractString;
+    return finalContractString;
+  } else {
+    return "zero"; // all contracts have already expired
+  }
 }
 
 function updateSelectableDaysFromMonth(selectedMonth, id) {
@@ -1579,7 +1591,7 @@ function updateSelectableDaysFromMonth(selectedMonth, id) {
       selectDay.appendChild(option);
     }
   } else if (selectedMonth === "2") {
-    if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028" || selectYear === "2026") {
+    if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028" || selectYear === "2032" || selectYear === "2036" || selectYear === "2040") {
       // leap year - 29 days in Feb
       if (parseInt(selectDay.value) > 29) {
         selectDay.value = 29;
@@ -1630,7 +1642,7 @@ function updateSelectableDaysFromYear(selectedYear, id) {
   var selectMonth = document.getElementById("month_select_" + id);
 
   if (selectMonth.value === "2") {
-    if (selectedYear === "2016" || selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028" || selectedYear === "2026") {
+    if (selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028" || selectedYear === "2032" || selectedYear === "2036" || selectedYear === "2040") {
       // leap year - 29 days in Feb
       if (parseInt(selectDay.value) > 29) {
         selectDay.value = 29;
