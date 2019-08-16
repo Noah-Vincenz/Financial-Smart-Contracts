@@ -1416,34 +1416,274 @@ global.decompose = function (inputString, initialDecomposition) {
     var superContractKey = numberOfContracts.toString();
     td.innerHTML = superContractKey;
 
-    for (var i = 0; i < 6; ++i) {
+    for (var i = 0; i < 5; ++i) {
       tr.appendChild(td = document.createElement("td"));
     }
 
-    var btn = document.createElement('input');
-    btn.type = "button";
-    btn.className = "acquire_button button";
-    btn.id = "acquire_button_" + superContractKey;
-    btn.value = "acquire";
-
-    btn.onclick = function (_) {
-      if (correctUserTryingToAcquire()) {
-        executeSuperContract(superContractKey);
-      } else {
-        document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
-      }
-    };
-
-    td.appendChild(btn); // if either of these is true then we want the acquire button to be disabled
-
-    if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
-      btn.disabled = true;
-    }
-
+    createValuationSelect(tr, superContractKey);
+    createAcquireButton(tr, superContractKey);
     ++numberOfContracts;
     numberOfSubContracts = 0;
   }
 };
+
+function createValuationSelect(tr, id) {
+  var td;
+  tr.appendChild(td = document.createElement("td"));
+  var div = document.createElement("div");
+  td.appendChild(div);
+  div.className = "valuation_cell_data";
+  var selectDay = document.createElement("select");
+  selectDay.className = "select_valuation";
+  selectDay.id = "day_select_" + id;
+
+  selectDay.onchange = function () {
+    updateValuationValue(id);
+  };
+
+  div.appendChild(selectDay);
+
+  for (var i = 1; i <= 31; i++) {
+    var option = document.createElement("option");
+    option.value = i;
+    option.text = i;
+    selectDay.appendChild(option);
+  }
+
+  var selectMonth = document.createElement("select");
+  selectMonth.className = "select_valuation";
+  selectMonth.id = "month_select_" + id;
+
+  selectMonth.onchange = function () {
+    var selectedMonth = selectMonth.value;
+    updateSelectableDaysFromMonth(selectedMonth, id);
+    updateValuationValue(id);
+  };
+
+  div.appendChild(selectMonth);
+
+  for (var i = 1; i <= 12; i++) {
+    var option = document.createElement("option");
+    option.value = i;
+    option.text = i;
+    selectMonth.appendChild(option);
+  }
+
+  var selectYear = document.createElement("select");
+  selectYear.className = "select_valuation_year";
+  selectYear.id = "year_select_" + id;
+
+  selectYear.onchange = function () {
+    var selectedYear = selectYear.value;
+    updateSelectableDaysFromYear(selectedYear, id);
+    updateValuationValue(id);
+  };
+
+  div.appendChild(selectYear);
+
+  for (var i = 2019; i <= 2040; i++) {
+    var option = document.createElement("option");
+    option.value = i;
+    option.text = i;
+    selectYear.appendChild(option);
+  }
+
+  var valueLabel = document.createElement("p");
+  td.appendChild(valueLabel);
+  valueLabel.id = "p_value_" + id;
+  valueLabel.className = "p_value";
+  updateValuationValue(id);
+}
+
+function updateValuationValue(id) {
+  var day = document.getElementById("day_select_" + id).value;
+  var month = document.getElementById("month_select_" + id).value;
+  var year = document.getElementById("year_select_" + id).value;
+  var c = getAllSubcontracts(id);
+  document.getElementById("p_value_" + id).innerHTML = getValue(c, day + "/" + month + "/" + year + "-" + "12:00:00").toString() + "ETH";
+} // TODO: superContractsMap does not store expired contracts, so cannot go back in time
+
+
+function getAllSubcontracts(superKey) {
+  var finalContractString = "";
+  var _iteratorNormalCompletion5 = true;
+  var _didIteratorError5 = false;
+  var _iteratorError5 = undefined;
+
+  try {
+    for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+      var _step5$value = _slicedToArray(_step5.value, 2),
+          superContractId = _step5$value[0],
+          contractsSet = _step5$value[1];
+
+      if (superContractId === superKey) {
+        var _iteratorNormalCompletion6 = true;
+        var _didIteratorError6 = false;
+        var _iteratorError6 = undefined;
+
+        try {
+          for (var _iterator6 = contractsSet[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var contract = _step6.value;
+
+            if (finalContractString === "") {
+              finalContractString = contract.contractString;
+            } else {
+              finalContractString = finalContractString + " and " + contract.contractString;
+            }
+          }
+        } catch (err) {
+          _didIteratorError6 = true;
+          _iteratorError6 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+              _iterator6["return"]();
+            }
+          } finally {
+            if (_didIteratorError6) {
+              throw _iteratorError6;
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    _didIteratorError5 = true;
+    _iteratorError5 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
+        _iterator5["return"]();
+      }
+    } finally {
+      if (_didIteratorError5) {
+        throw _iteratorError5;
+      }
+    }
+  }
+
+  return finalContractString;
+}
+
+function updateSelectableDaysFromMonth(selectedMonth, id) {
+  var selectDay = document.getElementById("day_select_" + id);
+  var selectYear = document.getElementById("year_select_" + id);
+
+  if (selectedMonth === "1" || selectedMonth === "3" || selectedMonth === "5" || selectedMonth === "7" || selectedMonth === "8" || selectedMonth === "10" || selectedMonth === "12") {
+    // 31 days
+    for (var i = selectDay.options.length + 1; i <= 31; ++i) {
+      // add items
+      var option = document.createElement("option");
+      option.value = i;
+      option.text = i;
+      selectDay.appendChild(option);
+    }
+  } else if (selectedMonth === "2") {
+    if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028" || selectYear === "2026") {
+      // leap year - 29 days in Feb
+      if (parseInt(selectDay.value) > 29) {
+        selectDay.value = 29;
+      }
+
+      while (selectDay.options.length > 29) {
+        selectDay.remove(29);
+      }
+
+      if (selectDay.options.length === 28) {
+        var option = document.createElement("option");
+        option.value = "29";
+        option.text = "29";
+        selectDay.appendChild(option);
+      }
+    } else {
+      // 28 days in Feb
+      if (parseInt(selectDay.value) > 28) {
+        selectDay.value = 28;
+      }
+
+      while (selectDay.options.length > 28) {
+        selectDay.remove(28);
+      }
+    }
+  } else {
+    // 30 days
+    if (parseInt(selectDay.value) > 30) {
+      selectDay.value = 30;
+    }
+
+    if (selectDay.options.length > 30) {
+      selectDay.remove(30);
+    }
+
+    for (var i = selectDay.options.length + 1; i <= 30; ++i) {
+      // add items
+      var option = document.createElement("option");
+      option.value = i;
+      option.text = i;
+      selectDay.appendChild(option);
+    }
+  }
+}
+
+function updateSelectableDaysFromYear(selectedYear, id) {
+  var selectDay = document.getElementById("day_select_" + id);
+  var selectMonth = document.getElementById("month_select_" + id);
+
+  if (selectMonth.value === "2") {
+    if (selectedYear === "2016" || selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028" || selectedYear === "2026") {
+      // leap year - 29 days in Feb
+      if (parseInt(selectDay.value) > 29) {
+        selectDay.value = 29;
+      }
+
+      while (selectDay.options.length > 29) {
+        // remove items first
+        selectDay.remove(29);
+      }
+
+      if (selectDay.options.length === 28) {
+        var option = document.createElement("option");
+        option.value = "29";
+        option.text = "29";
+        selectDay.appendChild(option);
+      }
+    } else {
+      // 28 days in Feb
+      if (parseInt(selectDay.value) > 28) {
+        selectDay.value = 28;
+      }
+
+      while (selectDay.options.length > 28) {
+        selectDay.remove(28);
+      }
+    }
+  }
+}
+
+function createAcquireButton(tr, id) {
+  var td;
+  tr.appendChild(td = document.createElement("td")); //Create array of options to be added
+
+  var btn = document.createElement('input');
+  btn.type = "button";
+  btn.className = "acquire_button button";
+  btn.id = "acquire_button_" + id;
+  btn.value = "acquire";
+
+  btn.onclick = function (_) {
+    if (correctUserTryingToAcquire()) {
+      executeSuperContract(id);
+    } else {
+      document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+    }
+  };
+
+  td.appendChild(btn); // if either of these is true then we want the acquire button to be disabled
+
+  if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
+    btn.disabled = true;
+  }
+}
 
 function addChoices(contractsStack, divId) {
   var contract2 = contractsStack.pop();
@@ -1724,15 +1964,15 @@ function createContractObject(inputString) {
 
 function addToSuperContracts(superKey, contract) {
   if (superContractsMap.has(superKey)) {
-    var _iteratorNormalCompletion5 = true;
-    var _didIteratorError5 = false;
-    var _iteratorError5 = undefined;
+    var _iteratorNormalCompletion7 = true;
+    var _didIteratorError7 = false;
+    var _iteratorError7 = undefined;
 
     try {
-      for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-        var _step5$value = _slicedToArray(_step5.value, 2),
-            superContractId = _step5$value[0],
-            contractsSet = _step5$value[1];
+      for (var _iterator7 = superContractsMap[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+        var _step7$value = _slicedToArray(_step7.value, 2),
+            superContractId = _step7$value[0],
+            contractsSet = _step7$value[1];
 
         if (superContractId === superKey) {
           var newSet = contractsSet;
@@ -1742,16 +1982,16 @@ function addToSuperContracts(superKey, contract) {
         }
       }
     } catch (err) {
-      _didIteratorError5 = true;
-      _iteratorError5 = err;
+      _didIteratorError7 = true;
+      _iteratorError7 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
-          _iterator5["return"]();
+        if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
+          _iterator7["return"]();
         }
       } finally {
-        if (_didIteratorError5) {
-          throw _iteratorError5;
+        if (_didIteratorError7) {
+          throw _iteratorError7;
         }
       }
     }
@@ -1766,15 +2006,15 @@ function addToSuperContracts(superKey, contract) {
 }
 
 function deleteFromSuperContracts(superKey, contract) {
-  var _iteratorNormalCompletion6 = true;
-  var _didIteratorError6 = false;
-  var _iteratorError6 = undefined;
+  var _iteratorNormalCompletion8 = true;
+  var _didIteratorError8 = false;
+  var _iteratorError8 = undefined;
 
   try {
-    for (var _iterator6 = superContractsMap[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-      var _step6$value = _slicedToArray(_step6.value, 2),
-          superContractId = _step6$value[0],
-          contractsSet = _step6$value[1];
+    for (var _iterator8 = superContractsMap[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+      var _step8$value = _slicedToArray(_step8.value, 2),
+          superContractId = _step8$value[0],
+          contractsSet = _step8$value[1];
 
       if (superContractId === superKey) {
         var newSet = contractsSet;
@@ -1790,16 +2030,16 @@ function deleteFromSuperContracts(superKey, contract) {
       }
     }
   } catch (err) {
-    _didIteratorError6 = true;
-    _iteratorError6 = err;
+    _didIteratorError8 = true;
+    _iteratorError8 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-        _iterator6["return"]();
+      if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
+        _iterator8["return"]();
       }
     } finally {
-      if (_didIteratorError6) {
-        throw _iteratorError6;
+      if (_didIteratorError8) {
+        throw _iteratorError8;
       }
     }
   }
@@ -1903,56 +2143,56 @@ function greaterDate(dateString1, dateString2) {
 }
 
 function executeSuperContract(superKey) {
-  var _iteratorNormalCompletion7 = true;
-  var _didIteratorError7 = false;
-  var _iteratorError7 = undefined;
+  var _iteratorNormalCompletion9 = true;
+  var _didIteratorError9 = false;
+  var _iteratorError9 = undefined;
 
   try {
-    for (var _iterator7 = superContractsMap[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-      var _step7$value = _slicedToArray(_step7.value, 2),
-          superContractId = _step7$value[0],
-          contractsSet = _step7$value[1];
+    for (var _iterator9 = superContractsMap[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+      var _step9$value = _slicedToArray(_step9.value, 2),
+          superContractId = _step9$value[0],
+          contractsSet = _step9$value[1];
 
       if (superContractId === superKey) {
-        var _iteratorNormalCompletion8 = true;
-        var _didIteratorError8 = false;
-        var _iteratorError8 = undefined;
+        var _iteratorNormalCompletion10 = true;
+        var _didIteratorError10 = false;
+        var _iteratorError10 = undefined;
 
         try {
-          for (var _iterator8 = contractsSet[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-            var contract = _step8.value;
+          for (var _iterator10 = contractsSet[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+            var contract = _step10.value;
 
             if (contract.toBeExecutedAtHorizon !== "yes") {
               executeSingleContract(contract);
             }
           }
         } catch (err) {
-          _didIteratorError8 = true;
-          _iteratorError8 = err;
+          _didIteratorError10 = true;
+          _iteratorError10 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
-              _iterator8["return"]();
+            if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
+              _iterator10["return"]();
             }
           } finally {
-            if (_didIteratorError8) {
-              throw _iteratorError8;
+            if (_didIteratorError10) {
+              throw _iteratorError10;
             }
           }
         }
       }
     }
   } catch (err) {
-    _didIteratorError7 = true;
-    _iteratorError7 = err;
+    _didIteratorError9 = true;
+    _iteratorError9 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
-        _iterator7["return"]();
+      if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
+        _iterator9["return"]();
       }
     } finally {
-      if (_didIteratorError7) {
-        throw _iteratorError7;
+      if (_didIteratorError9) {
+        throw _iteratorError9;
       }
     }
   }
@@ -2102,7 +2342,6 @@ function createTableRow(contract) {
   tr.appendChild(td = document.createElement("td"));
   td.id = "td_status_" + contract.id;
   td.innerHTML = contract.status;
-  tr.appendChild(td = document.createElement("td"));
 }
 
 function correctUserTryingToAcquire() {

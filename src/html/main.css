@@ -129,12 +129,40 @@ select[disabled] {
     margin-bottom: 20px;
 }
 
+.p_party {
+    position: relative;
+    font-size: 20px;
+    margin-bottom: 8px;
+    width: 100%;
+}
+
 .choices_button {
     color: gray;
     background-color: white;
     border-radius: 12px;
     cursor: pointer;
     border: 1px solid #707070;
+    font-size: 14px;
+}
+
+.select_valuation {
+    padding: 0;
+    font-size: 12px;
+    width: 39px;
+}
+
+.select_valuation_year {
+    padding: 0;
+    font-size: 12px;
+    width: 53px;
+}
+
+.valuation_cell_data {
+    display: flex;
+}
+
+.p_value {
+    font-weight: normal;
     font-size: 14px;
 }
 
@@ -152,7 +180,6 @@ select[disabled] {
 
 .label {
     position: relative;
-    font-family: Arial;
     color: #707070;
     font-size: 20px;
     margin-top: 30px;

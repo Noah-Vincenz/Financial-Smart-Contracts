@@ -818,30 +818,202 @@ global.decompose = function(inputString, initialDecomposition) {
       tr.appendChild(td = document.createElement("td"));
       var superContractKey = numberOfContracts.toString();
       td.innerHTML = superContractKey;
-      for (var i = 0; i < 6; ++i) {
+      for (var i = 0; i < 5; ++i) {
           tr.appendChild(td = document.createElement("td"));
       }
-      var btn = document.createElement('input');
-      btn.type = "button";
-      btn.className = "acquire_button button";
-      btn.id = "acquire_button_" + superContractKey;
-      btn.value = "acquire";
-      btn.onclick = _ => {
-          if (correctUserTryingToAcquire()) {
-              executeSuperContract(superContractKey);
-          } else {
-              document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
-          }
-      };
-      td.appendChild(btn);
-      // if either of these is true then we want the acquire button to be disabled
-      if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
-          btn.disabled = true;
-      }
+      createValuationSelect(tr, superContractKey);
+      createAcquireButton(tr, superContractKey);
       ++numberOfContracts;
       numberOfSubContracts = 0;
   }
 };
+
+function createValuationSelect(tr, id) {
+    var td;
+    tr.appendChild(td = document.createElement("td"));
+    var div = document.createElement("div");
+    td.appendChild(div);
+    div.className = "valuation_cell_data";
+
+    var selectDay = document.createElement("select");
+    selectDay.className = "select_valuation";
+    selectDay.id = "day_select_" + id;
+    selectDay.onchange = function() {
+        updateValuationValue(id);
+    }
+    div.appendChild(selectDay);
+    for (var i = 1; i <= 31; i++) {
+        var option = document.createElement("option");
+        option.value = i;
+        option.text = i;
+        selectDay.appendChild(option);
+    }
+
+    var selectMonth = document.createElement("select");
+    selectMonth.className = "select_valuation";
+    selectMonth.id = "month_select_" + id;
+    selectMonth.onchange = function() {
+        var selectedMonth = selectMonth.value;
+        updateSelectableDaysFromMonth(selectedMonth, id);
+        updateValuationValue(id);
+    };
+    div.appendChild(selectMonth);
+    for (var i = 1; i <= 12; i++) {
+        var option = document.createElement("option");
+        option.value = i;
+        option.text = i;
+        selectMonth.appendChild(option);
+    }
+
+    var selectYear = document.createElement("select");
+    selectYear.className = "select_valuation_year";
+    selectYear.id = "year_select_" + id;
+    selectYear.onchange = function() {
+        var selectedYear = selectYear.value;
+        updateSelectableDaysFromYear(selectedYear, id);
+        updateValuationValue(id);
+    };
+    div.appendChild(selectYear);
+    for (var i = 2019; i <= 2040; i++) {
+        var option = document.createElement("option");
+        option.value = i;
+        option.text = i;
+        selectYear.appendChild(option);
+    }
+    var valueLabel = document.createElement("p");
+    td.appendChild(valueLabel);
+    valueLabel.id = "p_value_" + id;
+    valueLabel.className = "p_value";
+    updateValuationValue(id);
+}
+
+function updateValuationValue(id) {
+    var day = document.getElementById("day_select_" + id).value;
+    var month = document.getElementById("month_select_" + id).value;
+    var year = document.getElementById("year_select_" + id).value;
+    var c = getAllSubcontracts(id);
+    document.getElementById("p_value_" + id).innerHTML = getValue(c, day + "/" + month + "/" + year + "-" + "12:00:00").toString() + "ETH";
+}
+
+// TODO: superContractsMap does not store expired contracts, so cannot go back in time
+function getAllSubcontracts(superKey) {
+    var finalContractString = "";
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        if (superContractId === superKey) {
+            for (let contract of contractsSet) {
+                if (finalContractString === "") {
+                    finalContractString = contract.contractString;
+                } else {
+                    finalContractString = finalContractString + " and " + contract.contractString;
+                }
+            }
+        }
+    }
+    return finalContractString;
+}
+
+function updateSelectableDaysFromMonth(selectedMonth, id) {
+    var selectDay = document.getElementById("day_select_" + id);
+    var selectYear = document.getElementById("year_select_" + id);
+    if (selectedMonth === "1" || selectedMonth === "3" || selectedMonth === "5"
+      || selectedMonth === "7" || selectedMonth === "8" || selectedMonth === "10"
+      || selectedMonth === "12") { // 31 days
+        for (var i = selectDay.options.length + 1; i <= 31; ++i) { // add items
+          var option = document.createElement("option");
+          option.value = i;
+          option.text = i;
+          selectDay.appendChild(option);
+        }
+    }
+    else if (selectedMonth === "2") {
+        if (selectYear === "2020" || selectYear === "2024" || selectYear === "2028" || selectYear === "2026") { // leap year - 29 days in Feb
+            if (parseInt(selectDay.value) > 29) {
+                selectDay.value = 29;
+            }
+            while (selectDay.options.length > 29) {
+                selectDay.remove(29);
+            }
+            if (selectDay.options.length === 28) {
+                var option = document.createElement("option");
+                option.value = "29";
+                option.text = "29";
+                selectDay.appendChild(option);
+            }
+        } else { // 28 days in Feb
+            if (parseInt(selectDay.value) > 28) {
+                selectDay.value = 28;
+            }
+            while (selectDay.options.length > 28) {
+                selectDay.remove(28);
+            }
+        }
+    }
+    else { // 30 days
+        if (parseInt(selectDay.value) > 30) {
+            selectDay.value = 30;
+        }
+        if (selectDay.options.length > 30) {
+            selectDay.remove(30);
+        }
+        for (var i = selectDay.options.length + 1; i <= 30; ++i) { // add items
+          var option = document.createElement("option");
+          option.value = i;
+          option.text = i;
+          selectDay.appendChild(option);
+        }
+    }
+}
+
+function updateSelectableDaysFromYear(selectedYear, id) {
+    var selectDay = document.getElementById("day_select_" + id);
+    var selectMonth = document.getElementById("month_select_" + id);
+    if (selectMonth.value === "2") {
+        if (selectedYear === "2016" || selectedYear === "2020" || selectedYear === "2024" || selectedYear === "2028" || selectedYear === "2026") { // leap year - 29 days in Feb
+            if (parseInt(selectDay.value) > 29) {
+                selectDay.value = 29;
+            }
+            while (selectDay.options.length > 29) { // remove items first
+                selectDay.remove(29);
+            }
+            if (selectDay.options.length === 28) {
+                var option = document.createElement("option");
+                option.value = "29";
+                option.text = "29";
+                selectDay.appendChild(option);
+            }
+        } else { // 28 days in Feb
+            if (parseInt(selectDay.value) > 28) {
+                selectDay.value = 28;
+            }
+            while (selectDay.options.length > 28) {
+                selectDay.remove(28);
+            }
+        }
+    }
+}
+
+function createAcquireButton(tr, id) {
+    var td;
+    tr.appendChild(td = document.createElement("td"));
+    //Create array of options to be added
+    var btn = document.createElement('input');
+    btn.type = "button";
+    btn.className = "acquire_button button";
+    btn.id = "acquire_button_" + id;
+    btn.value = "acquire";
+    btn.onclick = _ => {
+        if (correctUserTryingToAcquire()) {
+            executeSuperContract(id);
+        } else {
+            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+        }
+    };
+    td.appendChild(btn);
+    // if either of these is true then we want the acquire button to be disabled
+    if (acquireBtnToBeDisabled1 || acquireBtnToBeDisabled2) {
+        btn.disabled = true;
+    }
+}
 
 function addChoices(contractsStack, divId) {
     var contract2 = contractsStack.pop();
@@ -1364,7 +1536,6 @@ function createTableRow(contract) {
     tr.appendChild(td = document.createElement("td"));
     td.id = "td_status_" + contract.id;
     td.innerHTML = contract.status;
-    tr.appendChild(td = document.createElement("td"));
 }
 
 function correctUserTryingToAcquire() {

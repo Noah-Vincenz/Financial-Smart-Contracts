@@ -15,6 +15,7 @@
     <div id="top_container">
         <div id="top_input_container">
             <div id="holder_container">
+                <p class="p_party">Contract Holder:</p>
                 <input id="holder_address" class="address_input" type="text" placeholder="Contract Holder Address"
                 value="0x004ec07d2329997267Ec62b4166639513386F32E" maxlength="42"><br>
                 <p class="p_balance" id="holder_balance_p">Balance: 0ETH</p>
@@ -27,6 +28,7 @@
             </div>
 
             <div id="counter_party_container">
+                <p class="p_party">Contract Counter-Party:</p>
                 <input id="counter_party_address" class="address_input" type="text" placeholder="Contract Counter-Party Address"
                 value="0x7f023262356b002a4b7deb7ce057eb8b1aabb427" maxlength="42"><br>
                 <p class="p_balance" id="counter_party_balance_p">Balance: 0ETH</p>
@@ -52,7 +54,7 @@
               <div id="arrow_button_container">
                   <button class="arrow_button" id = "arrow_button" type="button" onclick="addDefinition(getDefinitionsText())">></button>
               </div>
-              <textarea id="input_added_textarea" rows="6" cols="10" type="text" placeholder="No definitions given yet." disabled="true"></textarea>
+              <textarea id="input_added_textarea" rows="6" cols="10" type="text" placeholder="No custom definitions added yet." disabled="true"></textarea>
           </div>
           <p class="status" id="add_definitions_status"></p>
       </div>
@@ -75,6 +77,7 @@
                           <th>Expiry</th>
                           <th>Executed At Expiry</th>
                           <th>Status</th>
+                          <th>Valuation</th>
                           <th>Action</th>
                       </tr>
                   </thead>
