@@ -464,26 +464,7 @@ window.addEventListener('load', function () {
   (0, _oracles.createOracles)(); // start timer
 
   update();
-  runClock(); //console.log(getValue("( one or zero ) and ( scaleK 10 one and zero )")); // sum(max(1,0), sum(10,0)) -> 11
-  //console.log(getValue("one or ( zero and ( scaleK 10 one and zero ) )")); // max(1, sum(0, sum(10, 0))) -> 10
-  //console.log(getValue("( one or ( zero and scaleK 10 one ) ) and zero")); // sum(max(1, sum(0,10)), 0) -> 10
-  //console.log(getValue("one")); // 1
-  //console.log(getValue("scaleK 10 one and one")); // 11
-  //console.log(getValue("truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one")); // 10
-  //console.log(getValue("one or scaleK 10 one")); // 10
-  //console.log(getValue("one or ( zero and scaleK 10 one )")); // 10
-  //console.log(getValue("truncate \"24/12/2017-23:33:33\" ( one )")); // 0
-  //console.log(getValue("one and ( zero and scaleK 10 one )")); // 11
-
-  console.log(getHorizon("truncate \"24/12/2017-23:33:33\" ( zero ) and scaleK 10 ( one )"));
-  console.log(getHorizon("( truncate \"24/12/2017-23:33:33\" ( zero ) and scaleK 10 ( one ) )"));
-  console.log(getValue("one and ( truncate \"24/12/2017-23:33:33\" zero and scaleK 10 one )")); // 11
-
-  console.log(getValue("one or ( truncate \"24/12/2017-23:33:33\" one and scaleK 10 one )")); // 10 -- Error, returns 1
-  //console.log(getValue("one or ( truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one )")); // 10 -- Error, returns 1
-  //console.log(getValue("( one or ( truncate \"24/12/2017-23:33:33\" ( one ) and scaleK 10 one ) ) and one")); // sum(max(1, sum(0, 10)), 1) -> 11
-  //console.log(getValue("( one or ( one and scaleK 10 one ) ) and truncate \"24/12/2017-23:33:33\" ( one )")); // sum(max(1, sum(1,10)), 0) -> 11
-  //console.log(getValue("( one or ( one and scaleK 10 one ) ) and one")); // sum(max(1, sum(1,10)), 1) -> 12
+  runClock();
 }); // TODO: transform input ie decrease spaces
 
 global.addDefinition = function (inputString) {
@@ -575,7 +556,7 @@ function update() {
         for (var _iterator3 = contractsSet[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
           var contract = _step3.value;
 
-          if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
+          if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
             if (contract.toBeExecutedAtHorizon === "yes") {
               // contract contains 'get' - must be executed now
               executeSingleContract(contract);
@@ -830,7 +811,6 @@ function evaluateConditionals(inputString) {
             }
 
             if (leftOverArr[firstIndexClosingBrack + 1] === "and" || leftOverArr[firstIndexClosingBrack + 1] === "or") {
-              console.log("in here");
               ++i;
             }
           } else {
@@ -936,8 +916,8 @@ function evaluate(inputString) {
       } else if (term === "[>]" || term === "[<]" || term === "[==]" || term === "[>=]" || term === "[<=]") {
         // Value Comparison
         // can only compare two contracts - cannot have a logical operator between two contracts
-        var value1 = getValue(part1);
-        var value2 = getValue(part2);
+        var value1 = getValue(part1, "");
+        var value2 = getValue(part2, "");
 
         switch (term) {
           case "[>=]":
@@ -963,7 +943,40 @@ function evaluate(inputString) {
         var horizon2 = getHorizon(part2);
 
         if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
-          var horizonsSet = extractAllSubHorizons(part1, part2);
+          var horizonsSet = extractAllSubHorizons(part1, part2); // go through all dates and call getValue with date parameter
+
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
+
+          try {
+            for (var _iterator4 = horizonsSet[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              var hor = _step4.value;
+              var x = getValue(part1, hor);
+              var y = getValue(part2, hor);
+
+              if (x < y) {
+                return false;
+              }
+            }
+          } catch (err) {
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
+                _iterator4["return"]();
+              }
+            } finally {
+              if (_didIteratorError4) {
+                throw _iteratorError4;
+              }
+            }
+          }
+
+          return true;
+        } else {
+          return false;
         }
       }
     }
@@ -971,16 +984,40 @@ function evaluate(inputString) {
 }
 
 function extractAllSubHorizons(contract1, contract2) {
-  var set1 = new Set(); // whenever we reach one or zero we need to find their horizon
+  var setOfDates = new Set(); // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
+  // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
 
-  var maxHorizon = getHorizon(contract2); // we only want to check for times <= maxHorizon
+  var maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
 
+  setOfDates.add(maxHorizon);
   var contract1HorArr = contract1.split(" ");
   var contract2HorArr = contract2.split(" ");
 
-  for (var i = 0; i < contract1HorArr.length; ++i) {}
+  for (var i = 0; i < contract1HorArr.length; ++i) {
+    var term = contract1HorArr[i];
 
-  for (var i = 0; i < contract1HorArr.length; ++i) {}
+    if (term === "truncate") {
+      var currentHor = (0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(contract1HorArr[i + 1]));
+
+      if (greaterDate(maxHorizon, currentHor)) {
+        setOfDates.add(currentHor);
+      }
+    }
+  }
+
+  for (var i = 0; i < contract2HorArr.length; ++i) {
+    var term = contract2HorArr[i];
+
+    if (term === "truncate") {
+      var currentHor = (0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(contract2HorArr[i + 1]));
+
+      if (greaterDate(maxHorizon, currentHor)) {
+        setOfDates.add(currentHor);
+      }
+    }
+  }
+
+  return setOfDates;
 }
 
 function COMPARISONOPERATOR(string) {
@@ -1043,8 +1080,7 @@ function getHorizon(contractString) {
   }
 }
 
-function getValue(contractString) {
-  console.log("string = " + contractString);
+function getValue(contractString, horizonToCheck) {
   var strArr = contractString.split(" "); // check if string contains conjunction
 
   if (contractString.includes("and") || contractString.includes("or")) {
@@ -1073,56 +1109,46 @@ function getValue(contractString) {
     var part2 = strArr.slice(indexOfMostBalancedConj + 1).join(" ");
     var horizon1 = getHorizon(part1);
     var horizon2 = getHorizon(part2);
-    var value1 = getValue(part1);
-    var value2 = getValue(part2);
-    console.log("comparing horizons");
-    console.log(horizon1);
-    console.log(horizon2);
+    var value1 = getValue(part1, horizonToCheck);
+    var value2 = getValue(part2, horizonToCheck);
 
-    if (!beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
-      console.log("both are infinite");
-
+    if (!beforeCurrentDate(horizon1, horizonToCheck) && !beforeCurrentDate(horizon2, horizonToCheck)) {
       if (mostBalancedConjType === "and") {
         return value1 + value2;
       } else {
         return Math.max(value1, value2);
       }
-    } else if (!beforeCurrentDate(horizon1) && beforeCurrentDate(horizon2)) {
-      console.log("first one is infinite");
+    } else if (!beforeCurrentDate(horizon1, horizonToCheck) && beforeCurrentDate(horizon2, horizonToCheck)) {
       return value1;
-    } else if (beforeCurrentDate(horizon1) && !beforeCurrentDate(horizon2)) {
-      console.log("second one is infinite");
+    } else if (beforeCurrentDate(horizon1, horizonToCheck) && !beforeCurrentDate(horizon2, horizonToCheck)) {
       return value2;
     } else {
       // both have expired - return 0
-      console.log("none are infinite");
       return 0;
     }
   } else {
     // string does not contain connective
-    console.log("String does not have connective");
-    console.log(contractString);
     var value = 1;
 
     if (contractString.includes("zero")) {
-      console.log("returning 0");
       return 0;
     } else {
       for (var i = 0; i < strArr.length; ++i) {
-        if (strArr[i] === "scaleK" && i < strArr.length - 2 && parseFloat(strArr[i + 1])) {
+        if (strArr[i] === "scaleK") {
           // TODO: do not need to check this as we already have checked syntax
           value = value * parseFloat(strArr[i + 1]);
+          ++i;
         } else if (strArr[i] === "give") {
           value = -value;
         }
       }
 
-      if (beforeCurrentDate(getHorizon(contractString))) {
-        console.log("returning 0");
-        return 0;
-      } else {
-        console.log("returning " + value);
+      if (!beforeCurrentDate(getHorizon(contractString), horizonToCheck)) {
+        // its horizon is after, contract has not expired
         return value;
+      } else {
+        // ie contract is expired, it is later than horizonToCheck
+        return 0;
       }
     }
   }
@@ -1438,7 +1464,7 @@ function createContractEntries(contractsArr) {
       acquireBtnToBeDisabled1 = false;
     }
 
-    if (!beforeCurrentDate(getHorizon(conString))) {
+    if (!beforeCurrentDate(getHorizon(conString), "")) {
       // at least one subcontract has not expired yet
       acquireBtnToBeDisabled2 = false;
     }
@@ -1684,7 +1710,7 @@ function createContractObject(inputString) {
   var contract = new _contract.Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString, (0, _contract.translateContract)(recipient, amount, horizonDate, acquireAtHorizon), horizonDate, acquireAtHorizon, "waiting to be executed");
   createTableRow(contract);
 
-  if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
+  if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
     // add expired label
     document.getElementById("td_status_" + contract.id).innerHTML = "expired";
   } else {
@@ -1698,15 +1724,15 @@ function createContractObject(inputString) {
 
 function addToSuperContracts(superKey, contract) {
   if (superContractsMap.has(superKey)) {
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
+    var _iteratorNormalCompletion5 = true;
+    var _didIteratorError5 = false;
+    var _iteratorError5 = undefined;
 
     try {
-      for (var _iterator4 = superContractsMap[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-        var _step4$value = _slicedToArray(_step4.value, 2),
-            superContractId = _step4$value[0],
-            contractsSet = _step4$value[1];
+      for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+        var _step5$value = _slicedToArray(_step5.value, 2),
+            superContractId = _step5$value[0],
+            contractsSet = _step5$value[1];
 
         if (superContractId === superKey) {
           var newSet = contractsSet;
@@ -1716,16 +1742,16 @@ function addToSuperContracts(superKey, contract) {
         }
       }
     } catch (err) {
-      _didIteratorError4 = true;
-      _iteratorError4 = err;
+      _didIteratorError5 = true;
+      _iteratorError5 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
-          _iterator4["return"]();
+        if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
+          _iterator5["return"]();
         }
       } finally {
-        if (_didIteratorError4) {
-          throw _iteratorError4;
+        if (_didIteratorError5) {
+          throw _iteratorError5;
         }
       }
     }
@@ -1740,15 +1766,15 @@ function addToSuperContracts(superKey, contract) {
 }
 
 function deleteFromSuperContracts(superKey, contract) {
-  var _iteratorNormalCompletion5 = true;
-  var _didIteratorError5 = false;
-  var _iteratorError5 = undefined;
+  var _iteratorNormalCompletion6 = true;
+  var _didIteratorError6 = false;
+  var _iteratorError6 = undefined;
 
   try {
-    for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-      var _step5$value = _slicedToArray(_step5.value, 2),
-          superContractId = _step5$value[0],
-          contractsSet = _step5$value[1];
+    for (var _iterator6 = superContractsMap[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+      var _step6$value = _slicedToArray(_step6.value, 2),
+          superContractId = _step6$value[0],
+          contractsSet = _step6$value[1];
 
       if (superContractId === superKey) {
         var newSet = contractsSet;
@@ -1764,16 +1790,16 @@ function deleteFromSuperContracts(superKey, contract) {
       }
     }
   } catch (err) {
-    _didIteratorError5 = true;
-    _iteratorError5 = err;
+    _didIteratorError6 = true;
+    _iteratorError6 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
-        _iterator5["return"]();
+      if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+        _iterator6["return"]();
       }
     } finally {
-      if (_didIteratorError5) {
-        throw _iteratorError5;
+      if (_didIteratorError6) {
+        throw _iteratorError6;
       }
     }
   }
@@ -1792,18 +1818,42 @@ function computeDateString(dateString) {
   return finalDateString;
 }
 
-function beforeCurrentDate(contractDate) {
-  if (contractDate === "infinite") {
-    return false;
-  }
+function beforeCurrentDate(contractDate, horizonToCheck) {
+  if (horizonToCheck === "") {
+    // we want to compare against the current date - so it is valid even if it is equal to
+    if (contractDate === "infinite") {
+      return false;
+    }
 
-  var contractDate = new Date(computeDateString(contractDate));
-  var todayDate = new Date();
+    var contractDate = new Date(computeDateString(contractDate));
+    var todayDate = new Date();
 
-  if (contractDate.getTime() <= todayDate.getTime()) {
-    return true;
+    if (contractDate.getTime() < todayDate.getTime()) {
+      // Note the =
+      return true;
+    } else {
+      return false;
+    }
   } else {
-    return false;
+    // we want to compare against another date, not the current date
+    if (horizonToCheck === "infinite" || contractDate === "infinite") {
+      if (horizonToCheck === "infinite" && contractDate === "infinite") {
+        return false;
+      } else if (horizonToCheck === "infinite") {
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    var contractDate = new Date(computeDateString(contractDate));
+    var dateToCompareAgainst = new Date(computeDateString(horizonToCheck));
+
+    if (contractDate.getTime() < dateToCompareAgainst.getTime()) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
@@ -1853,56 +1903,56 @@ function greaterDate(dateString1, dateString2) {
 }
 
 function executeSuperContract(superKey) {
-  var _iteratorNormalCompletion6 = true;
-  var _didIteratorError6 = false;
-  var _iteratorError6 = undefined;
+  var _iteratorNormalCompletion7 = true;
+  var _didIteratorError7 = false;
+  var _iteratorError7 = undefined;
 
   try {
-    for (var _iterator6 = superContractsMap[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-      var _step6$value = _slicedToArray(_step6.value, 2),
-          superContractId = _step6$value[0],
-          contractsSet = _step6$value[1];
+    for (var _iterator7 = superContractsMap[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+      var _step7$value = _slicedToArray(_step7.value, 2),
+          superContractId = _step7$value[0],
+          contractsSet = _step7$value[1];
 
       if (superContractId === superKey) {
-        var _iteratorNormalCompletion7 = true;
-        var _didIteratorError7 = false;
-        var _iteratorError7 = undefined;
+        var _iteratorNormalCompletion8 = true;
+        var _didIteratorError8 = false;
+        var _iteratorError8 = undefined;
 
         try {
-          for (var _iterator7 = contractsSet[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-            var contract = _step7.value;
+          for (var _iterator8 = contractsSet[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+            var contract = _step8.value;
 
             if (contract.toBeExecutedAtHorizon !== "yes") {
               executeSingleContract(contract);
             }
           }
         } catch (err) {
-          _didIteratorError7 = true;
-          _iteratorError7 = err;
+          _didIteratorError8 = true;
+          _iteratorError8 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
-              _iterator7["return"]();
+            if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
+              _iterator8["return"]();
             }
           } finally {
-            if (_didIteratorError7) {
-              throw _iteratorError7;
+            if (_didIteratorError8) {
+              throw _iteratorError8;
             }
           }
         }
       }
     }
   } catch (err) {
-    _didIteratorError6 = true;
-    _iteratorError6 = err;
+    _didIteratorError7 = true;
+    _iteratorError7 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-        _iterator6["return"]();
+      if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
+        _iterator7["return"]();
       }
     } finally {
-      if (_didIteratorError6) {
-        throw _iteratorError6;
+      if (_didIteratorError7) {
+        throw _iteratorError7;
       }
     }
   }
@@ -1947,14 +1997,14 @@ function callTransferFunction(contract, fromAddress, toAddress) {
           if (bool === 0) {
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
 
-            if (beforeCurrentDate(contract.horizonDate)) {
+            if (beforeCurrentDate(contract.horizonDate, "")) {
               document.getElementById("td_status_" + contract.id).innerHTML = "expired";
               deleteFromSuperContracts(contract.id.split(".")[0], contract);
             }
           } else if (bool === 1) {
             document.getElementById("td_status_" + contract.id).innerHTML = "failed: sender address and recipient address are the same";
 
-            if (beforeCurrentDate(contract.horizonDate)) {
+            if (beforeCurrentDate(contract.horizonDate, "")) {
               document.getElementById("td_status_" + contract.id).innerHTML = "expired";
               deleteFromSuperContracts(contract.id.split(".")[0], contract);
             }
@@ -1972,7 +2022,7 @@ function callTransferFunction(contract, fromAddress, toAddress) {
       //window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
       document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
 
-      if (beforeCurrentDate(contract.horizonDate)) {
+      if (beforeCurrentDate(contract.horizonDate, "")) {
         document.getElementById("td_status_" + contract.id).innerHTML = "expired";
         deleteFromSuperContracts(contract.id.split(".")[0], contract);
       }

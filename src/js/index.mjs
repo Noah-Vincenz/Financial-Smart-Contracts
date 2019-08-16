@@ -110,7 +110,7 @@ function update() {
     // if not get: then disable acquire button
     for (var [superContractId, contractsSet] of superContractsMap) {
         for (let contract of contractsSet) {
-            if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
+            if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
                 if (contract.toBeExecutedAtHorizon === "yes") { // contract contains 'get' - must be executed now
                     executeSingleContract(contract);
                 } else { // contract just contains 'truncate' and not 'get'
@@ -316,7 +316,6 @@ function evaluateConditionals(inputString) {
                             stack.pop();
                         }
                         if (leftOverArr[firstIndexClosingBrack + 1] === "and" || leftOverArr[firstIndexClosingBrack + 1] === "or") {
-                            console.log("in here");
                             ++i;
                         }
                     } else {
@@ -411,8 +410,8 @@ function evaluate(inputString) {
                 // Value Comparison
 
                 // can only compare two contracts - cannot have a logical operator between two contracts
-                var value1 = getValue(part1);
-                var value2 = getValue(part2);
+                var value1 = getValue(part1, "");
+                var value2 = getValue(part2, "");
                 switch(term) {
                     case "[>=]":
                         return value1 >= value2;
@@ -432,6 +431,17 @@ function evaluate(inputString) {
                 var horizon2 = getHorizon(part2);
                 if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
                     var horizonsSet = extractAllSubHorizons(part1, part2);
+                    // go through all dates and call getValue with date parameter
+                    for (let hor of horizonsSet) {
+                        var x = getValue(part1, hor);
+                        var y = getValue(part2, hor);
+                        if (x < y) {
+                            return false;
+                        }
+                    }
+                    return true;
+                } else {
+                    return false;
                 }
             }
         }
@@ -439,17 +449,32 @@ function evaluate(inputString) {
 }
 
 function extractAllSubHorizons(contract1, contract2) {
-    var set1 = new Set();
-    // whenever we reach one or zero we need to find their horizon
-    var maxHorizon = getHorizon(contract2); // we only want to check for times <= maxHorizon
+    var setOfDates = new Set();
+    // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
+    // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
+    var maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+    setOfDates.add(maxHorizon);
     var contract1HorArr = contract1.split(" ");
     var contract2HorArr = contract2.split(" ");
     for (var i = 0; i < contract1HorArr.length; ++i) {
-
+        var term = contract1HorArr[i];
+        if (term === "truncate") {
+            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract1HorArr[i + 1]));
+            if (greaterDate(maxHorizon, currentHor)) {
+                setOfDates.add(currentHor);
+            }
+        }
     }
-    for (var i = 0; i < contract1HorArr.length; ++i) {
-
+    for (var i = 0; i < contract2HorArr.length; ++i) {
+        var term = contract2HorArr[i];
+        if (term === "truncate") {
+            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract2HorArr[i + 1]));
+            if (greaterDate(maxHorizon, currentHor)) {
+                setOfDates.add(currentHor);
+            }
+        }
     }
+    return setOfDates;
 }
 
 function COMPARISONOPERATOR(string) {
@@ -502,7 +527,7 @@ function getHorizon(contractString) {
     }
 }
 
-function getValue(contractString) {
+function getValue(contractString, horizonToCheck) {
     var strArr = contractString.split(" ");
     // check if string contains conjunction
     if (contractString.includes("and") || contractString.includes("or")) {
@@ -529,20 +554,20 @@ function getValue(contractString) {
         var part2 = strArr.slice(indexOfMostBalancedConj + 1).join(" ");
         var horizon1 = getHorizon(part1);
         var horizon2 = getHorizon(part2);
-        var value1 = getValue(part1);
-        var value2 = getValue(part2);
-        if (!beforeCurrentDate(horizon1)
-          && !beforeCurrentDate(horizon2)) {
+        var value1 = getValue(part1, horizonToCheck);
+        var value2 = getValue(part2, horizonToCheck);
+        if (!beforeCurrentDate(horizon1, horizonToCheck)
+          && !beforeCurrentDate(horizon2, horizonToCheck)) {
             if (mostBalancedConjType === "and") {
                 return value1 + value2;
             } else {
                 return Math.max(value1, value2);
             }
-        } else if (!beforeCurrentDate(horizon1)
-          && beforeCurrentDate(horizon2)) {
+        } else if (!beforeCurrentDate(horizon1, horizonToCheck)
+          && beforeCurrentDate(horizon2, horizonToCheck)) {
             return value1;
-        } else if (beforeCurrentDate(horizon1)
-          && !beforeCurrentDate(horizon2)) {
+        } else if (beforeCurrentDate(horizon1, horizonToCheck)
+          && !beforeCurrentDate(horizon2, horizonToCheck)) {
             return value2;
         } else { // both have expired - return 0
             return 0;
@@ -554,16 +579,17 @@ function getValue(contractString) {
             return 0;
         } else {
             for (var i = 0; i < strArr.length; ++i) {
-                if (strArr[i] === "scaleK" && i < strArr.length - 2 && parseFloat(strArr[i + 1])) { // TODO: do not need to check this as we already have checked syntax
+                if (strArr[i] === "scaleK") { // TODO: do not need to check this as we already have checked syntax
                     value = value * parseFloat(strArr[i + 1]);
+                    ++i;
                 } else if (strArr[i] === "give") {
                     value = -value;
                 }
             }
-            if (beforeCurrentDate(getHorizon(contractString))) {
-                return 0;
-            } else {
+            if (!beforeCurrentDate(getHorizon(contractString), horizonToCheck)) { // its horizon is after, contract has not expired
                 return value;
+            } else { // ie contract is expired, it is later than horizonToCheck
+                return 0;
             }
         }
     }
@@ -833,7 +859,7 @@ function createContractEntries(contractsArr) {
         if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
             acquireBtnToBeDisabled1 = false;
         }
-        if (!beforeCurrentDate(getHorizon(conString))) { // at least one subcontract has not expired yet
+        if (!beforeCurrentDate(getHorizon(conString), "")) { // at least one subcontract has not expired yet
             acquireBtnToBeDisabled2 = false;
         }
         createContractObject(conString);
@@ -1046,7 +1072,7 @@ function createContractObject(inputString) {
 
     createTableRow(contract);
 
-    if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate)) {
+    if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
         // add expired label
         document.getElementById("td_status_" + contract.id).innerHTML = "expired";
     } else {
@@ -1103,17 +1129,36 @@ function computeDateString(dateString) {
     return finalDateString;
 }
 
-function beforeCurrentDate(contractDate) {
-    if (contractDate === "infinite") {
-        return false;
-    }
-    var contractDate = new Date(computeDateString(contractDate));
-    var todayDate = new Date();
-    if (contractDate.getTime() <= todayDate.getTime()) {
-        return true;
-    } else {
-        return false;
-    }
+function beforeCurrentDate(contractDate, horizonToCheck) {
+  if (horizonToCheck === "") { // we want to compare against the current date - so it is valid even if it is equal to
+      if (contractDate === "infinite") {
+          return false;
+      }
+      var contractDate = new Date(computeDateString(contractDate));
+      var todayDate = new Date();
+      if (contractDate.getTime() < todayDate.getTime()) { // Note the =
+          return true;
+      } else {
+          return false;
+      }
+  } else { // we want to compare against another date, not the current date
+      if (horizonToCheck === "infinite" || contractDate === "infinite") {
+          if (horizonToCheck === "infinite" && contractDate === "infinite") {
+              return false;
+          } else if (horizonToCheck === "infinite") {
+              return true;
+          } else {
+              return false;
+          }
+      }
+      var contractDate = new Date(computeDateString(contractDate));
+      var dateToCompareAgainst = new Date(computeDateString(horizonToCheck));
+      if (contractDate.getTime() < dateToCompareAgainst.getTime()) {
+          return true;
+      } else {
+          return false;
+      }
+  }
 }
 
 function equalDates(dateString1, dateString2) {
@@ -1203,13 +1248,13 @@ function callTransferFunction(contract, fromAddress, toAddress) {
                     var bool = parseInt(boolean);
                     if (bool === 0) {
                         document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
-                        if (beforeCurrentDate(contract.horizonDate)) {
+                        if (beforeCurrentDate(contract.horizonDate, "")) {
                             document.getElementById("td_status_" + contract.id).innerHTML = "expired";
                             deleteFromSuperContracts(contract.id.split(".")[0], contract);
                         }
                     } else if (bool === 1) {
                         document.getElementById("td_status_" + contract.id).innerHTML = "failed: sender address and recipient address are the same";
-                        if (beforeCurrentDate(contract.horizonDate)) {
+                        if (beforeCurrentDate(contract.horizonDate, "")) {
                             document.getElementById("td_status_" + contract.id).innerHTML = "expired";
                             deleteFromSuperContracts(contract.id.split(".")[0], contract);
                         }
@@ -1226,7 +1271,7 @@ function callTransferFunction(contract, fromAddress, toAddress) {
         } else {
             //window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
-            if (beforeCurrentDate(contract.horizonDate)) {
+            if (beforeCurrentDate(contract.horizonDate, "")) {
                 document.getElementById("td_status_" + contract.id).innerHTML = "expired";
                 deleteFromSuperContracts(contract.id.split(".")[0], contract);
             }
