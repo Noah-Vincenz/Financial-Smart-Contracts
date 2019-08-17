@@ -23,7 +23,6 @@ import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
 
 var numberOfSubContracts = 0;
 var numberOfContracts = 0;
-//var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
 var superContractsMap = new Map(); // map from superContract id to set of contract objects contained within super contract
 var agreedOracleAddress;
 var account1Deposited = false;
@@ -317,11 +316,7 @@ function evaluateConditionals(inputString) {
 
                 // pop from stack until we have read 'if'
                 while (stack[stack.length - 1] !== "if") {
-                    if (ifCondition === "") {
-                        ifCondition = stack.pop();
-                    } else {
-                        ifCondition = stack.pop() + " " + ifCondition;
-                    }
+                    ifCondition = ifCondition === "" ? stack.pop() : stack.pop() + " " + ifCondition;
                 }
                 stack.pop(); // popping 'if' off stack
                 --ifsToBeMatched;
@@ -530,45 +525,70 @@ function COMPARISONOPERATOR(string) {
     return false;
 }
 
+
 function getHorizon(contractString) {
-    // Loops through the whole contract to find the largest horizon
-    if (!contractString.includes("truncate")) {
-        return "infinite";
-    } else {
-        // Find minimum horizon, but beforeCurrentDate() must return false
-        var strArr = contractString.split(" ");
-        var indexOfFirstTruncate = strArr.indexOf("truncate");
-        var substringArr = strArr.slice(indexOfFirstTruncate + 1);
-        var maxHorizon = ""; // setting first horizon as empty string
-        var comeAcrossTruncate = false;
-        for (var i = 0; i < strArr.length; ++i) {
-            if (strArr[i] === "truncate") {
-                // obtain c from 'truncate t c'
-                var truncDate = strArr[i + 1];
-                var oscs = obtainSubContractString(strArr.slice(i + 2));
-                var c = oscs[0];
-                // obtain c's previous horizon
-                var prevHorizon = getHorizon(c);
-                // compare previous horizon with new horizon t and get min
-                var currentHor = truncDate;
-                if (greaterDate(lTrimDoubleQuotes(rTrimDoubleQuotes(truncDate)), lTrimDoubleQuotes(rTrimDoubleQuotes(prevHorizon)))) {
-                    currentHor = prevHorizon;
-                }
-                comeAcrossTruncate = true;
-                if (maxHorizon === "" || greaterDate(lTrimDoubleQuotes(rTrimDoubleQuotes(currentHor)), lTrimDoubleQuotes(rTrimDoubleQuotes(maxHorizon)))) {
-                    maxHorizon = currentHor;
-                }
-                i += oscs[1];
-            } else if (strArr[i] === "and" || strArr[i] === "or") { // have reached end of subcontract
-                if (!comeAcrossTruncate) { // if we have not come across a "truncate" then this subcontract's horizon is infinite
-                    return "infinite";
-                }
-                comeAcrossTruncate = false;
-            } else if (i === strArr.length - 1 && !comeAcrossTruncate) {
+    // Loops through the whole contract once to find the largest horizon
+    // Find minimum horizon, but beforeCurrentDate() must return false
+    var strArr = contractString.split(" ");
+    var maxHorizon = ""; // setting first horizon as empty string
+    var comeAcrossTruncate = false;
+    for (var i = 0; i < strArr.length; ++i) {
+        if (strArr[i] === "truncate") {
+            // obtain c from 'truncate t c'
+            var truncDate = strArr[i + 1];
+            var oscs = obtainSubContractString(strArr, i + 2);
+            var c = oscs[0];
+            // obtain c's previous horizon
+            var prevHorizon = getHorizon(c);
+            // compare previous horizon with new horizon t and get min
+            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(truncDate));
+            if (greaterDate(currentHor, prevHorizon)) {
+                currentHor = prevHorizon;
+            }
+            comeAcrossTruncate = true;
+            if (maxHorizon === "" || greaterDate(currentHor, maxHorizon)) {
+                maxHorizon = currentHor;
+            }
+            i += oscs[1];
+        } else if (strArr[i] === "and" || strArr[i] === "or") { // have reached end of subcontract
+            if (!comeAcrossTruncate) { // if we have not come across a "truncate" then this subcontract's horizon is infinite
                 return "infinite";
             }
+            comeAcrossTruncate = false;
+        } else if (i === strArr.length - 1 && !comeAcrossTruncate) {
+            return "infinite";
         }
-        return lTrimDoubleQuotes(rTrimDoubleQuotes(maxHorizon));
+    }
+    return maxHorizon;
+}
+
+function obtainSubContractString(array, indexToStartFrom) {
+    // returns subcontractString and the number of items in the string
+    var stringToReturn = "";
+    if (array[indexToStartFrom] === "(") {
+        var openingParens = 1;
+        for (var i = indexToStartFrom + 1; i < array.length; ++i) {
+            // if string starts with opening paren wait until get balanced closing paren
+            var term = array[i];
+            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
+            if (term === "(") {
+                ++openingParens;
+            } else if (term === ")") {
+                --openingParens;
+            }
+            if (openingParens === 0) {
+                return [stringToReturn, i + 1 - indexToStartFrom];
+            }
+        }
+    } else {
+        // else wait until reading 'zero' or 'one'
+        for (var i = indexToStartFrom; i < array.length; ++i) {
+            var term = array[i];
+            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
+            if (term === "one" || term === "zero") {
+                return [stringToReturn, i + 1 - indexToStartFrom];
+            }
+        }
     }
 }
 
@@ -609,11 +629,7 @@ function decompose(termArr) {
                 contractString = "";
             }
         } else if (term === "zero" || term === "one") {
-            if (contractString === "") {
-                contractString = term;
-            } else {
-                contractString = contractString + " " + term;
-            }
+            contractString = contractString === "" ? term : contractString + " " + term;
             var combinatorString = parseStack[parseStack.length - 1];
             var closingParensString = closingParensStack[closingParensStack.length - 1];
             if (conjWaitingToBeMatched) {
@@ -654,16 +670,10 @@ function decompose(termArr) {
                     closingParensStack.push(closingParensStack[closingParensStack.length - 1] + " )");
                 }
             }
-        } else if (contractString === "") {
-            contractString = term;
         } else {
-            contractString = contractString + " " + term;
+            contractString = contractString === "" ? term : contractString + " " + term;
         }
-        if (contractParsed === "") {
-            contractParsed = term;
-        } else {
-            contractParsed = contractParsed + " " + term;
-        }
+        contractParsed = contractParsed === "" ? term : contractParsed + " " + term;
     }
     // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
     if (contractString !== "") {
@@ -752,30 +762,6 @@ function sameDayAsCurrentDate(contractHorizon, horizonToCheck) {
             return true;
         }
         return false;
-    }
-}
-
-function obtainSubContractString(array) {
-    // if string starts with opening paren wait until get balanced closing paren
-    if (array[0] === "(") {
-        var openingParens = 1;
-        for (var i = 1; i < array.length; ++i) {
-            if (array[i] === "(") {
-                ++openingParens;
-            } else if (array[i] === ")") {
-                --openingParens;
-            }
-            if (openingParens === 0) {
-                return [array.slice(0, i + 1).join(' '), i + 1];
-            }
-        }
-    } else {
-        // else wait until reading 'zero' or 'one'
-        for (var i = 0; i < array.length; ++i) {
-            if (array[i] === "one" || array[i] === "zero") {
-                return [array.slice(0, i + 1).join(' '), i + 1];
-            }
-        }
     }
 }
 
@@ -966,11 +952,7 @@ function getAllSubcontracts(superKey) {
         for (var [superContractId, contractsSet] of superContractsMap) {
             if (superContractId === superKey) {
                 for (let contract of contractsSet) {
-                    if (finalContractString === "") {
-                        finalContractString = contract.contractString;
-                    } else {
-                        finalContractString = finalContractString + " and " + contract.contractString;
-                    }
+                    finalContractString = finalContractString === "" ? contract.contractString : finalContractString + " and " + contract.contractString;
                 }
             }
         }
@@ -1157,10 +1139,8 @@ function decomposeAnds(contractString) {
                     closingParensStack.push(closingParensStack[closingParensStack.length - 1] + " )");
                 }
             }
-        } else if (contractString === "") {
-            contractString = term;
         } else {
-            contractString = contractString + " " + term;
+            contractString = contractString === "" ? term : contractString + " " + term;
         }
     }
     // this happens if there is a balanced or conjunction at the end and the second part still needs to be added

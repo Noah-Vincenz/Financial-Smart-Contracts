@@ -145,12 +145,12 @@ export function rTrimBrace(str) {
 
 export function lTrimDoubleQuotes(str) {
     if (str == null) return str;
-    return str.replace(/^\"+/g, '');
+    return str.replace(/^\"/, '');
 }
 
 export function rTrimDoubleQuotes(str) {
     if (str == null) return str;
-    return str.replace(/\"$/g, '');
+    return str.replace(/\"$/, '');
 }
 
 export function trimSemiColon(str) {
