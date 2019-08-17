@@ -32,7 +32,7 @@ var observablesArr = ["libor3m", "tempInLondon"];
 var uniqueID = 0; // id to keep track of divs for contract choices (and remove these)
 var acquireBtnToBeDisabled1 = true;
 var acquireBtnToBeDisabled2 = true;
-var contractsBeingDecomposed = 0;
+var contractsBeingDecomposed = 1;
 
 $(function(){
     var $select = $(".custom_select");
@@ -878,8 +878,10 @@ function cleanUpBeforeDecomp(inputString) {
 
 global.processContract = function(inputString, initialDecomposition) {
     ++uniqueID;
+    //++contractsBeingDecomposed;
     if (initialDecomposition) {
         // This is the case only when this function is triggered by the 'make transaction' button
+        contractsBeingDecomposed = 1;
         removeChildren("button_choices_container"); // NEEDED?
         acquireBtnToBeDisabled1 = true;
         acquireBtnToBeDisabled2 = true;
@@ -899,38 +901,26 @@ global.processContract = function(inputString, initialDecomposition) {
         var part2 = decomposedResult[1];
         var mostBalancedConj = decomposedResult[2];
         if (mostBalancedConj === "and") {
-            contractsBeingDecomposed += 2;
+            ++contractsBeingDecomposed;
             processContract(part1, false);
             processContract(part2, false);
         } else {
+          /*
             if (contractsBeingDecomposed > 0) {
-                --contractsBeingDecomposed;
+                --
             }
+            */
             addChoices([part1, part2], uniqueID);
         }
     }
     else { // input does not contain 'or'
+      /*
         if (contractsBeingDecomposed > 0) {
             --contractsBeingDecomposed;
-        }
+        } */
         var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
+        contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
         createContractEntries(contractsArr);
-    }
-    if (!document.getElementById("button_choices_container").hasChildNodes() && contractsBeingDecomposed === 0) {
-        // now we can add the super contract row
-        let tr = document.getElementById("my_table").insertRow(1);
-        tr.className = "super_contract_row";
-        var td;
-        tr.appendChild(td = document.createElement("td"));
-        var superContractKey = numberOfContracts.toString();
-        td.innerHTML = superContractKey;
-        for (var i = 0; i < 5; ++i) {
-            tr.appendChild(td = document.createElement("td"));
-        }
-        createValuationSelect(tr, superContractKey);
-        createAcquireButton(tr, superContractKey);
-        ++numberOfContracts;
-        numberOfSubContracts = 0;
     }
 };
 
@@ -1128,7 +1118,7 @@ function createAcquireButton(tr, id) {
         if (correctUserTryingToAcquire()) {
             executeSuperContract(id);
         } else {
-            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the one owner of the contract you are trying to acquire.";
+            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the owner of the contract you are trying to acquire.";
         }
     };
     td.appendChild(btn);
@@ -1173,6 +1163,7 @@ function decomposeAnds(contractString) {
         var term = termArr[i];
         if (term === "and") { // we have reached the end of a subcontract whenever 'and' is read
             if (contractString !== "") {
+
                 if (openingParens === 0) {
                     finalContractsArr.push(contractString);
                 } else if (parseStack.length > 0) {
@@ -1189,10 +1180,12 @@ function decomposeAnds(contractString) {
             --openingParens;
             var combinatorString = parseStack.pop();
             var closingParensString = closingParensStack.pop();
-            if (contractString !== "") {
+            if (contractString !== "" && combinatorString !== undefined && closingParensString !== undefined) {
                 finalContractsArr.push(combinatorString + " ( " + contractString + closingParensString);
-                contractString = "";
+            } else {
+                finalContractsArr.push(contractString);
             }
+            contractString = "";
         } else if (term === "(") {
             ++openingParens;
             if (contractString !== "") {
@@ -1359,20 +1352,53 @@ function createContractObject(inputString) {
             acquireAtHorizon = "yes";
         }
     }
+
     const contract = new Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
 
-    createTableRow(contract);
-
-    if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
-        // add expired label
-        document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+    var fromAddress = recipient === 1 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
+    var balanceLabel = recipient === 1 ? document.getElementById("holder_balance_p").innerHTML.split() : document.getElementById("counter_party_balance_p").innerHTML;
+    const regex = new RegExp("(Balance:\\s)(.+)(ETH)");
+    var matchObj = regex.exec(balanceLabel); // cannot check Rust balance as this will cause a delay. However, this is fine since label balance gets updated directly after transfer
+    var balance = parseFloat(matchObj[2]);
+    // uncomment this for testing, comment below - > there will be no super contract row
+    // createTableRow(contract); // TESTING
+    if (balance >= parseFloat(amount) && enoughBalanceForCapacity(contract, balance)) {
+        createTableRow(contract);
+        ++numberOfSubContracts;
+        if (horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
+            // add expired label
+            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
+        } else {
+            addToSuperContracts(numberOfContracts.toString(), contract); // contract is only added to pending contracts map if it is still valid
+            document.getElementById("td_status_" + contract.id).innerHTML = "waiting to be executed";
+        }
+        addSuperContractRow();
     } else {
-        addToSuperContracts(numberOfContracts.toString(), contract); // contract is only added to pending contracts map if it is still valid
-        document.getElementById("td_status_" + contract.id).innerHTML = "waiting to be executed";
+        document.getElementById("transaction_status").innerHTML = "Insufficient funds. The sending party does not have enough Ether in their account. Please deposit before adding additional contracts.";
+        addSuperContractRow();
     }
-    ++numberOfSubContracts;
+}
+
+function addSuperContractRow() {
+    --contractsBeingDecomposed;
+    if (!document.getElementById("button_choices_container").hasChildNodes() && contractsBeingDecomposed === 0 && numberOfSubContracts !== 0) {
+        // now we can add the super contract row
+        let tr = document.getElementById("my_table").insertRow(1);
+        tr.className = "super_contract_row";
+        var td;
+        tr.appendChild(td = document.createElement("td"));
+        var superContractKey = numberOfContracts.toString();
+        td.innerHTML = superContractKey;
+        for (var i = 0; i < 5; ++i) {
+            tr.appendChild(td = document.createElement("td"));
+        }
+        createValuationSelect(tr, superContractKey);
+        createAcquireButton(tr, superContractKey);
+        ++numberOfContracts;
+        numberOfSubContracts = 0;
+    }
 }
 
 function addToSuperContracts(superKey, contract) {
@@ -1534,7 +1560,6 @@ function executeSingleContract(contract) {
 
 function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
-        // do local balance check as contract does not update as quickly
         if (balance >= parseFloat(contract.amount)) {
             transfer(fromAddress, toAddress, parseFloat(contract.amount)).then(transferTxHash => {
                 watchTransferEvent().then(boolean => {
@@ -1562,7 +1587,6 @@ function callTransferFunction(contract, fromAddress, toAddress) {
                 });
             });
         } else {
-            //window.alert("The sender address does not have enough Ether for this transfer. Please deposit more Ether into the account.");
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
             if (beforeCurrentDate(contract.horizonDate, "")) {
                 document.getElementById("td_status_" + contract.id).innerHTML = "expired";
@@ -1570,6 +1594,25 @@ function callTransferFunction(contract, fromAddress, toAddress) {
             }
         }
     });
+}
+
+function enoughBalanceForCapacity(contract, balance) {
+    // compute sum of transactions in Map
+    var sum = 0;
+    for (var [superContractId, contractsSet] of superContractsMap) {
+        for (let contractInMap of contractsSet) {
+            sum += parseFloat(contractInMap.amount);
+        }
+    }
+    if (contract.recipient === 0) { // owner is recipient - if sum is +ve then that means holder is receiving and counter party paying
+        sum = -sum; // negate the sum for the counterparty
+    }
+    // subtract final sum + new tx amount from balance and check if >= 0
+    if ((balance - (sum + parseFloat(contract.amount))) >= 0) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 function sleep(ms) {
@@ -1677,9 +1720,11 @@ function createButton (contractString, buttonId, divId) {
     container.appendChild(button);
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        removeChildren("section_" + divId);
-        container.remove();
-        processContract(button.innerHTML, false);
+        if (correctUserTryingToAcquire()) {
+            removeChildren("section_" + divId);
+            container.remove();
+            processContract(button.innerHTML, false);
+        }
     });
 }
 
