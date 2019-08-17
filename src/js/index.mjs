@@ -133,7 +133,7 @@ function replaceUserDefinitions(inputString) {
             for (var j = 1; j < lhsArr.length; ++j) { // skipping first index as this is definition
                 const regex2 = new RegExp("(.+\\s)?(" + lhsArr[j] + ")(\\s.+)?");
                 var matchObj2 = regex2.exec(newValue);
-                newValue = matchObj2[1] + endPartArr[j] + matchObj2[3]; 
+                newValue = matchObj2[1] + endPartArr[j] + matchObj2[3];
             }
             endPartArr.splice(0, lhsArr.length);
 
@@ -1220,8 +1220,8 @@ function parsesSuccessfullyForSyntax(contractString) {
                 break;
 
             case "give":
-                if (i === strArr.length - 1 || (i < strArr.length - 1 && nextTerm !== "one" && nextTerm !== "zero")) {
-                    document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": give should be followed by one or zero.";
+                if (i === strArr.length - 1 || (i < strArr.length - 1 && nextTerm !== "(")) {
+                    document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": give should be followed by opening parenthesis.";
                     return false;
                 }
                 break;
@@ -1243,13 +1243,13 @@ function parsesSuccessfullyForSyntax(contractString) {
                 break;
             default:
                 if (parseFloat(term) || observablesArr.includes(term)) {
-                    if (i === 0 || i === strArr.length - 1 || prevTerm !== "scaleK") {
-                        document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a float/observable value should be after scaleK.";
+                    if (i === 0 || i === strArr.length - 1 || prevTerm !== "scaleK" || nextTerm !== "(") {
+                        document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a float/observable value should be after scaleK and the float/observable should be followed by parenthesis.";
                         return false;
                     }
                 } else if (isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))) {
-                    if (i === 0 || i === strArr.length - 1 || prevTerm !== "truncate") {
-                        document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a date should be after truncate.";
+                    if (i === 0 || i === strArr.length - 1 || prevTerm !== "truncate" || nextTerm !== "(") {
+                        document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a date should be after truncate and the date should be followed by parenthesis.";
                         return false;
                     }
                 } else {

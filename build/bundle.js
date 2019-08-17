@@ -1913,8 +1913,8 @@ function parsesSuccessfullyForSyntax(contractString) {
         break;
 
       case "give":
-        if (i === strArr.length - 1 || i < strArr.length - 1 && nextTerm !== "one" && nextTerm !== "zero") {
-          document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": give should be followed by one or zero.";
+        if (i === strArr.length - 1 || i < strArr.length - 1 && nextTerm !== "(") {
+          document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": give should be followed by opening parenthesis.";
           return false;
         }
 
@@ -1938,13 +1938,13 @@ function parsesSuccessfullyForSyntax(contractString) {
 
       default:
         if (parseFloat(term) || observablesArr.includes(term)) {
-          if (i === 0 || i === strArr.length - 1 || prevTerm !== "scaleK") {
-            document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a float/observable value should be after scaleK.";
+          if (i === 0 || i === strArr.length - 1 || prevTerm !== "scaleK" || nextTerm !== "(") {
+            document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a float/observable value should be after scaleK and the float/observable should be followed by parenthesis.";
             return false;
           }
         } else if (isDate((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(term)))) {
-          if (i === 0 || i === strArr.length - 1 || prevTerm !== "truncate") {
-            document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a date should be after truncate.";
+          if (i === 0 || i === strArr.length - 1 || prevTerm !== "truncate" || nextTerm !== "(") {
+            document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a date should be after truncate and the date should be followed by parenthesis.";
             return false;
           }
         } else {
