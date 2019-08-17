@@ -21,10 +21,6 @@ import {depositCollateral, getSelectedMetaMaskAccount, getSelectedNetwork, holde
 
 import {Oracle, createOracles, getOracleByAddress} from "./oracles.mjs";
 
-//TODO: add window for user to add definitions by typing 'c1 = give zero' then whenever parsing through string we replace every c1 with its value in the map
-//TODO: add gas estimation of transfers
-//TODO: go over conditionalEvaluation to check if correct for all cases
-
 var numberOfSubContracts = 0;
 var numberOfContracts = 0;
 //var stringToAddToBeginning = ""; // string that is added to the beginning of the contract when outer most does not contain any conjunctions ie. 'truncate' will simply be added to contract string and rest will be decomposed
@@ -59,11 +55,9 @@ window.addEventListener('load', function() {  // commented for testing purposes
     // start timer
     update();
     runClock();
+    console.log(getValue("scaleK 10 (one and one)"));
 });
 
-// TODO: be able to add the following
-// zcb t x = scaleK x ( get ( truncate t ( one )))
-// in input this will eb zcb "12/11/2012-12:33:33" 10
 global.addDefinition = function(inputString) {
     document.getElementById("add_definitions_status").innerHTML = "";
     // remove multiple whitespaces
@@ -580,9 +574,107 @@ function getHorizon(contractString) {
 }
 
 function getValue(contractString, horizonToCheck) {
-    var strArr = contractString.split(" ");
+    var termArr = contractString.split(" ");
     // check if string contains conjunction
     if (contractString.includes("and") || contractString.includes("or")) {
+        var openingParens = 0;
+        var closingParens = 0;
+        var contractString = "";
+        var parseStack = [];
+        var contractsStack = [];
+        var closingParensStack = [];
+        var mostBalancedConj = "";
+        var mostBalancedConjBalance = termArr.length - 1;
+        var conjWaitingToBeMatched = false; // set to true when reading conjunction and then set to false when reading another conjunction or reaching end
+        for (var i = 0; i < termArr.length; ++i) {
+            var term = termArr[i];
+            if (term === "and" || term === "or") { // we have reached the end of a subcontract whenever 'and' is read
+                if (openingParens === closingParens) { // found outer most conjunct
+                    mostBalancedConj = term;
+                    contractsStack[0] = termArr.slice(0, i).join(' ');
+                    contractsStack[1] = termArr.slice(i + 1).join(' ');
+                    break;
+                } else if (openingParens > closingParens && (openingParens - closingParens) < mostBalancedConjBalance) {
+                    mostBalancedConjBalance = openingParens - closingParens;
+                    mostBalancedConj = term;
+                    var combinatorString = parseStack[parseStack.length - 1];
+                    var closingParensString = closingParensStack[closingParensStack.length - 1];
+                    if (contractString !== "") {
+                        if (combinatorString !== undefined) {
+                            contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                        } else if (closingParensString !== undefined){
+                            contractsStack[0] = contractString + closingParensString;
+                        } else {
+                            contractsStack[0] = contractString;
+                        }
+                    }
+                    conjWaitingToBeMatched = true;
+                    contractString = "";
+                }
+            } else if (term === "zero" || term === "one") {
+                if (contractString === "") {
+                    contractString = term;
+                } else {
+                    contractString = contractString + " " + term;
+                }
+                var combinatorString = parseStack[parseStack.length - 1];
+                var closingParensString = closingParensStack[closingParensStack.length - 1];
+                if (conjWaitingToBeMatched) {
+                    if (combinatorString !== undefined && closingParensString !== undefined) {
+                        contractsStack[1] = combinatorString + " ( " + contractString + closingParensString;
+                    } else {
+                        contractsStack[1] = contractString;
+                    }
+                    conjWaitingToBeMatched = false;
+                    contractString = "";
+                } else {
+                    if (combinatorString !== undefined && closingParensString !== undefined) {
+                        contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                    } else {
+                        contractsStack[0] = contractString;
+                    }
+                    contractString = "";
+                }
+            } else if (term === ")") {
+                // as soon as closing paren is read we have found a contract
+                ++closingParens;
+                var combinatorString = parseStack.pop();
+                var closingParensString = closingParensStack.pop();
+            } else if (term === "(") {
+                ++openingParens;
+                if (contractString !== "") {
+                    if (parseStack.length > 0) {
+                        parseStack.push(parseStack[parseStack.length - 1] + " ( " + contractString);
+                    } else {
+                        parseStack.push(contractString);
+                    }
+                    contractString = "";
+                }
+                if (termArr[i - 1] !== "and" && i !== 0) {
+                    if (closingParensStack.length === 0) {
+                        closingParensStack.push(" )");
+                    } else {
+                        closingParensStack.push(closingParensStack[closingParensStack.length - 1] + " )");
+                    }
+                }
+            } else if (contractString === "") {
+                contractString = term;
+            } else {
+                contractString = contractString + " " + term;
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+        /*
         // find most balanced conjunction
         var indexOfMostBalancedConj = 0;
         var mostBalancedConjType = "";
@@ -602,7 +694,7 @@ function getValue(contractString, horizonToCheck) {
             }
         }
         // split contract by mostBalanced conj and perform getValue and getHorizon on both parts
-        var part1 = strArr.slice(0, indexOfMostBalancedConj).join(" ");
+        var part1 = strArr.slice(0, indexOfMostBalancedConj).join(" "); // TODO: no, part1 should include its combinators from before hand
         var part2 = strArr.slice(indexOfMostBalancedConj + 1).join(" ");
         var horizon1 = getHorizon(part1);
         var horizon2 = getHorizon(part2);
@@ -624,17 +716,18 @@ function getValue(contractString, horizonToCheck) {
         } else { // both have expired - return 0
             return 0;
         }
+    */
     } else {
         // string does not contain connective
         var value = 1;
         if (contractString.includes("zero")) {
             return 0;
         } else {
-            for (var i = 0; i < strArr.length; ++i) {
-                if (strArr[i] === "scaleK") { // TODO: do not need to check this as we already have checked syntax
-                    value = value * parseFloat(strArr[i + 1]);
+            for (var i = 0; i < termArr.length; ++i) {
+                if (termArr[i] === "scaleK") { // TODO: do not need to check this as we already have checked syntax
+                    value = value * parseFloat(termArr[i + 1]);
                     ++i;
-                } else if (strArr[i] === "give") {
+                } else if (termArr[i] === "give") {
                     value = -value;
                 }
             }
@@ -731,7 +824,8 @@ global.decompose = function(inputString, initialDecomposition) {
       var termArr = inputString.split(" ");
       var openingParens = 0;
       var closingParens = 0;
-      var contractString = "";
+      var contractString = ""; // keeps track of current sub string that is being added to
+      var contractParsed = ""; // keeps track of the whole string parsed so far so we do not need to spit string for efficiency reasons
       var parseStack = [];
       var contractsStack = [];
       var closingParensStack = [];
@@ -743,7 +837,7 @@ global.decompose = function(inputString, initialDecomposition) {
           if (term === "and" || term === "or") { // we have reached the end of a subcontract whenever 'and' is read
               if (openingParens === closingParens) { // found outer most conjunct
                   mostBalancedConj = term;
-                  contractsStack[0] = termArr.slice(0, i).join(' ');
+                  contractsStack[0] = contractParsed;
                   contractsStack[1] = termArr.slice(i + 1).join(' ');
                   break;
               } else if (openingParens > closingParens && (openingParens - closingParens) < mostBalancedConjBalance) {
@@ -813,6 +907,11 @@ global.decompose = function(inputString, initialDecomposition) {
               contractString = term;
           } else {
               contractString = contractString + " " + term;
+          }
+          if (contractParsed === "") {
+              contractParsed = term;
+          } else {
+              contractParsed = contractParsed + " " + term;
           }
       }
       // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
