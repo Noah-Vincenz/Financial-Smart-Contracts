@@ -434,13 +434,13 @@ function evaluate(inputString) {
                 var horizon2 = getHorizon(part2);
                 switch(term) {
                     case "{>=}":
-                        return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+                        return !greaterDate(horizon2, horizon1);
                     case "{>}":
                         return greaterDate(horizon1, horizon2);
                     case "{<=}":
-                        return !greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
-                    case "{<}":
                         return !greaterDate(horizon1, horizon2);
+                    case "{<}":
+                        return greaterDate(horizon2, horizon1);
                     case "{==}":
                         return equalDates(horizon1, horizon2);
                     default:
@@ -465,34 +465,100 @@ function evaluate(inputString) {
                         return value1 === value2;
                     default:
                 }
-            } else if (term === ">=") {
-                // Dominance
+            } else if (term === ">=" || term === ">" || term === "<=" || term === "<" || term === "==") {
+                // Dominance Comparison
                 var horizon1 = getHorizon(part1);
                 var horizon2 = getHorizon(part2);
-                if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
-                    var horizonsSet = extractAllSubHorizons(part1, part2);
-                    // go through all dates and call getValue with date parameter
-                    for (let hor of horizonsSet) {
-                        var x = getValue(part1, hor);
-                        var y = getValue(part2, hor);
-                        if (x < y) {
+                var horizonsSet = extractAllSubHorizons(part1, part2, term);
+                // go through all dates and call getValue with date parameter
+                switch(term) {
+                    case ">=":
+                        if (!greaterDate(horizon2, horizon1)) {
+                            for (let hor of horizonsSet) {
+                                var value1 = getValue(part1, hor);
+                                var value2 = getValue(part2, hor);
+                                if (value1 < value2) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        } else {
                             return false;
                         }
-                    }
-                    return true;
-                } else {
-                    return false;
+                        break;
+                    case ">":
+                        if (greaterDate(horizon1, horizon2)) {
+                            for (let hor of horizonsSet) {
+                                var value1 = getValue(part1, hor);
+                                var value2 = getValue(part2, hor);
+                                if (value1 <= value2) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                        break;
+                    case "<=":
+                        if (!greaterDate(horizon1, horizon2)) {
+                            for (let hor of horizonsSet) {
+                                var value1 = getValue(part1, hor);
+                                var value2 = getValue(part2, hor);
+                                if (value1 > value2) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                        break;
+                    case "<":
+                        if (greaterDate(horizon2, horizon1)) {
+                            for (let hor of horizonsSet) {
+                                var value1 = getValue(part1, hor);
+                                var value2 = getValue(part2, hor);
+                                if (value1 >= value2) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                        break;
+                    case "==":
+                        if (equalDates(horizon2, horizon1)) {
+                            for (let hor of horizonsSet) {
+                                var value1 = getValue(part1, hor);
+                                var value2 = getValue(part2, hor);
+                                if (value1 !== value2) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                        break;
+                    default:
                 }
             }
         }
     }
 }
 
-function extractAllSubHorizons(contract1, contract2) {
+function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
     var setOfDates = new Set();
     // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
     // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
-    var maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+    var maxHorizon = "";
+    if (comparisonOperator === ">=" || comparisonOperator === ">" || comparisonOperator === "==") {
+        maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+    } else {
+        maxHorizon = getHorizon(contract1); // we only want to check for times that are <= maxHorizon
+    }
     setOfDates.add(maxHorizon);
     var contract1HorArr = contract1.split(" ");
     var contract2HorArr = contract2.split(" ");
@@ -519,7 +585,8 @@ function extractAllSubHorizons(contract1, contract2) {
 
 function COMPARISONOPERATOR(string) {
     if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}"
-      || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]" || string === ">=") {
+      || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]"
+      || string === ">=" || string === "==" || string === "<=" || string === ">" || string === "<") {
         return true;
     }
     return false;

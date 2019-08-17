@@ -941,16 +941,16 @@ function evaluate(inputString) {
 
         switch (term) {
           case "{>=}":
-            return greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+            return !greaterDate(horizon2, horizon1);
 
           case "{>}":
             return greaterDate(horizon1, horizon2);
 
           case "{<=}":
-            return !greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2);
+            return !greaterDate(horizon1, horizon2);
 
           case "{<}":
-            return !greaterDate(horizon1, horizon2);
+            return greaterDate(horizon2, horizon1);
 
           case "{==}":
             return equalDates(horizon1, horizon2);
@@ -981,57 +981,221 @@ function evaluate(inputString) {
 
           default:
         }
-      } else if (term === ">=") {
-        // Dominance
+      } else if (term === ">=" || term === ">" || term === "<=" || term === "<" || term === "==") {
+        // Dominance Comparison
         var horizon1 = getHorizon(part1);
         var horizon2 = getHorizon(part2);
+        var horizonsSet = extractAllSubHorizons(part1, part2, term); // go through all dates and call getValue with date parameter
 
-        if (greaterDate(horizon1, horizon2) || equalDates(horizon1, horizon2)) {
-          var horizonsSet = extractAllSubHorizons(part1, part2); // go through all dates and call getValue with date parameter
+        switch (term) {
+          case ">=":
+            if (!greaterDate(horizon2, horizon1)) {
+              var _iteratorNormalCompletion4 = true;
+              var _didIteratorError4 = false;
+              var _iteratorError4 = undefined;
 
-          var _iteratorNormalCompletion4 = true;
-          var _didIteratorError4 = false;
-          var _iteratorError4 = undefined;
+              try {
+                for (var _iterator4 = horizonsSet[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                  var hor = _step4.value;
+                  var value1 = getValue(part1, hor);
+                  var value2 = getValue(part2, hor);
 
-          try {
-            for (var _iterator4 = horizonsSet[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-              var hor = _step4.value;
-              var x = getValue(part1, hor);
-              var y = getValue(part2, hor);
-
-              if (x < y) {
-                return false;
+                  if (value1 < value2) {
+                    return false;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
+                    _iterator4["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError4) {
+                    throw _iteratorError4;
+                  }
+                }
               }
+
+              return true;
+            } else {
+              return false;
             }
-          } catch (err) {
-            _didIteratorError4 = true;
-            _iteratorError4 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
-                _iterator4["return"]();
-              }
-            } finally {
-              if (_didIteratorError4) {
-                throw _iteratorError4;
-              }
-            }
-          }
 
-          return true;
-        } else {
-          return false;
+            break;
+
+          case ">":
+            if (greaterDate(horizon1, horizon2)) {
+              var _iteratorNormalCompletion5 = true;
+              var _didIteratorError5 = false;
+              var _iteratorError5 = undefined;
+
+              try {
+                for (var _iterator5 = horizonsSet[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                  var _hor = _step5.value;
+                  var value1 = getValue(part1, _hor);
+                  var value2 = getValue(part2, _hor);
+
+                  if (value1 <= value2) {
+                    return false;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError5 = true;
+                _iteratorError5 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
+                    _iterator5["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError5) {
+                    throw _iteratorError5;
+                  }
+                }
+              }
+
+              return true;
+            } else {
+              return false;
+            }
+
+            break;
+
+          case "<=":
+            if (!greaterDate(horizon1, horizon2)) {
+              var _iteratorNormalCompletion6 = true;
+              var _didIteratorError6 = false;
+              var _iteratorError6 = undefined;
+
+              try {
+                for (var _iterator6 = horizonsSet[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                  var _hor2 = _step6.value;
+                  var value1 = getValue(part1, _hor2);
+                  var value2 = getValue(part2, _hor2);
+
+                  if (value1 > value2) {
+                    return false;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError6 = true;
+                _iteratorError6 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+                    _iterator6["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError6) {
+                    throw _iteratorError6;
+                  }
+                }
+              }
+
+              return true;
+            } else {
+              return false;
+            }
+
+            break;
+
+          case "<":
+            if (greaterDate(horizon2, horizon1)) {
+              var _iteratorNormalCompletion7 = true;
+              var _didIteratorError7 = false;
+              var _iteratorError7 = undefined;
+
+              try {
+                for (var _iterator7 = horizonsSet[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                  var _hor3 = _step7.value;
+                  var value1 = getValue(part1, _hor3);
+                  var value2 = getValue(part2, _hor3);
+
+                  if (value1 >= value2) {
+                    return false;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError7 = true;
+                _iteratorError7 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
+                    _iterator7["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError7) {
+                    throw _iteratorError7;
+                  }
+                }
+              }
+
+              return true;
+            } else {
+              return false;
+            }
+
+            break;
+
+          case "==":
+            if (equalDates(horizon2, horizon1)) {
+              var _iteratorNormalCompletion8 = true;
+              var _didIteratorError8 = false;
+              var _iteratorError8 = undefined;
+
+              try {
+                for (var _iterator8 = horizonsSet[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                  var _hor4 = _step8.value;
+                  var value1 = getValue(part1, _hor4);
+                  var value2 = getValue(part2, _hor4);
+
+                  if (value1 !== value2) {
+                    return false;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError8 = true;
+                _iteratorError8 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
+                    _iterator8["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError8) {
+                    throw _iteratorError8;
+                  }
+                }
+              }
+
+              return true;
+            } else {
+              return false;
+            }
+
+            break;
+
+          default:
         }
       }
     }
   }
 }
 
-function extractAllSubHorizons(contract1, contract2) {
+function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
   var setOfDates = new Set(); // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
   // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
 
-  var maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+  var maxHorizon = "";
+
+  if (comparisonOperator === ">=" || comparisonOperator === ">" || comparisonOperator === "==") {
+    maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+  } else {
+    maxHorizon = getHorizon(contract1); // we only want to check for times that are <= maxHorizon
+  }
 
   setOfDates.add(maxHorizon);
   var contract1HorArr = contract1.split(" ");
@@ -1065,7 +1229,7 @@ function extractAllSubHorizons(contract1, contract2) {
 }
 
 function COMPARISONOPERATOR(string) {
-  if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}" || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]" || string === ">=") {
+  if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}" || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]" || string === ">=" || string === "==" || string === "<=" || string === ">" || string === "<") {
     return true;
   }
 
@@ -1563,53 +1727,53 @@ function getAllSubcontracts(superKey) {
   var finalContractString = "";
 
   if (superContractsMap.has(superKey)) {
-    var _iteratorNormalCompletion5 = true;
-    var _didIteratorError5 = false;
-    var _iteratorError5 = undefined;
+    var _iteratorNormalCompletion9 = true;
+    var _didIteratorError9 = false;
+    var _iteratorError9 = undefined;
 
     try {
-      for (var _iterator5 = superContractsMap[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-        var _step5$value = _slicedToArray(_step5.value, 2),
-            superContractId = _step5$value[0],
-            contractsSet = _step5$value[1];
+      for (var _iterator9 = superContractsMap[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+        var _step9$value = _slicedToArray(_step9.value, 2),
+            superContractId = _step9$value[0],
+            contractsSet = _step9$value[1];
 
         if (superContractId === superKey) {
-          var _iteratorNormalCompletion6 = true;
-          var _didIteratorError6 = false;
-          var _iteratorError6 = undefined;
+          var _iteratorNormalCompletion10 = true;
+          var _didIteratorError10 = false;
+          var _iteratorError10 = undefined;
 
           try {
-            for (var _iterator6 = contractsSet[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-              var contract = _step6.value;
+            for (var _iterator10 = contractsSet[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+              var contract = _step10.value;
               finalContractString = finalContractString === "" ? contract.contractString : finalContractString + " and " + contract.contractString;
             }
           } catch (err) {
-            _didIteratorError6 = true;
-            _iteratorError6 = err;
+            _didIteratorError10 = true;
+            _iteratorError10 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-                _iterator6["return"]();
+              if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
+                _iterator10["return"]();
               }
             } finally {
-              if (_didIteratorError6) {
-                throw _iteratorError6;
+              if (_didIteratorError10) {
+                throw _iteratorError10;
               }
             }
           }
         }
       }
     } catch (err) {
-      _didIteratorError5 = true;
-      _iteratorError5 = err;
+      _didIteratorError9 = true;
+      _iteratorError9 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
-          _iterator5["return"]();
+        if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
+          _iterator9["return"]();
         }
       } finally {
-        if (_didIteratorError5) {
-          throw _iteratorError5;
+        if (_didIteratorError9) {
+          throw _iteratorError9;
         }
       }
     }
@@ -2017,15 +2181,15 @@ function createContractObject(inputString) {
 
 function addToSuperContracts(superKey, contract) {
   if (superContractsMap.has(superKey)) {
-    var _iteratorNormalCompletion7 = true;
-    var _didIteratorError7 = false;
-    var _iteratorError7 = undefined;
+    var _iteratorNormalCompletion11 = true;
+    var _didIteratorError11 = false;
+    var _iteratorError11 = undefined;
 
     try {
-      for (var _iterator7 = superContractsMap[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-        var _step7$value = _slicedToArray(_step7.value, 2),
-            superContractId = _step7$value[0],
-            contractsSet = _step7$value[1];
+      for (var _iterator11 = superContractsMap[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+        var _step11$value = _slicedToArray(_step11.value, 2),
+            superContractId = _step11$value[0],
+            contractsSet = _step11$value[1];
 
         if (superContractId === superKey) {
           var newSet = contractsSet;
@@ -2035,16 +2199,16 @@ function addToSuperContracts(superKey, contract) {
         }
       }
     } catch (err) {
-      _didIteratorError7 = true;
-      _iteratorError7 = err;
+      _didIteratorError11 = true;
+      _iteratorError11 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
-          _iterator7["return"]();
+        if (!_iteratorNormalCompletion11 && _iterator11["return"] != null) {
+          _iterator11["return"]();
         }
       } finally {
-        if (_didIteratorError7) {
-          throw _iteratorError7;
+        if (_didIteratorError11) {
+          throw _iteratorError11;
         }
       }
     }
@@ -2059,15 +2223,15 @@ function addToSuperContracts(superKey, contract) {
 }
 
 function deleteFromSuperContracts(superKey, contract) {
-  var _iteratorNormalCompletion8 = true;
-  var _didIteratorError8 = false;
-  var _iteratorError8 = undefined;
+  var _iteratorNormalCompletion12 = true;
+  var _didIteratorError12 = false;
+  var _iteratorError12 = undefined;
 
   try {
-    for (var _iterator8 = superContractsMap[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-      var _step8$value = _slicedToArray(_step8.value, 2),
-          superContractId = _step8$value[0],
-          contractsSet = _step8$value[1];
+    for (var _iterator12 = superContractsMap[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+      var _step12$value = _slicedToArray(_step12.value, 2),
+          superContractId = _step12$value[0],
+          contractsSet = _step12$value[1];
 
       if (superContractId === superKey) {
         var newSet = contractsSet;
@@ -2083,16 +2247,16 @@ function deleteFromSuperContracts(superKey, contract) {
       }
     }
   } catch (err) {
-    _didIteratorError8 = true;
-    _iteratorError8 = err;
+    _didIteratorError12 = true;
+    _iteratorError12 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
-        _iterator8["return"]();
+      if (!_iteratorNormalCompletion12 && _iterator12["return"] != null) {
+        _iterator12["return"]();
       }
     } finally {
-      if (_didIteratorError8) {
-        throw _iteratorError8;
+      if (_didIteratorError12) {
+        throw _iteratorError12;
       }
     }
   }
@@ -2196,56 +2360,56 @@ function greaterDate(dateString1, dateString2) {
 }
 
 function executeSuperContract(superKey) {
-  var _iteratorNormalCompletion9 = true;
-  var _didIteratorError9 = false;
-  var _iteratorError9 = undefined;
+  var _iteratorNormalCompletion13 = true;
+  var _didIteratorError13 = false;
+  var _iteratorError13 = undefined;
 
   try {
-    for (var _iterator9 = superContractsMap[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-      var _step9$value = _slicedToArray(_step9.value, 2),
-          superContractId = _step9$value[0],
-          contractsSet = _step9$value[1];
+    for (var _iterator13 = superContractsMap[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+      var _step13$value = _slicedToArray(_step13.value, 2),
+          superContractId = _step13$value[0],
+          contractsSet = _step13$value[1];
 
       if (superContractId === superKey) {
-        var _iteratorNormalCompletion10 = true;
-        var _didIteratorError10 = false;
-        var _iteratorError10 = undefined;
+        var _iteratorNormalCompletion14 = true;
+        var _didIteratorError14 = false;
+        var _iteratorError14 = undefined;
 
         try {
-          for (var _iterator10 = contractsSet[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-            var contract = _step10.value;
+          for (var _iterator14 = contractsSet[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+            var contract = _step14.value;
 
             if (contract.toBeExecutedAtHorizon !== "yes") {
               executeSingleContract(contract);
             }
           }
         } catch (err) {
-          _didIteratorError10 = true;
-          _iteratorError10 = err;
+          _didIteratorError14 = true;
+          _iteratorError14 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
-              _iterator10["return"]();
+            if (!_iteratorNormalCompletion14 && _iterator14["return"] != null) {
+              _iterator14["return"]();
             }
           } finally {
-            if (_didIteratorError10) {
-              throw _iteratorError10;
+            if (_didIteratorError14) {
+              throw _iteratorError14;
             }
           }
         }
       }
     }
   } catch (err) {
-    _didIteratorError9 = true;
-    _iteratorError9 = err;
+    _didIteratorError13 = true;
+    _iteratorError13 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
-        _iterator9["return"]();
+      if (!_iteratorNormalCompletion13 && _iterator13["return"] != null) {
+        _iterator13["return"]();
       }
     } finally {
-      if (_didIteratorError9) {
-        throw _iteratorError9;
+      if (_didIteratorError13) {
+        throw _iteratorError13;
       }
     }
   }
