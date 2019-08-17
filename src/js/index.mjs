@@ -61,18 +61,16 @@ window.addEventListener('load', function() {  // commented for testing purposes
     runClock();
 });
 
-// TODO: transform input ie decrease spaces
+// TODO: be able to add the following
+// zcb t x = scaleK x ( get ( truncate t ( one )))
+// in input this will eb zcb "12/11/2012-12:33:33" 10
 global.addDefinition = function(inputString) {
-    if (inputString === "") {
-        document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
-        return;
-    }
     document.getElementById("add_definitions_status").innerHTML = "";
     // remove multiple whitespaces
-    inputString = inputString.replace(/  +/g, ' ');
+    inputString = inputString.replace(/  +/gm, " ");
     // pattern matching for semantics
-    var matches = inputString.match(/^\w+\s?=\s?.+;$/);
-    if (matches === null) {
+    var matches = inputString.match(/^.+\s?=\s?.+;$/);
+    if (inputString === "" || matches === null) {
         document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
         return;
     }
@@ -80,13 +78,15 @@ global.addDefinition = function(inputString) {
     var strArr = inputString.split("=");
     var part1 = rTrimWhiteSpace(strArr[0]);
     var part2 = trimSemiColon(lTrimWhiteSpace(strArr[1]));
+
+    var part1Arr = part1.split(" ");
+    var part2Arr = part2.split(" ");
     // check semantics of second part
-    var secondArr = part2.split(" ");
-    for (var i = 0; i < secondArr.length; ++i) {
-        var term = secondArr[i];
-        if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
+    for (var i = 0; i < part2Arr.length; ++i) {
+        var term = part2Arr[i];
+        if (!part1.includes(term) && term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
         && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
-        && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term)
+        && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term) && term !== "(" && term !== ")"
         && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
         && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)
         && !definitionsMap.has(term)) {
@@ -94,10 +94,62 @@ global.addDefinition = function(inputString) {
             return;
         }
     }
-    definitionsMap.set(part1, part2);
-    for (var [key, value] of definitionsMap) { // need to do this in order to allow overwriting of definitions
-        document.getElementById("input_added_textarea").innerHTML += (key + " = " + value + "\n");
+    // or just use first word - add checking and then tell user that first term must be definition
+    // need to find word in lhs string thats not in rhs and not one of the existing terms & add definition to map
+    for (var i = 0; i < part1Arr.length; ++i) {
+        var term = part1Arr[i];
+        if (!part2.includes(term) && term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
+        && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
+        && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term)
+        && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
+        && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
+            definitionsMap.set(term, part1 + "=" + part2);
+        }
     }
+    for (var [key, value] of definitionsMap) { // need to do this in order to allow overwriting of definitions
+        var valueArr = value.split("=");
+        document.getElementById("input_added_textarea").innerHTML += (key + ": " + valueArr[0] + " = " + valueArr[1] + "\n");
+    }
+}
+
+
+function replaceUserDefinitions(inputString) {
+    var strSplit = inputString.split(" ");
+    let keys = Array.from(definitionsMap.keys());
+    // check if any definition appears in inputString
+    var intersection = strSplit.filter(value => keys.includes(value));
+    while(intersection.length !== 0) {
+        for(var i = 0; i < intersection.length; ++i) {
+            // check for if any definition appears in inputString
+            const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
+            // find matching part in string
+            var matchObj1 = regex.exec(inputString);
+            var value = definitionsMap.get(intersection[i]);
+            var valueArr = value.split("=");
+            var lhs = valueArr[0];
+            var newValue = valueArr[1];
+            var endPartArr = lTrimWhiteSpace(matchObj1[2] + matchObj1[3]).split(" ");
+            var lhsArr = lhs.split(" "); // do not need to trim by whitespace here as we add no whitespace when adding definitions
+            for (var j = 1; j < lhsArr.length; ++j) { // skipping first index as this is definition
+                const regex2 = new RegExp("(.+\\s)?(" + lhsArr[j] + ")(\\s.+)?");
+                var matchObj2 = regex2.exec(newValue);
+                newValue = matchObj2[1] + endPartArr[j] + matchObj2[3]; 
+            }
+            endPartArr.splice(0, lhsArr.length);
+
+            if (newValue.indexOf("one") !== newValue.lastIndexOf("one")
+              || newValue.indexOf("zero") !== newValue.lastIndexOf("zero")
+              || ( newValue.includes("one") && newValue.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
+                inputString = matchObj1[1] + " ( " + newValue + " ) " + endPartArr.join(" ");
+
+            } else {
+                inputString = matchObj1[1] + newValue + " " + endPartArr.join(" "); // need to add the whitespace as we trimmed it previously
+            }
+        }
+        strSplit = inputString.split(" ");
+        intersection = strSplit.filter(value => keys.includes(value));
+    }
+    return inputString;
 }
 
 global.getDefinitionsText = function() {
@@ -639,39 +691,14 @@ function correctConstruct(inputString) {
     return true;
 }
 
-function replaceUserDefinitions(inputString) {
-    var strSplit = inputString.split(" ");
-    let keys = Array.from(definitionsMap.keys());
-    var intersection = strSplit.filter(value => keys.includes(value));
-    while(intersection.length !== 0) {
-        for(var i = 0; i < intersection.length; ++i) {
-            const regex = new RegExp("(.*)(" + intersection[i] + ")(.*)");
-            var matchObj = regex.exec(inputString);
-            var value = definitionsMap.get(intersection[i]);
-            if (value.indexOf("one") !== value.lastIndexOf("one")
-              || value.indexOf("zero") !== value.lastIndexOf("zero")
-              || ( value.includes("one") && value.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
-
-                inputString = matchObj[1] + "( " + definitionsMap.get(intersection[i]) + " )" + matchObj[3];
-
-            } else {
-                inputString = matchObj[1] + definitionsMap.get(intersection[i]) + matchObj[3];
-            }
-        }
-        strSplit = inputString.split(" ");
-        intersection = strSplit.filter(value => keys.includes(value));
-    }
-    return inputString;
-}
-
 function cleanUpBeforeDecomp(inputString) {
+    // add dash between date day and time for processing purposes
+    inputString = changeDateFormat(inputString);
+    // replacing own definitions with map values
+    inputString = replaceUserDefinitions(inputString);
     if (!correctConstruct(inputString)) {
         return "error";
     }
-    // replacing own definitions with map values
-    inputString = replaceUserDefinitions(inputString);
-    // add dash between date day and time for processing purposes
-    inputString = changeDateFormat(inputString);
     // remove linebreaks, then multiple whitespaces
     inputString = inputString.replace(/(\r\n|\n|\r)/gm, " ").replace(/  +/gm, " ");
     // add spacing before and after parenthesis
@@ -897,11 +924,18 @@ function createValuationSelect(tr, id) {
 }
 
 function updateValuationValue(id) {
-    var day = document.getElementById("day_select_" + id).value;
-    var month = document.getElementById("month_select_" + id).value;
+    var day = padNumber(document.getElementById("day_select_" + id).value);
+    var month = padNumber(document.getElementById("month_select_" + id).value);
     var year = document.getElementById("year_select_" + id).value;
     var c = getAllSubcontracts(id);
     document.getElementById("p_value_" + id).innerHTML = getValue(c, day + "/" + month + "/" + year + "-" + "12:00:00").toString() + "ETH";
+}
+
+function padNumber(number) {
+    if (number.length === 1) {
+        return "0" + number;
+    }
+    return number;
 }
 
 // TODO: superContractsMap does not store expired contracts, so cannot go back in time
