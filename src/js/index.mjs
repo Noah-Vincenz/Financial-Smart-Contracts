@@ -580,6 +580,10 @@ function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
             }
         }
     }
+    // if operator is > or < then we need to remove max horizon from the set
+    if (comparisonOperator === ">" || comparisonOperator === "<") {
+        setOfDates.delete(maxHorizon);
+    }
     return setOfDates;
 }
 
