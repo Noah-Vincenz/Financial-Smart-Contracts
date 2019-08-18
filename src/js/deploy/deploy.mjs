@@ -155,7 +155,7 @@ export function watchTransferEvent() {
             if (err) {
                 reject(err);
             } else {
-                resolve(event.args.boolean); // returns true iff transfer was successful
+                resolve(event.args.result); // returns ints regarding state of transfer
             }
         });
     });

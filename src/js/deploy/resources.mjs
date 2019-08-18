@@ -134,7 +134,7 @@ export const ABI = [
     "name": "TransferEvent",
     "inputs": [
       {
-        "name": "boolean",
+        "name": "result",
         "type": "int32",
         "indexed": false
       }

@@ -5,9 +5,10 @@
 /* jshint esversion: 6 */
 
 export class Contract {
-    constructor(id, amount, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, status) {
+    constructor(id, amount, observablesArr, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, status) {
         this.id = id;
         this.amount = amount;
+        this.observablesArr = observablesArr;
         this.recipient = recipient;
         this.contractString = contractString;
         this.meaningOfContractString = meaningOfContractString;
@@ -17,7 +18,7 @@ export class Contract {
     }
 }
 
-export function translateContract(recipient, amount, horizonDate, acquireAtHorizon) {
+export function translateContract(recipient, amount, observablesArr, horizonDate, acquireAtHorizon) {
     var to = " owner ";
     var from = " counter-party ";
     var hDate = "";
@@ -39,6 +40,12 @@ export function translateContract(recipient, amount, horizonDate, acquireAtHoriz
         } else {
             adj = "s are";
         }
+    }
+    if (observablesArr.length > 0) {
+        for (var i = 0; i < observablesArr.length; ++i) {
+            amount = amount + "x" + observablesArr[i];
+        }
+        adj = "s are";
     }
     return amount + " Ether" + adj + " transferred from the " + from + " address to the " + to + " address" + hDate + ".";
 }

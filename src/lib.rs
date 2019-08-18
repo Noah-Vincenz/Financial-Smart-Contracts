@@ -60,7 +60,7 @@ pub mod smart_contract {
 		fn depositCollateral(&mut self, amount: U256);
 		/// Event declaration
 		#[event]
-        fn TransferEvent(&mut self, boolean: i32);
+        fn TransferEvent(&mut self, result: i32);
 	}
 
 	pub struct SmartContractInstance;
@@ -102,6 +102,7 @@ pub mod smart_contract {
 		fn transfer(&mut self, from: Address, to: Address, amount: U256) {
             let senderBalance = read_balance(&from);
             let recipientBalance = read_balance(&to);
+
             if senderBalance < amount {
 				self.TransferEvent(0);
 			} else if to == from {

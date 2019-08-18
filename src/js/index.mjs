@@ -212,6 +212,10 @@ global.createContractFunction = function() {
     document.getElementById("create_contract_status").innerHTML = "";
     var localHolderAddress = document.getElementById("holder_address").value;
     var localCounterPartyAddress = document.getElementById("counter_party_address").value;
+    if (localHolderAddress === localCounterPartyAddress) {
+        document.getElementById("create_contract_status").innerHTML = "Holder address and counter party address cannot be the same";
+        return;
+    }
     // check if getSelectedMetaMaskAccount returns valid result, if not log error telling user to log in
     if(getSelectedMetaMaskAccount() === undefined) {
         document.getElementById("create_contract_status").innerHTML = "Please log into MetaMask.";
@@ -800,7 +804,7 @@ function findNextConnective(contractStringArr, indexToStartFrom) {
 function getValue(contractString, horizonToCheck) {
     var termArr = contractString.split(" ");
     // check if string contains conjunction
-    if (contractString.includes("and") || contractString.includes("or")) {
+    if (contractString.includes(" and ") || contractString.includes(" or ")) {
         var decomposedResult = decompose(termArr);
         var part1 = decomposedResult[0];
         var part2 = decomposedResult[1];
@@ -834,7 +838,23 @@ function getValue(contractString, horizonToCheck) {
         } else {
             for (var i = 0; i < termArr.length; ++i) {
                 if (termArr[i] === "scaleK") {
-                    value = value * parseFloat(termArr[i + 1]);
+                    if (termArr[i + 1].includes("x")) { // value dependent on some observable values
+                        var arr = termArr[i + 1].split("x");
+                        for (var j = 0; j < arr.length; ++j) {
+                            if (parseFloat(arr[j])) {
+                                value = value * parseFloat(arr[j]);
+                            } else { // we encountered an observable
+                                if (arr[j] === "libor3m") {
+                                    // rounding because Parity can only handle integers
+                                    value = Math.round(value * getOracleByAddress(agreedOracleAddress).getLiborSpotRate());
+                                } else if (arr[j] === "tempInLondon") {
+                                    value = Math.round(value * getOracleByAddress(agreedOracleAddress).getTempInLondon());
+                                }
+                            }
+                        }
+                    } else {
+                        value = value * parseFloat(termArr[i + 1]);
+                    }
                     ++i;
                 } else if (termArr[i] === "give") {
                     value = -value;
@@ -921,7 +941,6 @@ function cleanUpBeforeDecomp(inputString) {
 }
 
 global.processContract = function(inputString, initialDecomposition) {
-    console.log("calling processContract");
     ++uniqueID;
     if (initialDecomposition) {
         // This is the case only when this function is triggered by the 'make transaction' button
@@ -953,11 +972,8 @@ global.processContract = function(inputString, initialDecomposition) {
         }
     }
     else { // input does not contain 'or'
-        console.log("inputString = " + inputString);
         var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
-        console.log(contractsArr);
         contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
-        console.log("calling createContractEntries")
         createContractEntries(contractsArr);
     }
 };
@@ -1372,49 +1388,52 @@ function createContractObject(inputString) {
 
     var giveOccurrences = 0;
     var getOccurrences = 0;
+    var getHasAppeared = false; // to make sure gets are followed by a truncate
     var amount = "1";
-    if (inputString.includes("zero")) {
+    var contractObsArr = [];
+    if (inputString.includes(" zero ")) {
         amount = "0";
     }
     var horizonDate = getHorizon(inputString);
-    //var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
         var str = strArr[i];
         if (str === "give") {
-            //recipient = 1;
             ++giveOccurrences;
-        } else if (str === "scaleK" && !inputString.includes("zero")) {
+        } else if (str === "scaleK" && amount !== "0") {
             if (parseFloat(strArr[i + 1])) {
                 amount = ( parseFloat(amount) * parseFloat(strArr[i + 1]) ).toString();
                 ++i;
             } else if (observablesArr.includes(strArr[i + 1])) {
-                amount = strArr[i + 1];
+                contractObsArr.push(strArr[i + 1]);
                 ++i;
             }
         } else if (str === "get") {
+            getHasAppeared = true;
             ++getOccurrences;
-            //acquireAtHorizon = "yes";
+        } else if (str === "truncate") { // to make sure gets are followed by a truncate
+            getHasAppeared = false;
         }
+    }
+    if (getHasAppeared) {
+        document.getElementById("transaction_status").innerHTML = "Syntax error: get must be followed by truncate.";
+        addSuperContractRow();
+        return;
     }
     var recipient = giveOccurrences % 2 === 0 ? 0 : 1;
     var acquireAtHorizon = getOccurrences % 2 === 0 ? "no" : "yes";
-
-    // TODO: create new string here with function createNewContractString(params below ie recipient, ...)
-    const contract = new Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString,
-       translateContract(recipient, amount, horizonDate, acquireAtHorizon),
+    var contractString = createNewContractString(amount, contractObsArr, recipient, horizonDate, acquireAtHorizon);
+    const contract = new Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, contractObsArr, recipient, contractString,
+       translateContract(recipient, amount, contractObsArr, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
 
-    console.log("Have created a contract");
-    var fromAddress = recipient === 1 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
     var balanceLabel = recipient === 1 ? document.getElementById("holder_balance_p").innerHTML.split() : document.getElementById("counter_party_balance_p").innerHTML;
     const regex = new RegExp("(Balance:\\s)(.+)(ETH)");
     var matchObj = regex.exec(balanceLabel); // cannot check Rust balance as this will cause a delay. However, this is fine since label balance gets updated directly after transfer
     var balance = parseFloat(matchObj[2]);
     // uncomment this for testing, comment below - > there will be no super contract row
     // createTableRow(contract); // TESTING
-    console.log("amount of new contract: " + amount);
     if (balance >= parseFloat(amount) && enoughBalanceForCapacity(contract, balance)) {
         createTableRow(contract);
         ++numberOfSubContracts;
@@ -1430,6 +1449,32 @@ function createContractObject(inputString) {
         document.getElementById("transaction_status").innerHTML = "Insufficient funds. The sending party does not have enough Ether in their account. Please deposit before adding additional contracts.";
         addSuperContractRow();
     }
+}
+
+function createNewContractString(amount, obsArr, recipient, horizonDate, acquireAtHorizon) {
+    var stringToReturn = "";
+    if (amount === "0") {
+        stringToReturn = "zero";
+    } else if (amount === "1" && obsArr.length === 0) {
+        stringToReturn = "one";
+    } else {
+        if (obsArr.length > 0) {
+            for (var i = 0; i < obsArr.length; ++i) {
+                amount = amount + "x" + observablesArr[i];
+            }
+        }
+        stringToReturn = "scaleK " + amount + " ( one )";
+    }
+    if (horizonDate !== "infinite") {
+        stringToReturn = "truncate " + horizonDate + " ( " + stringToReturn + " )";
+    }
+    if (acquireAtHorizon === "yes") {
+        stringToReturn = "get ( " + stringToReturn + " )"
+    }
+    if (recipient === 1) {
+        stringToReturn = "give ( " + stringToReturn + " )"
+    }
+    return stringToReturn;
 }
 
 function addSuperContractRow() {
@@ -1586,13 +1631,17 @@ function executeSuperContract(superKey) {
 }
 
 function executeSingleContract(contract) {
-    if (contract.amount === "tempInLondon") {
-        contract.amount = getOracleByAddress(agreedOracleAddress).getTempInLondon().toString();
+    var obsArr = contract.observablesArr;
+    if (obsArr.length > 0) {
+        for (var i = 0; i < obsArr.length; ++i) {
+            if (obsArr[i] === "libor3m") {
+                // rounding because Parity can only handle integers
+                contract.amount = (Math.round(parseFloat(contract.amount) * getOracleByAddress(agreedOracleAddress).getLiborSpotRate())).toString();
+            } else if (obsArr[i] === "tempInLondon") {
+                contract.amount = (Math.round(parseFloat(contract.amount) * getOracleByAddress(agreedOracleAddress).getTempInLondon())).toString();
+            }
+        }
     }
-    if (contract.amount === "libor3m") {
-        contract.amount = getOracleByAddress(agreedOracleAddress).getLiborSpotRate().toString();
-    }
-
     holderAddress().then(holderAddress => {
         counterPartyAddress().then(counterPartyAddress => {
             if (contract.recipient == 0) { // owner receives
@@ -1613,28 +1662,12 @@ function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
         if (balance >= parseFloat(contract.amount)) {
             transfer(fromAddress, toAddress, parseFloat(contract.amount)).then(transferTxHash => {
-                watchTransferEvent().then(boolean => {
-                    var bool = parseInt(boolean);
-                    if (bool === 0) {
-                        document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
-                        if (beforeCurrentDate(contract.horizonDate, "")) {
-                            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
-                        }
-                    } else if (bool === 1) {
-                        document.getElementById("td_status_" + contract.id).innerHTML = "failed: sender address and recipient address are the same";
-                        if (beforeCurrentDate(contract.horizonDate, "")) {
-                            document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
-                        }
-                    } else if (bool === 2) {
-                        waitForReceipt(transferTxHash).then( _ => {
-                            console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
-                            document.getElementById("td_status_" + contract.id).innerHTML = "successful";
-                            deleteFromSuperContracts(contract.id.split(".")[0], contract);
-                            retrieveBalances();
-                        });
-                    }
+                // do not need to watch for transfer event as we do checks here.. watching the event may cause delays
+                waitForReceipt(transferTxHash).then( _ => {
+                    console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
+                    document.getElementById("td_status_" + contract.id).innerHTML = "successful";
+                    deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                    retrieveBalances();
                 });
             });
         } else {
@@ -1764,9 +1797,7 @@ function ownsRights(contractOwnerInt) {
 }
 
 function createButton (contractString, beginningString, endString, buttonId, divId) {
-    console.log(beginningString);
     var occ = occurrences(beginningString, "give ", false);
-    console.log("occurences = " + occ);
     var contractOwnerInt = occ % 2 === 0 ? 0 : 1;
     var button = document.createElement("button");
     button.id = "choices_button_" + buttonId;
