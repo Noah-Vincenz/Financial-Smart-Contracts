@@ -689,10 +689,6 @@ function decompose(termArr) {
                 mostBalancedConj = term;
                 var combinatorString = parseStack[parseStack.length - 1];
                 var closingParensString = closingParensStack[closingParensStack.length - 1];
-                console.log("in here when reading term: " + term);
-                console.log("contractString = " + contractString);
-                console.log("combinatorString = " + combinatorString);
-                console.log("closingParensString = " + closingParensString);
                 if (contractString !== "") {
                     if (combinatorString !== undefined) {
                         if (mostBalancedConj === "or") {
@@ -718,8 +714,6 @@ function decompose(termArr) {
             }
         } else if (term === "zero" || term === "one") {
             contractString = contractString === "" ? term : contractString + " " + term;
-            console.log("in here when reading " + term);
-            console.log("new contractString: " + contractString);
             var combinatorString = parseStack[parseStack.length - 1];
             var closingParensString = closingParensStack[closingParensStack.length - 1];
             if (conjWaitingToBeMatched) {
@@ -737,7 +731,6 @@ function decompose(termArr) {
                 conjWaitingToBeMatched = false;
                 contractString = "";
             } else {
-                console.log("IN HERE");
                 if (combinatorString !== undefined && closingParensString !== undefined) {
                     if (mostBalancedConj === "or") {
                         contractsStack[0] = contractString;
@@ -929,7 +922,6 @@ function cleanUpBeforeDecomp(inputString) {
 
 global.processContract = function(inputString, initialDecomposition) {
     ++uniqueID;
-    //++contractsBeingDecomposed;
     if (initialDecomposition) {
         // This is the case only when this function is triggered by the 'make transaction' button
         contractsBeingDecomposed = 1;
@@ -956,19 +948,10 @@ global.processContract = function(inputString, initialDecomposition) {
             processContract(part1, false);
             processContract(part2, false);
         } else {
-          /*
-            if (contractsBeingDecomposed > 0) {
-                --
-            }
-            */
             addChoices([part1, part2], uniqueID);
         }
     }
     else { // input does not contain 'or'
-      /*
-        if (contractsBeingDecomposed > 0) {
-            --contractsBeingDecomposed;
-        } */
         var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
         contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
         createContractEntries(contractsArr);
@@ -1166,11 +1149,7 @@ function createAcquireButton(tr, id) {
     btn.id = "acquire_button_" + id;
     btn.value = "acquire";
     btn.onclick = _ => {
-        if (correctUserTryingToAcquire()) {
-            executeSuperContract(id);
-        } else {
-            document.getElementById("table_status").innerHTML = "Please change the currently selected MetaMask account to the owner of the contract you are trying to acquire.";
-        }
+        executeSuperContract(id);
     };
     td.appendChild(btn);
     // if either of these is true then we want the acquire button to be disabled
@@ -1182,8 +1161,6 @@ function createAcquireButton(tr, id) {
 function addChoices(contractsStack, divId) {
     var contract2 = contractsStack.pop();
     var contract1 = contractsStack.pop();
-    console.log(contract1);
-    console.log(contract2);
     createSection(divId);
     createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), stringToAddToBeginning, stringToAddToEnd, 1, divId);
     createOrLabel(divId);
@@ -1382,19 +1359,25 @@ function parsesSuccessfullyForSyntax(contractString) {
 }
 
 function createContractObject(inputString) {
-    var recipient = 0; // by default the contract holder is the recipient
+    // this is a lowest-level subcontract, ie. it contains only 1 occurrence zero/one
+    // TODO: add get must be followed by truncate
+    //var recipient = 0; // by default the contract holder is the recipient
+    // TODO: create new string here
+    var giveOccurrences = 0;
+    var getOccurrences = 0;
     var amount = "1";
     if (inputString.includes("zero")) {
         amount = "0";
     }
     var horizonDate = getHorizon(inputString);
-    var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
+    //var acquireAtHorizon = "no"; // used for get, ie if get is discovered then this is set to true
     var newStr = inputString.replace(/[()]/g, ''); // removing parenthesis
     var strArr = newStr.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
         var str = strArr[i];
         if (str === "give") {
-            recipient = 1;
+            //recipient = 1;
+            ++giveOccurrences;
         } else if (str === "scaleK" && !inputString.includes("zero")) {
             if (parseFloat(strArr[i + 1])) {
                 amount = ( parseFloat(amount) * parseFloat(strArr[i + 1]) ).toString();
@@ -1404,10 +1387,14 @@ function createContractObject(inputString) {
                 ++i;
             }
         } else if (str === "get") {
-            acquireAtHorizon = "yes";
+            ++getOccurrences;
+            //acquireAtHorizon = "yes";
         }
     }
+    var recipient = giveOccurrences % 2 === 0 ? 0 : 1;
+    var acquireAtHorizon = getOccurrences % 2 === 0 ? "no" : "yes";
 
+    // TODO: create new string here with function createNewContractString(params below ie recipient, ...)
     const contract = new Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString,
        translateContract(recipient, amount, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
@@ -1757,30 +1744,61 @@ function createTableRow(contract) {
     td.innerHTML = contract.status;
 }
 
-function correctUserTryingToAcquire() {
-    if (getSelectedMetaMaskAccount().toUpperCase() === document.getElementById("holder_address").value.toUpperCase()) {
+function ownsRights(contractOwnerInt) {
+    var ownerAddress = contractOwnerInt === 0 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
+    if (getSelectedMetaMaskAccount().toUpperCase() === ownerAddress.toUpperCase()) {
         return true;
     } else {
+        document.getElementById("transaction_status").innerHTML = "Please change the currently selected MetaMask account to the owner of the contract you are trying to make a choice on.";
         return false;
     }
 }
 
 function createButton (contractString, beginningString, endString, buttonId, divId) {
+    console.log(beginningString);
+    var occ = occurrences(beginningString, "give ", false);
+    console.log("occurences = " + occ);
+    var contractOwnerInt = occ % 2 === 0 ? 0 : 1;
     var button = document.createElement("button");
     button.id = "choices_button_" + buttonId;
     button.className = "choices_button";
     button.innerHTML = cleanParens(contractString);
+    var finalContractString = beginningString + button.innerHTML + endString;
     // 2. Append somewhere
     var container = document.getElementById("section_" + divId.toString());
     container.appendChild(button);
     // 3. Add event handler
     button.addEventListener ("click", function() {
-        if (correctUserTryingToAcquire()) {
+        if (ownsRights(contractOwnerInt)) { // party must own the rights of the contract to make choice
             removeChildren("section_" + divId);
             container.remove();
-            processContract(beginningString + button.innerHTML + endString, false);
+            processContract(finalContractString, false);
         }
     });
+}
+
+/*
+* @author Vitim.us https://gist.github.com/victornpb/7736865
+* @see http://stackoverflow.com/questions/4009756/how-to-count-string-occurrence-in-string/7924240#7924240
+*/
+function occurrences(string, subString, allowOverlapping) {
+
+   string += "";
+   subString += "";
+   if (subString.length <= 0) return (string.length + 1);
+
+   var n = 0,
+       pos = 0,
+       step = allowOverlapping ? 1 : subString.length;
+
+   while (true) {
+       pos = string.indexOf(subString, pos);
+       if (pos >= 0) {
+           ++n;
+           pos += step;
+       } else break;
+   }
+   return n;
 }
 
 function createSection(divId) {
