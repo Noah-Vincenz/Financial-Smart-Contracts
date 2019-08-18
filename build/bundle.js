@@ -1615,6 +1615,7 @@ function cleanUpBeforeDecomp(inputString) {
 }
 
 global.processContract = function (inputString, initialDecomposition) {
+  console.log("calling processContract");
   ++uniqueID;
 
   if (initialDecomposition) {
@@ -1653,9 +1654,12 @@ global.processContract = function (inputString, initialDecomposition) {
     }
   } else {
     // input does not contain 'or'
+    console.log("inputString = " + inputString);
     var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
 
+    console.log(contractsArr);
     contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
+    console.log("calling createContractEntries");
     createContractEntries(contractsArr);
   }
 };
@@ -1991,13 +1995,15 @@ function decomposeAnds(contractString) {
       var combinatorString = parseStack.pop();
       var closingParensString = closingParensStack.pop();
 
-      if (contractString !== "" && combinatorString !== undefined && closingParensString !== undefined) {
-        finalContractsArr.push(combinatorString + " ( " + contractString + closingParensString);
-      } else {
-        finalContractsArr.push(contractString);
-      }
+      if (contractString !== "") {
+        if (combinatorString !== undefined && closingParensString !== undefined) {
+          finalContractsArr.push(combinatorString + " ( " + contractString + closingParensString);
+        } else {
+          finalContractsArr.push(contractString);
+        }
 
-      contractString = "";
+        contractString = "";
+      }
     } else if (term === "(") {
       ++openingParens;
 
@@ -2201,6 +2207,7 @@ function createContractObject(inputString) {
   var acquireAtHorizon = getOccurrences % 2 === 0 ? "no" : "yes"; // TODO: create new string here with function createNewContractString(params below ie recipient, ...)
 
   var contract = new _contract.Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, recipient, inputString, (0, _contract.translateContract)(recipient, amount, horizonDate, acquireAtHorizon), horizonDate, acquireAtHorizon, "waiting to be executed");
+  console.log("Have created a contract");
   var fromAddress = recipient === 1 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
   var balanceLabel = recipient === 1 ? document.getElementById("holder_balance_p").innerHTML.split() : document.getElementById("counter_party_balance_p").innerHTML;
   var regex = new RegExp("(Balance:\\s)(.+)(ETH)");
@@ -2208,6 +2215,8 @@ function createContractObject(inputString) {
 
   var balance = parseFloat(matchObj[2]); // uncomment this for testing, comment below - > there will be no super contract row
   // createTableRow(contract); // TESTING
+
+  console.log("amount of new contract: " + amount);
 
   if (balance >= parseFloat(amount) && enoughBalanceForCapacity(contract, balance)) {
     createTableRow(contract);
