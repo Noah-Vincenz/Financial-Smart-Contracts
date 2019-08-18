@@ -33,6 +33,8 @@ var uniqueID = 0; // id to keep track of divs for contract choices (and remove t
 var acquireBtnToBeDisabled1 = true;
 var acquireBtnToBeDisabled2 = true;
 var contractsBeingDecomposed = 1;
+var stringToAddToBeginning = "";
+var stringToAddToEnd = "";
 
 $(function(){
     var $select = $(".custom_select");
@@ -687,11 +689,26 @@ function decompose(termArr) {
                 mostBalancedConj = term;
                 var combinatorString = parseStack[parseStack.length - 1];
                 var closingParensString = closingParensStack[closingParensStack.length - 1];
+                console.log("in here when reading term: " + term);
+                console.log("contractString = " + contractString);
+                console.log("combinatorString = " + combinatorString);
+                console.log("closingParensString = " + closingParensString);
                 if (contractString !== "") {
                     if (combinatorString !== undefined) {
-                        contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                        if (mostBalancedConj === "or") {
+                            contractsStack[0] = contractString;
+                            stringToAddToBeginning = combinatorString + " ( ";
+                            stringToAddToEnd = closingParensString;
+                        } else {
+                            contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                        }
                     } else if (closingParensString !== undefined){
-                        contractsStack[0] = contractString + closingParensString;
+                        if (mostBalancedConj === "or") {
+                            contractsStack[0] = contractString;
+                            stringToAddToEnd = closingParensString;
+                        } else {
+                            contractsStack[0] = contractString + closingParensString;
+                        }
                     } else {
                         contractsStack[0] = contractString;
                     }
@@ -701,19 +718,44 @@ function decompose(termArr) {
             }
         } else if (term === "zero" || term === "one") {
             contractString = contractString === "" ? term : contractString + " " + term;
+            console.log("in here when reading " + term);
+            console.log("new contractString: " + contractString);
             var combinatorString = parseStack[parseStack.length - 1];
             var closingParensString = closingParensStack[closingParensStack.length - 1];
             if (conjWaitingToBeMatched) {
                 if (combinatorString !== undefined && closingParensString !== undefined) {
-                    contractsStack[1] = combinatorString + " ( " + contractString + closingParensString;
+                    if (mostBalancedConj === "or") {
+                        contractsStack[1] = contractString;
+                        stringToAddToBeginning = combinatorString + " ( "; // TODO: not sure if needed because it should already be set from first part
+                        stringToAddToEnd = closingParensString;
+                    } else {
+                        contractsStack[1] = combinatorString + " ( " + contractString + closingParensString;
+                    }
                 } else {
                     contractsStack[1] = contractString;
                 }
                 conjWaitingToBeMatched = false;
                 contractString = "";
             } else {
+                console.log("IN HERE");
                 if (combinatorString !== undefined && closingParensString !== undefined) {
-                    contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                    if (mostBalancedConj === "or") {
+                        contractsStack[0] = contractString;
+                        stringToAddToBeginning = combinatorString + " ( ";
+                        stringToAddToEnd = closingParensString;
+                    } else if (mostBalancedConj === "and") {
+                        contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                    } else { // we have not encountered any connective yet ie give ( one or zero )
+                        // need to look ahead to see if next connective is 'and' / 'or'
+                        var con = findNextConnective(termArr, i);
+                        if (con === "or") {
+                            contractsStack[0] = contractString;
+                            stringToAddToBeginning = combinatorString + " ( ";
+                            stringToAddToEnd = closingParensString;
+                        } else {
+                            contractsStack[0] = combinatorString + " ( " + contractString + closingParensString;
+                        }
+                    }
                 } else {
                     contractsStack[0] = contractString;
                 }
@@ -751,6 +793,15 @@ function decompose(termArr) {
         contractsStack.push(contractString);
     }
     return [contractsStack[0], contractsStack[1], mostBalancedConj];
+}
+
+function findNextConnective(contractStringArr, indexToStartFrom) {
+    for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
+        var term = contractStringArr[i];
+        if (term === "and" || term === "or") {
+            return term;
+        }
+    }
 }
 
 function getValue(contractString, horizonToCheck) {
@@ -1131,10 +1182,14 @@ function createAcquireButton(tr, id) {
 function addChoices(contractsStack, divId) {
     var contract2 = contractsStack.pop();
     var contract1 = contractsStack.pop();
+    console.log(contract1);
+    console.log(contract2);
     createSection(divId);
-    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), 1, divId);
+    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract1)), stringToAddToBeginning, stringToAddToEnd, 1, divId);
     createOrLabel(divId);
-    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), 2, divId);
+    createButton(rTrimWhiteSpace(lTrimWhiteSpace(contract2)), stringToAddToBeginning, stringToAddToEnd, 2, divId);
+    stringToAddToBeginning = "";
+    stringToAddToEnd = "";
 }
 
 function createContractEntries(contractsArr) {
@@ -1710,7 +1765,7 @@ function correctUserTryingToAcquire() {
     }
 }
 
-function createButton (contractString, buttonId, divId) {
+function createButton (contractString, beginningString, endString, buttonId, divId) {
     var button = document.createElement("button");
     button.id = "choices_button_" + buttonId;
     button.className = "choices_button";
@@ -1723,7 +1778,7 @@ function createButton (contractString, buttonId, divId) {
         if (correctUserTryingToAcquire()) {
             removeChildren("section_" + divId);
             container.remove();
-            processContract(button.innerHTML, false);
+            processContract(beginningString + button.innerHTML + endString, false);
         }
     });
 }
