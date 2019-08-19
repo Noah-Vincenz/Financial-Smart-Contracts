@@ -52,10 +52,23 @@ window.addEventListener('load', function() {  // commented for testing purposes
     document.getElementById("transaction_input_textarea").disabled = true;
     */
     createOracles();
-
     // start timer
     update();
     runClock();
+    //console.log(evaluateConditionals2("if ( ( if ( zero [>] one ) { truncate \"24/03/2019-23:33:33\" ( one ) } and zero ) and truncate \"24/03/2019-23:33:33\" ( one ) [<] truncate \"25/03/2019-23:33:33\" ( one ) ) { one } else { zero }"));
+    //console.log(evaluateConditionals2("if ( if ( zero [>] one ) { truncate \"24/03/2019-23:33:33\" ( one ) } and truncate \"24/03/2019-23:33:33\" ( one ) [==] truncate \"25/03/2019-23:33:33\" ( one ) ) { one } else { zero }"));
+    //console.log(evaluateConditionals2("if ( ( if ( zero [>] one ) { zero } else { one } [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [==] one ) ) { zero } else { give ( one ) }")); // give ( one )
+    //console.log(evaluateConditionals2("if ( ( if ( zero [>] one ) { zero } else { one } [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }")); // zero
+    //console.log(evaluateConditionals2("if ( ( ( if ( zero [>] one ) { zero } else { one } ) [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }")); // zero
+    //console.log(evaluateConditionals2("zero and ( if ( zero [<] one ) { one } or if ( zero [==] zero ) { one } else { zero } )")); // zero and ( one or one )
+    //console.log(evaluateConditionals2("zero and ( if ( if ( one [==] one ) { zero } [<] one ) { one } or if ( zero [==] zero ) { one } else { zero } )")); // zero and ( one or one )
+    //console.log(evaluateConditionals2("zero and ( if ( zero [<] if ( one [==] one ) { one } ) { one } or if ( zero [==] zero ) { one } else { zero } )")); // zero and ( one or one )
+    //console.log(evaluateConditionals2("zero and ( if ( zero [<] if ( if ( one [==] one ) { one } [==] one ) { one } ) { one } or if ( zero [==] zero ) { one } else { zero } )")); // zero and ( one or one )
+    //console.log(evaluateConditionals2("zero and ( if ( zero [<] if ( if ( if ( one [>] one ) { zero } else { one } [==] one ) { one } [==] one ) { one } ) { one } or if ( zero [==] zero ) { one } else { zero } )")); // zero and ( one or one )
+    //console.log(evaluateConditionals2("if ( ( zero [<] one ) && ( one [==] one ) ) { one } else { zero }")); // one
+    //console.log(evaluateConditionals2("if ( ( zero [<] one ) && ( one [==] one ) ) { one } else { zero } and one")); // one and one
+    //console.log(evaluate("( zero [<] one ) && ( one [==] one )")); // true
+    //console.log(evaluate("( zero [<] one ) && ( ( one [>] one ) || ( one [==] one ) )")); // true
 });
 
 global.addDefinition = function(inputString) {
@@ -105,7 +118,6 @@ global.addDefinition = function(inputString) {
         document.getElementById("input_added_textarea").innerHTML += (key + ": " + valueArr[0] + " = " + valueArr[1] + "\n");
     }
 }
-
 
 function replaceUserDefinitions(inputString) {
     var strSplit = inputString.split(" ");
@@ -258,6 +270,148 @@ global.getInputString = function() {
     return document.getElementById("transaction_input_textarea").value;
 };
 
+function evaluateConditionals2(inputString) {
+    // TODO: add enforcement around parenthesis if using  && or || and on each side we have a comparison (we ALWAYS do)!
+    // add checking that alternative must not be given, but if given then must be something inside (also for consequents)
+    var termArr = inputString.split(" ");
+    var ifsToBeMatched = 0;
+    var openingParens = 0;
+    var closingParens = 0;
+    var contractString = "";
+    var ifCondition = "";
+    var ifStack = [];
+    var noOfOpeningParensStack = [];
+    var firstPartStack = [];
+    var compOpStack = [];
+    for (var i = 0; i < termArr.length; ++i) {
+        var term = termArr[i];
+        if (term === "if") {
+            if (ifsToBeMatched > 0 && ifCondition !== "") {
+                ifStack.push(ifCondition);
+                ifCondition = "";
+            }
+            noOfOpeningParensStack.push(openingParens - closingParens);
+            ++ifsToBeMatched;
+        } else if (term === ")") {
+            ++closingParens;
+            //if (openingParens - closingParens === ifsToBeMatched - 1) { // have found end of if condition
+            var b1 = noOfOpeningParensStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0;
+            var b2 = (openingParens - noOfOpeningParensStack[noOfOpeningParensStack.length - 1]) === closingParens;
+            if (b1 || b2) {
+                var firstPart = firstPartStack.pop();
+                var compOp = compOpStack.pop();
+                var stringToEval = firstPart + " " + compOp + " " + ifCondition;
+                var cons = ""; // consequence
+                var alt = ""; // alternative
+                var bool = evaluate(stringToEval);
+                ifCondition = "";
+                if (bool) {
+                    var findConsequentResult1 = findConsequent(termArr, i + 2); // +2 to skip {
+                    cons = findConsequentResult1[0];
+                    var lengthOfCons = findConsequentResult1[1];
+                    if (ifsToBeMatched > 1) {
+                        ifCondition = ifStack.length > 0 ? ifStack.pop() + " " + cons : cons;
+                    } else {
+                        contractString = contractString === "" ? cons : contractString + " " + cons;
+                    }
+                    // now need to fast forward in string ie skip indices
+                    if (termArr[i + lengthOfCons + 2] !== "else") {
+                        i = i + lengthOfCons + 1; // +1 to skip {}
+                    } else {
+                        var findConsequentResult2 = findConsequent(termArr, i + findConsequentResult1[1] + 4); // +4 because of 'else' + {
+                        alt = findConsequentResult2[0];
+                        var lengthOfAlt = findConsequentResult2[1];
+                        i = i + lengthOfCons + lengthOfAlt + 3; // +3 to skip {}{}
+                    }
+                } else { // boolean returns false
+                    var findConsequentResult1 = findConsequent(termArr, i + 2); // +2 to skip {
+                    cons = findConsequentResult1[0];
+                    var lengthOfCons = findConsequentResult1[1];
+                    if (termArr[i + lengthOfCons + 2] !== "else") { // if no 'else' given
+                        i = i + lengthOfCons + 1; // +1 to skip {}
+                        if (ifsToBeMatched > 1) { // append result (nothing) to ifCondition
+                            if (ifStack.length > 0) {
+                                ifCondition = ifStack.pop();
+                                var slicedCond = ifCondition.slice(-3);
+                                if (slicedCond === "and" || slicedCond === " or") {
+                                    var lastIndex = ifCondition.lastIndexOf(" ");
+                                    ifCondition = ifCondition.slice(0, lastIndex);
+                                }
+                            } else {
+                                ifCondition = "";
+                            }
+                        } else { // append result (nothing) to contractString
+                            var slicedStr = contractString.slice(-3);
+                            if (slicedStr === "and" || slicedStr === " or") {
+                                var lastIndex = contractString.lastIndexOf(" ");
+                                contractString = contractString.slice(0, lastIndex);
+                            }
+                        }
+                        if (termArr[i + 1] === "and" || termArr[i + 1] === "or") {
+                            ++i;
+                        }
+                    } else { // there is an alternative
+                        var findConsequentResult2 = findConsequent(termArr, i + findConsequentResult1[1] + 4); // +4 because of 'else' + {
+                        alt = findConsequentResult2[0];
+                        var lengthOfAlt = findConsequentResult2[1];
+                        i = i + lengthOfCons + lengthOfAlt + 3; // +4 to skip {}{}
+                        if (ifsToBeMatched > 1) {
+                            ifCondition = ifStack.length > 0 ? ifStack.pop() + " " + alt : alt;
+                        } else {
+                            contractString = contractString === "" ? alt : contractString + " " + alt;
+                        }
+                    }
+                }
+                if (!correctConditionalSyntax(stringToEval, cons, alt)) {
+                    return "error";
+                }
+                --ifsToBeMatched;
+                noOfOpeningParensStack.pop();
+            } else if (ifsToBeMatched > 0) { // we are inside ifCondition and do not want to add to final string
+                ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
+            } else { // we are not inside ifCondition and can append to contractString
+                contractString = contractString === "" ? term : contractString + " " + term;
+            }
+        } else if (term === "(") {
+            ++openingParens;
+            if (termArr[i - 1] !== "if") {
+                if (ifsToBeMatched > 0) { // we are inside ifCondition and do not want to add to final string
+                    ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
+                } else { // we are not inside ifCondition and can append to contractString
+                    contractString = contractString === "" ? term : contractString + " " + term;
+                }
+            }
+        } else if (COMPARISONOPERATOR(term) || term === "||" || term === "&&") {
+            if (firstPartStack.length > 0 && firstPartStack.length === ifsToBeMatched) {
+                firstPartStack.push(firstPartStack.pop() + " " + compOpStack.pop() + " " + ifCondition);
+            } else {
+                firstPartStack.push(ifCondition);
+            }
+            compOpStack.push(term);
+            ifCondition = "";
+        } else {
+            if (ifsToBeMatched > 0) { // we are inside ifCondition and do not want to add to final string
+                ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
+            } else { // we are not inside ifCondition and can append to contractString
+                contractString = contractString === "" ? term : contractString + " " + term;
+            }
+        }
+    }
+    return contractString;
+}
+
+function findConsequent(contractStringArr, indexToStartFrom) {
+    var returnString = "";
+    for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
+        var term = contractStringArr[i];
+        if (term === "}") {
+            return [returnString, i - indexToStartFrom + 1];
+        } else {
+            returnString = returnString === "" ? term : returnString + " " + term;
+        }
+    }
+}
+
 function evaluateConditionals(inputString) {
     // find innermost if clause and replace it
     var openingParens = 0;
@@ -280,6 +434,7 @@ function evaluateConditionals(inputString) {
             }
             ++ifsToBeMatched;
             ifsStack.push(openingParens - closingParens);
+            ifCondition = "if";
         } else if (term === "else") {
             if (i < 9 || i > termArr.length - 4 || nextTerm !== "{" || prevTerm !== "}") {
                 document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
@@ -601,7 +756,6 @@ function COMPARISONOPERATOR(string) {
     }
     return false;
 }
-
 
 function getHorizon(contractString) {
     // Loops through the whole contract once to find the largest horizon
@@ -1275,6 +1429,7 @@ function concatenate(arr1, arr2) {
     return arr1;
 }
 
+// NEEDED?
 function splitContract(contractStringArr, indexOfMostBalancedOr) {
     // do not split by "or" because this will split by first 'or' occurence
     // we want to split by 'or' occurrence with only 1 difference between |openingParens| and |closingParen|
@@ -1382,9 +1537,6 @@ function parsesSuccessfullyForSyntax(contractString) {
 
 function createContractObject(inputString) {
     // this is a lowest-level subcontract, ie. it contains only 1 occurrence zero/one
-    // TODO: add get must be followed by truncate
-    //var recipient = 0; // by default the contract holder is the recipient
-    // TODO: create new string here
 
     var giveOccurrences = 0;
     var getOccurrences = 0;
