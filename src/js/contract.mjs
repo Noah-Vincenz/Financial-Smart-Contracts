@@ -19,12 +19,12 @@ export class Contract {
 }
 
 export function translateContract(recipient, amount, observablesArr, horizonDate, acquireAtHorizon) {
-    var to = " owner ";
-    var from = " counter-party ";
+    var to = "holder";
+    var from = "counter-party";
     var hDate = "";
     if (recipient === 1) {
-        to = " counter-party ";
-        from = " owner ";
+        to = "counter-party";
+        from = "holder";
     }
     if (horizonDate !== "infinite") {
         if (acquireAtHorizon === "yes") {
@@ -41,11 +41,37 @@ export function translateContract(recipient, amount, observablesArr, horizonDate
             adj = "s are";
         }
     }
-    if (observablesArr.length > 0) {
+    if (observablesArr.length > 0 && amount !== "0") {
         for (var i = 0; i < observablesArr.length; ++i) {
             amount = amount + "x" + observablesArr[i];
         }
         adj = "s are";
     }
     return amount + " Ether" + adj + " transferred from the " + from + " address to the " + to + " address" + hDate + ".";
+}
+
+export function createNewContractString(amount, obsArr, recipient, horizonDate, acquireAtHorizon) {
+    var stringToReturn = "";
+    if (amount === "0") {
+        stringToReturn = "zero";
+    } else if (amount === "1" && obsArr.length === 0) {
+        stringToReturn = "one";
+    } else {
+        if (obsArr.length > 0) {
+            for (var i = 0; i < obsArr.length; ++i) {
+                amount = amount + "x" + observablesArr[i];
+            }
+        }
+        stringToReturn = "scaleK " + amount + " ( one )";
+    }
+    if (horizonDate !== "infinite") {
+        stringToReturn = "truncate " + horizonDate + " ( " + stringToReturn + " )";
+    }
+    if (recipient === 1) {
+        stringToReturn = "give ( " + stringToReturn + " )"
+    }
+    if (acquireAtHorizon === "yes") {
+        stringToReturn = "get ( " + stringToReturn + " )"
+    }
+    return stringToReturn;
 }

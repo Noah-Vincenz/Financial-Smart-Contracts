@@ -144,3 +144,74 @@ pub mod smart_contract {
 		key
 	}
 }
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod tests {
+	extern crate pwasm_test;
+	extern crate pwasm_std;
+	extern crate pwasm_ethereum;
+	extern crate std;
+	use super::*;
+	use self::pwasm_test::{ext_reset, ext_update, ext_get};
+	use smart_contract::SmartContract;
+	use pwasm_std::types::{Address, U256};
+	#[test]
+	fn check_balance() {
+		/*
+		ext_reset(|e| {
+			e.balance_of(
+				Address::from([
+					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+				]),
+				100000.into(),
+			)
+		});
+		assert_eq!(
+			U256::from(100000),
+			pwasm_ethereum::balance(&Address::from([
+				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+			]))
+		);
+		*/
+		let sender_one = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		assert_eq!(sender_one, sender_one);
+	}
+	#[test]
+	fn give_and_update() {
+		/*
+		let mut contract = smart_contract::SmartContractInstance{};
+		let sender_one = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		let sender_two = Address::from([
+			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21
+		]);
+		// Here we're creating an External context using ExternalBuilder and set the `sender` to the `owner_address`
+		// so `pwasm_ethereum::sender()` in DonationContract::constructor() will return that `owner_address`
+		ext_update(|e| e
+			.sender(sender_one.clone())
+			.value(300.into())
+		);
+		contract.constructor();
+		assert_eq!(contract.balance(), 0.into());
+		contract.give();
+		assert_eq!(contract.balance(), 300.into());
+		ext_update(|e| e
+			.sender(sender_two.clone())
+			.value(250.into())
+		);
+		contract.give();
+		assert_eq!(contract.balance(), 550.into());
+		// 2 log entries should be created
+		assert_eq!(ext_get().logs().len(), 2);
+		*/
+		let sender_one = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		assert_eq!(sender_one, sender_one);
+
+	}
+}

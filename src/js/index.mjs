@@ -20,12 +20,23 @@ import {
   rTrimBrace,
   changeDateFormat,
   changeDateFormatBack,
-  trimSemiColon
+  trimSemiColon,
+  padNumber,
+  findNextConnective,
+  findConsequent,
+  isDate,
+  sameDayAsCurrentDate,
+  greaterDate,
+  equalDates,
+  beforeCurrentDate,
+  computeDateString,
+  concatenate
 } from "./stringmanipulation.mjs";
 
 import {
   Contract,
-  translateContract
+  translateContract,
+  createNewContractString
 } from "./contract.mjs";
 
 import {
@@ -51,6 +62,13 @@ import {
   getOracleByAddress
 } from "./oracles.mjs";
 
+import {
+  sleep,
+  occurrences,
+  isNumeric,
+  printStack
+} from "./generalfunctions.mjs"
+
 var numberOfSubContracts = 0,
     numberOfContracts = 0,
     superContractsMap = new Map(), // map from superContract id to set of contract objects contained within super contract
@@ -66,13 +84,6 @@ var numberOfSubContracts = 0,
     stringToAddToBeginning = "",
     stringToAddToEnd = "";
 
-$(function(){
-    var $select = $(".custom_select");
-    for (var i = 1; i <= 100; ++i) {
-        $select.append($('<option></option>').val(i).html(i));
-    }
-});
-
 window.addEventListener('load', function() {  // commented for testing purposes
     /*
     document.getElementById("deposit_button1").disabled = true;
@@ -81,91 +92,107 @@ window.addEventListener('load', function() {  // commented for testing purposes
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input_textarea").disabled = true;
     */
+    addDepositSelectOptions();
     createOracles();
     // start timer
     update();
     runClock();
+    var res = evaluate("( truncate \"23/12/2017-23:33:33\" ( one ) and truncate \"26/12/2017-23:33:33\" ( one ) )", ">", "truncate \"24/12/2017-23:33:33\" ( one )");
 });
 
-global.addDefinition = function(inputString) {
-    document.getElementById("add_definitions_status").innerHTML = "";
-    // remove multiple whitespaces
-    inputString = inputString.replace(/  +/gm, " ");
-    // pattern matching for semantics
-    var matches = inputString.match(/^.+\s?=\s?.+;$/);
-    if (inputString === "" || matches === null) {
-        document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
-        return;
-    }
-    document.getElementById("input_added_textarea").innerHTML = "";
-    var strArr = inputString.split("="),
-        part1 = rTrimWhiteSpace(strArr[0]),
-        part2 = trimSemiColon(lTrimWhiteSpace(strArr[1])),
-        part1Arr = part1.split(" "),
-        part2Arr = part2.split(" ");
-
-    // check semantics of second part
-    for (var i = 0; i < part2Arr.length; ++i) {
-        var term = part2Arr[i];
-        if (!part1.includes(term) && term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
-        && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
-        && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term) && term !== "(" && term !== ")"
-        && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
-        && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)
-        && !definitionsMap.has(term)) {
-            document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
-            return;
-        }
-    }
-    // or just use first word - add checking and then tell user that first term must be definition
-    // need to find word in lhs string thats not in rhs and not one of the existing terms & add definition to map
-    for (var i = 0; i < part1Arr.length; ++i) {
-        var term = part1Arr[i];
-        if (!part2.includes(term) && term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
-        && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
-        && term !== "&&" && term !== "if" && term !== "||" && !parseFloat(term)
-        && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
-        && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
-            definitionsMap.set(term, part1 + "=" + part2);
-        }
-    }
-    for (var [key, value] of definitionsMap) { // need to do this in order to allow overwriting of definitions
-        var valueArr = value.split("=");
-        document.getElementById("input_added_textarea").innerHTML += (key + ": " + valueArr[0] + " = " + valueArr[1] + "\n");
+function addDepositSelectOptions() {
+    var $select = $(".custom_select");
+    for (var i = 1; i <= 100; ++i) {
+        $select.append($('<option></option>').val(i).html(i));
     }
 }
 
-function replaceUserDefinitions(inputString) {
+global.addDefinition = function(inputString) {
+    try {
+        document.getElementById("add_definitions_status").innerHTML = "";
+        // remove multiple whitespaces
+        inputString = inputString.replace(/  +/gm, " ");
+        // pattern matching for semantics
+        var matches = inputString.match(/^.+\s?=\s?.+;$/);
+        if (inputString === "" || matches === null) {
+            document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
+            throw new Error("Please provide a valid definition.");
+        }
+        document.getElementById("input_added_textarea").innerHTML = "";
+        var strArr = inputString.split("="),
+            part1 = rTrimWhiteSpace(strArr[0]),
+            part2 = trimSemiColon(lTrimWhiteSpace(strArr[1])),
+            part1Arr = part1.split(" "),
+            part2Arr = part2.split(" ");
+
+        // check semantics of second part
+        for (var i = 0; i < part2Arr.length; ++i) {
+            var term = part2Arr[i];
+            if (!part1.includes(term) && nonExistingTerm(term) && !definitionsMap.has(term)) {
+                document.getElementById("add_definitions_status").innerHTML = "Please provide a valid definition.";
+                throw new Error("Please provide a valid definition.");
+            }
+        }
+        // or just use first word - add checking and then tell user that first term must be definition
+        // need to find word in lhs string thats not in rhs and not one of the existing terms & add definition to map
+        for (var i = 0; i < part1Arr.length; ++i) {
+            var term = part1Arr[i];
+            if (!part2.includes(term) && nonExistingTerm(term)) {
+                definitionsMap.set(term, part1 + "=" + part2);
+            }
+        }
+        for (var [key, value] of definitionsMap) { // need to do this in order to allow overwriting of definitions
+            var valueArr = value.split("=");
+            document.getElementById("input_added_textarea").innerHTML += (key + ": " + valueArr[0] + " = " + valueArr[1] + "\n");
+        }
+    } catch(e) {
+        console.log("Invalid definition provided.")
+        return;
+    }
+};
+
+export function nonExistingTerm(term) {
+    if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
+    && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
+    && term !== "&&" && term !== "if" && term !== "||" && !isNumeric(term) && term !== "(" && term !== ")"
+    && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term))) && term !== "else" && term !== "}"
+    && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
+        return true;
+    }
+    return false;
+}
+
+export function replaceUserDefinitions(inputString, mapOfDefinitions) {
     var strSplit = inputString.split(" "),
-        keys = Array.from(definitionsMap.keys()),
+        keys = Array.from(mapOfDefinitions.keys()),
         intersection = strSplit.filter(value => keys.includes(value));     // check if any definition appears in inputString
 
     while(intersection.length !== 0) {
         for(var i = 0; i < intersection.length; ++i) {
             // check for if any definition appears in inputString
             var regex = new RegExp("(.*)(" + intersection[i] + ")(.*)"),
-                matchObj = regex.exec(inputString), // find matching part in string
-                value = definitionsMap.get(intersection[i]),
+                matchObj1 = regex.exec(inputString), // find matching part in string
+                value = mapOfDefinitions.get(intersection[i]),
                 valueArr = value.split("="),
                 lhs = valueArr[0],
                 newValue = valueArr[1],
-                endPartArr = lTrimWhiteSpace(matchObj[2] + matchObj[3]).split(" "),
+                endPartArr = lTrimWhiteSpace(matchObj1[2] + matchObj1[3]).split(" "),
                 lhsArr = lhs.split(" "); // do not need to trim by whitespace here as we add no whitespace when adding definitions
 
             for (var j = 1; j < lhsArr.length; ++j) { // skipping first index as this is definition
                 regex = new RegExp("(.+\\s)?(" + lhsArr[j] + ")(\\s.+)?");
-                matchObj = regex.exec(newValue);
-                newValue = matchObj[1] + endPartArr[j] + matchObj[3];
+                var matchObj2 = regex.exec(newValue);
+                newValue = matchObj2[1] + endPartArr[j] + matchObj2[3];
             }
             endPartArr.splice(0, lhsArr.length);
 
             if (newValue.indexOf("one") !== newValue.lastIndexOf("one")
               || newValue.indexOf("zero") !== newValue.lastIndexOf("zero")
               || ( newValue.includes("one") && newValue.includes("zero") ) ) { // value consists of multiple contracts - add parenthesis
-                inputString = matchObj1[1] + " ( " + newValue + " ) " + endPartArr.join(" ");
-
+                inputString = endPartArr.length > 0 ? matchObj1[1] + " ( " + newValue + " ) " + endPartArr.join(" ") : matchObj1[1] + " ( " + newValue + ")";
             } else {
-                inputString = matchObj1[1] + newValue + " " + endPartArr.join(" "); // need to add the whitespace as we trimmed it previously
+                // need to add the whitespace as we trimmed it previously
+                inputString = endPartArr.length > 0 ? matchObj1[1] + newValue + " " + endPartArr.join(" ") : matchObj1[1] + newValue;
             }
         }
         strSplit = inputString.split(" ");
@@ -174,8 +201,117 @@ function replaceUserDefinitions(inputString) {
     return inputString;
 }
 
+
+function correctConstruct(inputString) {
+    if (inputString === "") {
+        document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
+        return false;
+    }
+    if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Parenthesis mismatch.";
+        return false;
+    }
+    if (!inputString.includes("one") && !inputString.includes("zero")) {
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract must include either 'one' or 'zero'.";
+        return false;
+    }
+    if (inputString.includes("get") && !inputString.includes("truncate")) {
+        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract cannot contain 'get' without 'truncate'.";
+        return false;
+    }
+    return true;
+}
+
+function obtainSubContractString(array, indexToStartFrom) {
+    // returns subcontractString and the number of items in the string
+    var stringToReturn = "";
+    if (array[indexToStartFrom] === "(") {
+        var openingParens = 1;
+        for (var i = indexToStartFrom + 1; i < array.length; ++i) {
+            // if string starts with opening paren wait until get balanced closing paren
+            var term = array[i];
+            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
+            if (term === "(") {
+                ++openingParens;
+            } else if (term === ")") {
+                --openingParens;
+            }
+            if (openingParens === 0) {
+                return [stringToReturn, i + 1 - indexToStartFrom];
+            }
+        }
+    } else {
+        // else wait until reading 'zero' or 'one' OR a number in the case it is called by getValue and has been replaced by a numbe
+        for (var i = indexToStartFrom; i < array.length; ++i) {
+            var term = array[i];
+            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
+            if (term === "one" || term === "zero" || isNumeric(term)) { // ---
+                return [stringToReturn, i + 1 - indexToStartFrom];
+            }
+        }
+    }
+}
+
+export function cleanUpBeforeDecomp(inputString) {
+    // add dash between date day and time for processing purposes
+    inputString = changeDateFormat(inputString);
+    // replacing own definitions with map values
+    inputString = replaceUserDefinitions(inputString, definitionsMap);
+    if (!correctConstruct(inputString)) {
+        return "error";
+    }
+    // remove linebreaks, then multiple whitespaces
+    inputString = inputString.replace(/(\r\n|\n|\r)/gm, " ").replace(/  +/gm, " ");
+    // add spacing before and after parenthesis
+    inputString = lTrimWhiteSpace(rTrimWhiteSpace(addSpacing(inputString)));
+    // evaluate & replace if clauses
+    var ifMatches = inputString.match(/^(.*\sif\s.*)|(if\s.*)$/);
+    if (ifMatches !== null) {
+        inputString = rTrimWhiteSpace(lTrimWhiteSpace(evaluateConditionals(inputString))); // may return "error"
+    }
+    return inputString;
+}
+
 global.getDefinitionsText = function() {
     return document.getElementById("add_input_textarea").value;
+}
+
+
+export function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
+    var setOfDates = new Set();
+    // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
+    // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
+    var maxHorizon = "";
+    if (comparisonOperator === ">=" || comparisonOperator === "==") {
+        maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
+    } else {
+        maxHorizon = getHorizon(contract1); // we only want to check for times that are <= maxHorizon
+    }
+    setOfDates.add(maxHorizon);
+    if (comparisonOperator === "==") {
+        return setOfDates;
+    }
+    var contract1HorArr = contract1.split(" "),
+        contract2HorArr = contract2.split(" ");
+    for (var i = 0; i < contract1HorArr.length; ++i) {
+        var term = contract1HorArr[i];
+        if (term === "truncate") {
+            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract1HorArr[i + 1]));
+            if (greaterDate(maxHorizon, currentHor)) {
+                setOfDates.add(currentHor);
+            }
+        }
+    }
+    for (var i = 0; i < contract2HorArr.length; ++i) {
+        var term = contract2HorArr[i];
+        if (term === "truncate") {
+            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract2HorArr[i + 1]));
+            if (greaterDate(maxHorizon, currentHor)) {
+                setOfDates.add(currentHor);
+            }
+        }
+    }
+    return setOfDates;
 }
 
 function update() {
@@ -189,7 +325,7 @@ function update() {
                     executeSingleContract(contract);
                 } else { // contract just contains 'truncate' and not 'get'
                     document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-                    deleteFromSuperContracts(superContractId, contract);
+                    deleteFromSuperContracts(superContractsMap, superContractId, contract);
                 }
             }
         }
@@ -289,7 +425,7 @@ global.getInputString = function() {
     return document.getElementById("transaction_input_textarea").value;
 };
 
-function evaluateConditionals(inputString) {
+export function evaluateConditionals(inputString) {
     var termArr = inputString.split(" "),
         ifsToBeMatched = 0,
         openingParens = 0,
@@ -323,15 +459,13 @@ function evaluateConditionals(inputString) {
         } else if (term === ")") {
             if ((i < termArr.length - 1 && nextTerm !== ")" && nextTerm !== "and" && nextTerm !== "or" && nextTerm !== "{" && !COMPARISONOPERATOR(nextTerm) && nextTerm !== "||" && nextTerm !== "&&")
               || i < 2 || ( i > 0 && prevTerm !== "one" && prevTerm !== "zero" && prevTerm !== "}" && prevTerm !== ")" )) {
-                console.log("in here");
                 document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                 return "error";
             }
             ++closingParens;
-            //if (openingParens - closingParens === ifsToBeMatched - 1) { // have found end of if condition
             var bool1 = noOfOpeningParensStack.length === 0 && openingParens === closingParens && ifsToBeMatched !== 0,
                 bool2 = (openingParens - noOfOpeningParensStack[noOfOpeningParensStack.length - 1]) === closingParens;
-            if (bool1 || bool2) {
+            if (bool1 || bool2) { // have reached end of the if condition
                 insideCondition = false;
                 var firstPart = firstPartStack.pop(),
                     compOp = compOpStack.pop(),
@@ -339,6 +473,10 @@ function evaluateConditionals(inputString) {
                     alt = "", // alternative
                     stringToEval = firstPart + " " + compOp + " " + ifCondition,
                     bool = evaluate(firstPart, compOp, ifCondition);
+                    if (bool === undefined) {
+                        document.getElementById("transaction_status").innerHTML = "Conditional statement syntax error.";
+                        return "error";
+                    }
 
                 ifCondition = "";
                 if (bool) {
@@ -369,21 +507,42 @@ function evaluateConditionals(inputString) {
                             if (ifStack.length > 0) {
                                 ifCondition = ifStack.pop();
                                 var slicedCond = ifCondition.slice(-3);
-                                if (slicedCond === "and" || slicedCond === " or") {
+                                if (slicedCond === "and" || slicedCond === " or") { // check if last term was a connective
                                     var lastIndex = ifCondition.lastIndexOf(" ");
                                     ifCondition = ifCondition.slice(0, lastIndex);
+                                }
+                                // check if last term was a comp op
+                                var slicedCompOp1 = ifCondition.slice(-4); // when compOp is 4 symbols long
+                                var slicedCompOp2 = ifCondition.slice(-2); // when compOp is 2 symbols long
+                                var slicedCompOp3 = ifCondition.slice(-1); // when compOp is 1 symbol long
+                                if (COMPARISONOPERATOR(slicedCond) || COMPARISONOPERATOR(slicedCompOp1) || COMPARISONOPERATOR(slicedCompOp2) || COMPARISONOPERATOR(slicedCompOp3)) { // check if last term was a connective
+                                    document.getElementById("transaction_status").innerHTML = "Comparison operator error: Please provide an alternative to your conditional statement.";
+                                    return "error";
                                 }
                             } else {
                                 ifCondition = "";
                             }
                         } else { // append result (nothing) to contractString
-                            var slicedStr = contractString.slice(-3);
-                            if (slicedStr === "and" || slicedStr === " or") {
+                            var slicedCond = contractString.slice(-3);
+                            if (slicedCond === "and" || slicedCond === " or") { // check if last term was a connective
                                 var lastIndex = contractString.lastIndexOf(" ");
                                 contractString = contractString.slice(0, lastIndex);
                             }
+                            // check if last term was a comp op
+                            var slicedCompOp1 = ifCondition.slice(-4); // when compOp is 4 symbols long
+                            var slicedCompOp2 = ifCondition.slice(-2); // when compOp is 2 symbols long
+                            var slicedCompOp3 = ifCondition.slice(-1); // when compOp is 1 symbol long
+                            if (COMPARISONOPERATOR(slicedCond) || COMPARISONOPERATOR(slicedCompOp1) || COMPARISONOPERATOR(slicedCompOp2) || COMPARISONOPERATOR(slicedCompOp3)) { // check if last term was a connective
+                                document.getElementById("transaction_status").innerHTML = "Comparison operator error: Please provide an alternative to your conditional statement.";
+                                return "error";
+                            }
                         }
-                        if (termArr[i + 1] === "and" || termArr[i + 1] === "or") {
+                        // check if next term is a comp op
+                        if (COMPARISONOPERATOR(termArr[i + 1])) { // check if next term is a connective
+                            document.getElementById("transaction_status").innerHTML = "Comparison operator error: Please provide an alternative to your conditional statement.";
+                            return "error";
+                        }
+                        if (termArr[i + 1] === "and" || termArr[i + 1] === "or") { // check if next term is a connective
                             ++i;
                         }
                     } else { // there is an alternative
@@ -398,13 +557,10 @@ function evaluateConditionals(inputString) {
                         }
                     }
                 }
-                if (!correctConditionalSyntax(stringToEval, cons, alt)) {
-                    return "error";
-                }
                 --ifsToBeMatched;
                 noOfOpeningParensStack.pop();
             } else if (ifsToBeMatched > 0 || insideCondition) { // we are inside ifCondition and do not want to add to final string
-                ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
+                //ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
             } else { // we are not inside ifCondition and can append to contractString
                 contractString = contractString === "" ? term : contractString + " " + term;
             }
@@ -412,7 +568,7 @@ function evaluateConditionals(inputString) {
             if (i > termArr.length - 3 || nextTerm === ")" || COMPARISONOPERATOR(nextTerm)
               || nextTerm === "&&" || nextTerm === "||" || nextTerm === "{" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
               || nextTerm === "}" || nextTerm === "or" || nextTerm === "and" || nextTerm === "else"
-              || parseFloat(nextTerm) || observablesArr.includes(nextTerm)
+              || isNumeric(nextTerm) || observablesArr.includes(nextTerm)
               || (i > 0 && (prevTerm === ")" || prevTerm === "one" || prevTerm === "zero"
               || prevTerm === "truncate" || prevTerm === "scaleK" || prevTerm === "else" || prevTerm === "}"))) {
                 document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
@@ -421,7 +577,7 @@ function evaluateConditionals(inputString) {
             ++openingParens;
             if (termArr[i - 1] !== "if") {
                 if (ifsToBeMatched > 0 || insideCondition) { // we are inside ifCondition and do not want to add to final string
-                    ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
+                    //ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
                 } else { // we are not inside ifCondition and can append to contractString
                     contractString = contractString === "" ? term : contractString + " " + term;
                 }
@@ -442,7 +598,12 @@ function evaluateConditionals(inputString) {
             var firstPart = firstPartStack.pop(),
                 compOp = compOpStack.pop(),
                 secondPart = ifCondition,
-                ifConditionVal = evaluate(lTrimWhiteSpace(rTrimWhiteSpace(lTrimParen(rTrimParen(firstPart)))), compOp, secondPart);
+                ifConditionVal = evaluate(firstPart, compOp, secondPart);
+                //ifConditionVal = evaluate(lTrimParen(rTrimParen(firstPart)), compOp, secondPart);
+                if (ifConditionVal === undefined) {
+                    document.getElementById("transaction_status").innerHTML = "Conditional statement syntax error.";
+                    return "error";
+                }
 
             // keep opening paren
             ifCondition = firstPart.slice(0, 1) === "(" && secondPart.slice(-1) !== ")" ? "(" + ifConditionVal + " " + term : ifConditionVal + " " + term;
@@ -450,11 +611,8 @@ function evaluateConditionals(inputString) {
                 // keep opening paren
                 ifCondition = firstPart.slice(0, 1) === "(" && secondPart.slice(-1) !== ")" ? "(" : "";
             }
-        } else if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one" && term !== "else"
-          && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
-          && term !== "&&" && term !== "||" && !parseFloat(term) && !isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(term)))
-          && term !== "}" && term !== "{" && term !== "and" && term !== "or" && !observablesArr.includes(term)) {
-            // give error
+        } else if (nonExistingTerm(term)) {
+            // give error for non-existing term
             document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
             return "error";
         } else {
@@ -468,8 +626,7 @@ function evaluateConditionals(inputString) {
     return contractString;
 }
 
-
-function evaluate(part1, comparisonOperator, part2) {
+export function evaluate(part1, comparisonOperator, part2) {
     if (comparisonOperator === "{>}" || comparisonOperator === "{<}" || comparisonOperator === "{==}" || comparisonOperator === "{>=}" || comparisonOperator === "{<=}") {
         // Horizon Comparison
 
@@ -512,12 +669,12 @@ function evaluate(part1, comparisonOperator, part2) {
     } else if (comparisonOperator === ">=" || comparisonOperator === ">" || comparisonOperator === "<=" || comparisonOperator === "<" || comparisonOperator === "==") {
         // Dominance Comparison
         var horizon1 = getHorizon(part1),
-            horizon2 = getHorizon(part2),
-            horizonsSet = extractAllSubHorizons(part1, part2, comparisonOperator);
+            horizon2 = getHorizon(part2);
         // go through all dates and call getValue with date parameter
         switch(comparisonOperator) {
             case ">=":
                 if (!greaterDate(horizon2, horizon1)) {
+                    var horizonsSet = extractAllSubHorizons(part1, part2, comparisonOperator);
                     for (let hor of horizonsSet) {
                         var value1 = getValue(part1, hor),
                             value2 = getValue(part2, hor);
@@ -531,21 +688,10 @@ function evaluate(part1, comparisonOperator, part2) {
                 }
                 break;
             case ">":
-                if (greaterDate(horizon1, horizon2)) {
-                    for (let hor of horizonsSet) {
-                        var value1 = getValue(part1, hor),
-                            value2 = getValue(part2, hor);
-                        if (value1 <= value2) {
-                            return false;
-                        }
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-                break;
+                return evaluate(part1, ">=", part2) && !evaluate(part1, "==", part2);
             case "<=":
                 if (!greaterDate(horizon1, horizon2)) {
+                    var horizonsSet = extractAllSubHorizons(part1, part2, comparisonOperator);
                     for (let hor of horizonsSet) {
                         var value1 = getValue(part1, hor),
                             value2 = getValue(part2, hor);
@@ -559,22 +705,13 @@ function evaluate(part1, comparisonOperator, part2) {
                 }
                 break;
             case "<":
-                if (greaterDate(horizon2, horizon1)) {
-                    for (let hor of horizonsSet) {
-                        var value1 = getValue(part1, hor),
-                            value2 = getValue(part2, hor);
-                        if (value1 >= value2) {
-                            return false;
-                        }
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-                break;
+                return evaluate(part1, "<=", part2) && !evaluate(part1, "==", part2);
             case "==":
                 if (equalDates(horizon2, horizon1)) {
+                    console.log("Both have equal dates");
+                    var horizonsSet = extractAllSubHorizons(part1, part2, comparisonOperator);
                     for (let hor of horizonsSet) {
+                        console.log("hor: " + hor);
                         var value1 = getValue(part1, hor),
                             value2 = getValue(part2, hor);
                         if (value1 !== value2) {
@@ -591,73 +728,6 @@ function evaluate(part1, comparisonOperator, part2) {
     }
 }
 
-function findConsequent(contractStringArr, indexToStartFrom) {
-    var returnString = "";
-    for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
-        var term = contractStringArr[i];
-        if (term === "}") {
-            return [returnString, i - indexToStartFrom + 1];
-        } else {
-            returnString = returnString === "" ? term : returnString + " " + term;
-        }
-    }
-}
-
-function correctConditionalSyntax(ifCondition, action1, action2) {
-    var inputString = "";
-    var ifSyntaxMatches;
-    if (action2 === "") {
-        inputString = "if ( " + ifCondition + " ) { " + action1 + " }";
-        ifSyntaxMatches = inputString.match(/^if\s\(\s.+\s\)\s{\s.+\s}$/);
-    } else {
-        inputString = "if ( " + ifCondition + " ) { " + action1 + " } else { " + action2 + " }";
-        ifSyntaxMatches = inputString.match(/^if\s\(\s.+\s\)\s{\s.+\s}\selse\s{\s.+\s}$/);
-    }
-    if (ifSyntaxMatches === null) {
-        document.getElementById("transaction_status").innerHTML = "If clause is not constructed properly.";
-        return false;
-    }
-    return true;
-}
-
-function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
-    var setOfDates = new Set();
-    // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
-    // simply by finding all truncate occurrences.. this is when a contracts value will change as some contract will expire
-    var maxHorizon = "";
-    if (comparisonOperator === ">=" || comparisonOperator === ">" || comparisonOperator === "==") {
-        maxHorizon = getHorizon(contract2); // we only want to check for times that are <= maxHorizon
-    } else {
-        maxHorizon = getHorizon(contract1); // we only want to check for times that are <= maxHorizon
-    }
-    setOfDates.add(maxHorizon);
-    var contract1HorArr = contract1.split(" "),
-        contract2HorArr = contract2.split(" ");
-    for (var i = 0; i < contract1HorArr.length; ++i) {
-        var term = contract1HorArr[i];
-        if (term === "truncate") {
-            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract1HorArr[i + 1]));
-            if (greaterDate(maxHorizon, currentHor)) {
-                setOfDates.add(currentHor);
-            }
-        }
-    }
-    for (var i = 0; i < contract2HorArr.length; ++i) {
-        var term = contract2HorArr[i];
-        if (term === "truncate") {
-            var currentHor = lTrimDoubleQuotes(rTrimDoubleQuotes(contract2HorArr[i + 1]));
-            if (greaterDate(maxHorizon, currentHor)) {
-                setOfDates.add(currentHor);
-            }
-        }
-    }
-    // if operator is > or < then we need to remove max horizon from the set
-    if (comparisonOperator === ">" || comparisonOperator === "<") {
-        setOfDates.delete(maxHorizon);
-    }
-    return setOfDates;
-}
-
 function COMPARISONOPERATOR(string) {
     if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}"
       || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]"
@@ -667,7 +737,7 @@ function COMPARISONOPERATOR(string) {
     return false;
 }
 
-function getHorizon(contractString) {
+export function getHorizon(contractString) {
     // Loops through the whole contract once to find the largest horizon
     // Find minimum horizon, but beforeCurrentDate() must return false
     var strArr = contractString.split(" "),
@@ -701,43 +771,17 @@ function getHorizon(contractString) {
     return maxHorizon;
 }
 
-function obtainSubContractString(array, indexToStartFrom) {
-    // returns subcontractString and the number of items in the string
-    var stringToReturn = "";
-    if (array[indexToStartFrom] === "(") {
-        var openingParens = 1;
-        for (var i = indexToStartFrom + 1; i < array.length; ++i) {
-            // if string starts with opening paren wait until get balanced closing paren
-            var term = array[i];
-            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
-            if (term === "(") {
-                ++openingParens;
-            } else if (term === ")") {
-                --openingParens;
-            }
-            if (openingParens === 0) {
-                return [stringToReturn, i + 1 - indexToStartFrom];
-            }
-        }
-    } else {
-        // else wait until reading 'zero' or 'one'
-        for (var i = indexToStartFrom; i < array.length; ++i) {
-            var term = array[i];
-            stringToReturn = stringToReturn === "" ? term : stringToReturn + " " + term;
-            if (term === "one" || term === "zero") {
-                return [stringToReturn, i + 1 - indexToStartFrom];
-            }
-        }
-    }
-}
-
 function decompose(termArr) {
+    console.log("calling decompose on: ");
+    console.log(termArr);
+    stringToAddToBeginning = "";
     var openingParens = 0,
         closingParens = 0,
         contractString = "",
         contractParsed = "",
         parseStack = [],
         contractsStack = [],
+        //connectiveStack = [], //---
         closingParensStack = [],
         mostBalancedConj = "",
         mostBalancedConjBalance = termArr.length - 1,
@@ -776,9 +820,11 @@ function decompose(termArr) {
                         contractsStack[0] = contractString;
                     }
                 }
-                conjWaitingToBeMatched = true;
                 contractString = "";
+            } else {
+                //connectiveStack.push(term); // ---
             }
+            conjWaitingToBeMatched = true;
         } else if (term === "zero" || term === "one") {
             contractString = contractString === "" ? term : contractString + " " + term;
             var combinatorString = parseStack[parseStack.length - 1];
@@ -793,7 +839,7 @@ function decompose(termArr) {
                         contractsStack[1] = combinatorString + " ( " + contractString + closingParensString;
                     }
                 } else {
-                    contractsStack[1] = contractString;
+                    //contractsStack[1] = contractsStack[1] !== undefined ? contractsStack[1] + " " + connectiveStack.pop() + " " + contractString : contractString; // ---
                 }
                 conjWaitingToBeMatched = false;
                 contractString = "";
@@ -855,56 +901,76 @@ function decompose(termArr) {
     return [contractsStack[0], contractsStack[1], mostBalancedConj];
 }
 
-function findNextConnective(contractStringArr, indexToStartFrom) {
-    for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
-        var term = contractStringArr[i];
-        if (term === "and" || term === "or") {
-            return term;
+export function getValue(contractString, horizonToCheck) {
+    var termArr = contractString.split(" "),
+        currentString = "",
+        combinatorStack = [],
+        valuesStack = [],
+        currentVal,
+        horizonsStack = []; // pushes horizons of each c whenever we push combinators
+
+    for (var i = 0; i < termArr.length; ++i) {
+        var term = termArr[i];
+        if (term === "(") {
+            if (currentString !== "") {
+                combinatorStack.push(currentString);
+                currentString = "";
+            }
+        } else if (term === ")") { // whenever we read this we can evaluate current contract string and pop 1 comb off the combinators stack to apply
+            currentVal = getLowestLevelContractValue(currentString, horizonToCheck);
+            if (combinatorStack.length > 0) {
+                var str = combinatorStack.pop() + " " + currentVal.toString();
+                currentVal = getLowestLevelContractValue(str, horizonToCheck);
+            }
+            if (currentVal !== undefined) {
+                currentString = i === termArr.length - 1 ? "" : currentVal.toString();
+            }
+            // apply combinator to it and call getValue again
+        } else if (term === "get") {
+            var oscs = obtainSubContractString(termArr, i + 1);
+            var subContractString = oscs[0];
+            var tempValue = getValue(subContractString, horizonToCheck);
+            currentVal = sameDayAsCurrentDate(getHorizon(subContractString), horizonToCheck) ? tempValue : 0;
+
+            if (currentVal !== undefined) {
+                currentString = i === termArr.length - 1 ? "" : currentVal.toString();
+            }
+            i += oscs[1];
+        } else {
+            currentString = currentString === "" ? term : currentString + " " + term;
         }
     }
+    if (currentString !== "") {
+        currentVal = getLowestLevelContractValue(currentString, horizonToCheck);
+    }
+    return currentVal;
 }
 
-function getValue(contractString, horizonToCheck) {
-    var termArr = contractString.split(" ");
-    // check if string contains conjunction
-    if (contractString.includes(" and ") || contractString.includes(" or ")) {
-        var decomposedResult = decompose(termArr),
-            part1 = decomposedResult[0],
-            part2 = decomposedResult[1],
-            mostBalancedConj = decomposedResult[2],
-            horizon1 = getHorizon(part1),
-            horizon2 = getHorizon(part2),
-            value1 = getValue(part1, horizonToCheck),
-            value2 = getValue(part2, horizonToCheck);
-        if (!beforeCurrentDate(horizon1, horizonToCheck)
-          && !beforeCurrentDate(horizon2, horizonToCheck)) {
-            if (mostBalancedConj === "and") {
-                return value1 + value2;
-            } else {
-                return Math.max(value1, value2);
-            }
-        } else if (!beforeCurrentDate(horizon1, horizonToCheck)
-          && beforeCurrentDate(horizon2, horizonToCheck)) {
-            return value1;
-        } else if (beforeCurrentDate(horizon1, horizonToCheck)
-          && !beforeCurrentDate(horizon2, horizonToCheck)) {
-            return value2;
-        } else { // both have expired - return 0
-            return 0;
-        }
+function getLowestLevelContractValue(contractString, horizonToCheck) {
+    if (contractString.includes(" or ")) { // it will only contain one or the other, not both
+        var arr = contractString.split(" or ");
+        return Math.max(getLowestLevelContractValue(arr[0], horizonToCheck), getLowestLevelContractValue(arr[1], horizonToCheck));
+    } else if (contractString.includes(" and ")) {
+        var arr = contractString.split(" and ");
+        return getLowestLevelContractValue(arr[0], horizonToCheck) + getLowestLevelContractValue(arr[1], horizonToCheck);
     } else {
         // string does not contain connective ie we are in lowest-level subcontract
-        var value = 1;
-        var horizon = getHorizon(contractString);
-        if (contractString.includes("zero")) {
+        if (isNumeric(contractString)) {
+            return parseFloat(contractString);
+        } else if (contractString === "zero" || contractString.includes(" zero ") || contractString === "0" || contractString.includes(" 0 ")) {
             return 0;
+        } else if (contractString === "one") {
+            return 1;
         } else {
+            var value = 1;
+            var horizon = getHorizon(contractString);
+            var termArr = contractString.split(" ");
             for (var i = 0; i < termArr.length; ++i) {
                 if (termArr[i] === "scaleK") {
                     if (termArr[i + 1].includes("x")) { // value dependent on some observable values
                         var arr = termArr[i + 1].split("x");
                         for (var j = 0; j < arr.length; ++j) {
-                            if (parseFloat(arr[j])) {
+                            if (isNumeric(arr[j])) {
                                 value = value * parseFloat(arr[j]);
                             } else { // we encountered an observable
                                 if (arr[j] === "libor3m") {
@@ -921,86 +987,18 @@ function getValue(contractString, horizonToCheck) {
                     ++i;
                 } else if (termArr[i] === "give") {
                     value = -value;
+                } else if (isNumeric(termArr[i])) {
+                    value = value * parseFloat(termArr[i]);
                 }
             }
-            if (contractString.includes("get")) {
-                if (sameDayAsCurrentDate(horizon, horizonToCheck)) {
-                    return value;
-                } else {
-                    return 0;
-                }
-            } else {
-                if (beforeCurrentDate(horizon, horizonToCheck)) { // ie contract has expired, its horizon is before horizonToCheck
-                    return 0;
-                } else { // contract's horizon is after the horizon given, so it is valid
-                    return value;
-                }
+            if (beforeCurrentDate(horizon, horizonToCheck)) { // ie contract has expired, its horizon is before horizonToCheck
+                return 0;
+            } else { // contract's horizon is after the horizon given, so it is valid
+                return value;
             }
+
         }
     }
-}
-
-function sameDayAsCurrentDate(contractHorizon, horizonToCheck) {
-    var contractDay = contractHorizon.split("-")[0].split("/")[0],
-        contractMonth = contractHorizon.split("-")[0].split("/")[1],
-        contractYear = contractHorizon.split("-")[0].split("/")[2];
-    if (horizonToCheck === "") {
-        var todayDay = new Date().getDate().toString(),
-            todayMonth = new Date().getMonth(),
-            todayYear = new Date().getFullYear().toString();
-        if (contractDay === todayDay && contractMonth === padNumber((todayMonth + 1).toString()) && contractYear === todayYear) {
-            return true;
-        }
-        return false;
-    } else {
-        var toCompareDay = horizonToCheck.split("-")[0].split("/")[0],
-            toCompareMonth = horizonToCheck.split("-")[0].split("/")[1],
-            toCompareYear = horizonToCheck.split("-")[0].split("/")[2];
-        if (contractDay === toCompareDay && contractMonth === toCompareMonth && contractYear === toCompareYear) {
-            return true;
-        }
-        return false;
-    }
-}
-
-function correctConstruct(inputString) {
-    if (inputString === "") {
-        document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
-        return false;
-    }
-    if (openingParensAmount(inputString) !== closingParensAmount(inputString)) {
-        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. Parenthesis mismatch.";
-        return false;
-    }
-    if (!inputString.includes("one") && !inputString.includes("zero")) {
-        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract must include either 'one' or 'zero'.";
-        return false;
-    }
-    if (inputString.includes("get") && !inputString.includes("truncate")) {
-        document.getElementById("transaction_status").innerHTML = "The contract is not constructed properly. A contract cannot contain 'get' without 'truncate'.";
-        return false;
-    }
-    return true;
-}
-
-function cleanUpBeforeDecomp(inputString) {
-    // add dash between date day and time for processing purposes
-    inputString = changeDateFormat(inputString);
-    // replacing own definitions with map values
-    inputString = replaceUserDefinitions(inputString);
-    if (!correctConstruct(inputString)) {
-        return "error";
-    }
-    // remove linebreaks, then multiple whitespaces
-    inputString = inputString.replace(/(\r\n|\n|\r)/gm, " ").replace(/  +/gm, " ");
-    // add spacing before and after parenthesis
-    inputString = lTrimWhiteSpace(rTrimWhiteSpace(addSpacing(inputString)));
-    // evaluate & replace if clauses
-    var ifMatches = inputString.match(/^(.*\sif\s.*)|(if\s.*)$/);
-    if (ifMatches !== null) {
-        inputString = rTrimWhiteSpace(lTrimWhiteSpace(evaluateConditionals(inputString))); // may return "error"
-    }
-    return inputString;
 }
 
 global.processContract = function(inputString, initialDecomposition) {
@@ -1026,6 +1024,9 @@ global.processContract = function(inputString, initialDecomposition) {
             part1 = decomposedResult[0],
             part2 = decomposedResult[1],
             mostBalancedConj = decomposedResult[2];
+            console.log("part1: " + part1);
+            console.log("part2: " + part2);
+            console.log(mostBalancedConj);
         if (mostBalancedConj === "and") {
             ++contractsBeingDecomposed;
             processContract(part1, false);
@@ -1115,13 +1116,6 @@ function updateValuationValue(id) {
         year = document.getElementById("year_select_" + id).value,
         c = getAllSubcontracts(id);
     document.getElementById("p_value_" + id).innerHTML = getValue(c, day + "/" + month + "/" + year + "-" + "12:00:00").toString() + "ETH";
-}
-
-function padNumber(number) {
-    if (number.length === 1) {
-        return "0" + number;
-    }
-    return number;
 }
 
 function getAllSubcontracts(superKey) {
@@ -1266,7 +1260,7 @@ function createContractEntries(contractsArr) {
     }
 }
 
-function decomposeAnds(contractString) {
+export function decomposeAnds(contractString) {
     // keep two stacks: one for combinators and one for closing parenthesis to be added
     var termArr = contractString.split(" "),
         openingParens = 0,
@@ -1331,23 +1325,6 @@ function decomposeAnds(contractString) {
     return finalContractsArr;
 }
 
-function concatenate(arr1, arr2) {
-    for (var i = 0; i < arr2.length; ++i) {
-        arr1.push(arr2[i]);
-    }
-    return arr1;
-}
-
-// NEEDED?
-function splitContract(contractStringArr, indexOfMostBalancedOr) {
-    // do not split by "or" because this will split by first 'or' occurence
-    // we want to split by 'or' occurrence with only 1 difference between |openingParens| and |closingParen|
-    var newStack = [];
-    newStack[0] = addParens(cleanParens(contractStringArr.slice(0, indexOfMostBalancedOr).join(' ')));
-    newStack[1] = addParens(cleanParens(contractStringArr.slice(indexOfMostBalancedOr + 1, contractStringArr.length - 1).join(' ')));
-    return newStack;
-}
-
 function parsesSuccessfullyForSyntax(contractString) {
     var strArr = contractString.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
@@ -1370,7 +1347,7 @@ function parsesSuccessfullyForSyntax(contractString) {
             case "and":
                 if ((i > 0 && prevTerm !== ")" && prevTerm !== "one" && prevTerm !== "zero")
                   || nextTerm === ")" || nextTerm === "and" || nextTerm === "or" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
-                  || parseFloat(nextTerm) || observablesArr.includes(nextTerm)) {
+                  || isNumeric(nextTerm) || observablesArr.includes(nextTerm)) {
                     document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                     return false;
                 }
@@ -1378,7 +1355,7 @@ function parsesSuccessfullyForSyntax(contractString) {
             case "or":
                 if ((i > 0 && prevTerm !== ")" && prevTerm !== "one" && prevTerm !== "zero")
                   || nextTerm === ")" || nextTerm === "and" || nextTerm === "or" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
-                  || parseFloat(nextTerm) || observablesArr.includes(nextTerm)) {
+                  || isNumeric(nextTerm) || observablesArr.includes(nextTerm)) {
                     document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                     return false;
                 }
@@ -1396,7 +1373,7 @@ function parsesSuccessfullyForSyntax(contractString) {
                 }
                 break;
             case "scaleK":
-                if (i > strArr.length - 3 || (i < strArr.length - 1 && !parseFloat(nextTerm) && !observablesArr.includes(nextTerm))) {
+                if (i > strArr.length - 3 || (i < strArr.length - 1 && !isNumeric(nextTerm) && !observablesArr.includes(nextTerm))) {
                     document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": scaleK should be followed by an integer or an observable.";
                     return false;
                 }
@@ -1412,7 +1389,7 @@ function parsesSuccessfullyForSyntax(contractString) {
                 if (i > strArr.length - 3 || prevTerm === "one" || prevTerm === "zero" || prevTerm === ")"
                   || prevTerm === "scaleK" || prevTerm === "truncate" || nextTerm === "and" || nextTerm === "or"
                   || nextTerm === ")" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
-                  || parseFloat(nextTerm) || observablesArr.includes(nextTerm)) {
+                  || isNumeric(nextTerm) || observablesArr.includes(nextTerm)) {
                     document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                     return false;
                 }
@@ -1425,7 +1402,7 @@ function parsesSuccessfullyForSyntax(contractString) {
                 }
                 break;
             default:
-                if (parseFloat(term) || observablesArr.includes(term)) {
+                if (isNumeric(term) || observablesArr.includes(term)) {
                     if (i === 0 || i === strArr.length - 1 || prevTerm !== "scaleK" || nextTerm !== "(") {
                         document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": a float/observable value should be after scaleK and the float/observable should be followed by parenthesis.";
                         return false;
@@ -1463,7 +1440,7 @@ function createContractObject(inputString) {
         if (str === "give") {
             ++giveOccurrences;
         } else if (str === "scaleK" && amount !== "0") {
-            if (parseFloat(strArr[i + 1])) {
+            if (isNumeric(strArr[i + 1])) {
                 amount = ( parseFloat(amount) * parseFloat(strArr[i + 1]) ).toString();
                 ++i;
             } else if (observablesArr.includes(strArr[i + 1])) {
@@ -1502,7 +1479,7 @@ function createContractObject(inputString) {
             // add expired label
             document.getElementById("td_status_" + contract.id).innerHTML = "expired";
         } else {
-            addToSuperContracts(numberOfContracts.toString(), contract); // contract is only added to pending contracts map if it is still valid
+            addToSuperContracts(superContractsMap, numberOfContracts.toString(), contract); // contract is only added to pending contracts map if it is still valid
             document.getElementById("td_status_" + contract.id).innerHTML = "waiting to be executed";
         }
         addSuperContractRow();
@@ -1510,32 +1487,6 @@ function createContractObject(inputString) {
         document.getElementById("transaction_status").innerHTML = "Insufficient funds. The sending party does not have enough Ether in their account. Please deposit before adding additional contracts.";
         addSuperContractRow();
     }
-}
-
-function createNewContractString(amount, obsArr, recipient, horizonDate, acquireAtHorizon) {
-    var stringToReturn = "";
-    if (amount === "0") {
-        stringToReturn = "zero";
-    } else if (amount === "1" && obsArr.length === 0) {
-        stringToReturn = "one";
-    } else {
-        if (obsArr.length > 0) {
-            for (var i = 0; i < obsArr.length; ++i) {
-                amount = amount + "x" + observablesArr[i];
-            }
-        }
-        stringToReturn = "scaleK " + amount + " ( one )";
-    }
-    if (horizonDate !== "infinite") {
-        stringToReturn = "truncate " + horizonDate + " ( " + stringToReturn + " )";
-    }
-    if (acquireAtHorizon === "yes") {
-        stringToReturn = "get ( " + stringToReturn + " )"
-    }
-    if (recipient === 1) {
-        stringToReturn = "give ( " + stringToReturn + " )"
-    }
-    return stringToReturn;
 }
 
 function addSuperContractRow() {
@@ -1558,124 +1509,40 @@ function addSuperContractRow() {
     }
 }
 
-function addToSuperContracts(superKey, contract) {
-    if (superContractsMap.has(superKey)) {
-        for (var [superContractId, contractsSet] of superContractsMap) {
+function addToSuperContracts(map, superKey, contract) {
+    if (map.has(superKey)) {
+        for (var [superContractId, contractsSet] of map) {
             if (superContractId === superKey) {
                 var newSet = contractsSet;
                 newSet.add(contract);
-                superContractsMap.set(superContractId, newSet);
+                map.set(superContractId, newSet);
                 break;
             }
         }
     } else {
         var newSet = new Set();
         newSet.add(contract);
-        superContractsMap.set(superKey, newSet);
+        map.set(superKey, newSet);
     }
     console.log("SupercontractsMap after adding a contract");
-    console.log(superContractsMap);
+    console.log(map);
 }
 
-function deleteFromSuperContracts(superKey, contract) {
-    for (var [superContractId, contractsSet] of superContractsMap) {
+function deleteFromSuperContracts(map, superKey, contract) {
+    for (var [superContractId, contractsSet] of map) {
         if (superContractId === superKey) {
             var newSet = contractsSet;
             newSet.delete(contract);
-            superContractsMap.set(superContractId, newSet);
+            map.set(superContractId, newSet);
             if (newSet.size === 0) {
-                superContractsMap.delete(superContractId);
+                map.delete(superContractId);
                 document.getElementById("acquire_button_" + superContractId).disabled = true;
             }
             break;
         }
     }
     console.log("SupercontractsMap after deleting a contract");
-    console.log(superContractsMap);
-}
-
-function computeDateString(dateString) {
-    var horizonArr = dateString.split("-"),
-        dateArr = horizonArr[0].split("/"),
-        timeArr = horizonArr[1].split(":"),
-        finalDateString = dateArr[2] + "-" + dateArr[1] + "-"
-    + dateArr[0] + "T" + timeArr[0] + ":" + timeArr[1] + ":"
-    + timeArr[2] + "+01:00"; // adding 15 seconds to the contract's expiry date to allow it to execute
-    return finalDateString;
-}
-
-function beforeCurrentDate(contractDate, horizonToCheck) {
-  if (horizonToCheck === "") { // we want to compare against the current date - so it is valid even if it is equal to
-      if (contractDate === "infinite") {
-          return false;
-      }
-      var contractDate = new Date(computeDateString(contractDate));
-      var todayDate = new Date();
-      if (contractDate.getTime() < todayDate.getTime()) { // Note the =
-          return true;
-      } else {
-          return false;
-      }
-  } else { // we want to compare against another date, not the current date
-      if (horizonToCheck === "infinite" || contractDate === "infinite") {
-          if (horizonToCheck === "infinite" && contractDate === "infinite") {
-              return false;
-          } else if (horizonToCheck === "infinite") {
-              return true;
-          } else {
-              return false;
-          }
-      }
-      var contractDate = new Date(computeDateString(contractDate));
-      var dateToCompareAgainst = new Date(computeDateString(horizonToCheck));
-      if (contractDate.getTime() < dateToCompareAgainst.getTime()) {
-          return true;
-      } else {
-          return false;
-      }
-  }
-}
-
-function equalDates(dateString1, dateString2) {
-    // for first date
-    if (dateString1 === "infinite" || dateString2 === "infinite") {
-        if (dateString1 === "infinite" && dateString2 === "infinite") {
-            return true;
-        } else {
-            return false;
-        }
-    }
-    var contractDate1 = new Date(computeDateString(dateString1));
-    // for second date
-    var contractDate2 = new Date(computeDateString(dateString2));
-
-    if (contractDate1.getTime() === contractDate2.getTime()) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-function greaterDate(dateString1, dateString2) {
-    // returns true if dateString1 > dateString2
-    if (dateString1 === "infinite" || dateString2 === "infinite") {
-        if (dateString1 === "infinite" && dateString2 === "infinite") {
-            return false;
-        } else if (dateString1 === "infinite") {
-            return true;
-        } else {
-            return false;
-        }
-    }
-    // for first date
-    var contractDate1 = new Date(computeDateString(dateString1));
-    // for second date
-    var contractDate2 = new Date(computeDateString(dateString2));
-    if (contractDate1.getTime() > contractDate2.getTime()) {
-        return true;
-    } else {
-        return false;
-    }
+    console.log(map);
 }
 
 function executeSuperContract(superKey) {
@@ -1726,7 +1593,7 @@ function callTransferFunction(contract, fromAddress, toAddress) {
                 waitForReceipt(transferTxHash).then( _ => {
                     console.log(fromAddress + " has transferred " + contract.amount + " Ether to " + toAddress);
                     document.getElementById("td_status_" + contract.id).innerHTML = "successful";
-                    deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                    deleteFromSuperContracts(superContractsMap, contract.id.split(".")[0], contract);
                     retrieveBalances();
                 });
             });
@@ -1734,7 +1601,7 @@ function callTransferFunction(contract, fromAddress, toAddress) {
             document.getElementById("td_status_" + contract.id).innerHTML = "insufficient funds";
             if (beforeCurrentDate(contract.horizonDate, "")) {
                 document.getElementById("td_status_" + contract.id).innerHTML = "expired";
-                deleteFromSuperContracts(contract.id.split(".")[0], contract);
+                deleteFromSuperContracts(superContractsMap, contract.id.split(".")[0], contract);
             }
         }
     });
@@ -1756,15 +1623,6 @@ function enoughBalanceForCapacity(contract, balance) {
         return true;
     } else {
         return false;
-    }
-}
-
-function sleep(ms) {
-    var start = new Date().getTime();
-    for (var i = 0; i < 1e7; i++) {
-        if ((new Date().getTime() - start) > ms){
-            break;
-        }
     }
 }
 
@@ -1818,14 +1676,6 @@ function retrieveBalances() {
     });
 }
 
-function printStack(stack, name) {
-    console.log(name + ": " + stack.length);
-    var x;
-    for (var x = 0; x < stack.length; ++x) {
-        console.log(name + " - " + x + ": " + stack[x]);
-    }
-}
-
 function createTableRow(contract) {
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
@@ -1848,6 +1698,8 @@ function createTableRow(contract) {
 
 function ownsRights(contractOwnerInt) {
     var ownerAddress = contractOwnerInt === 0 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
+    console.log(getSelectedMetaMaskAccount());
+    console.log(ownerAddress);
     if (getSelectedMetaMaskAccount().toUpperCase() === ownerAddress.toUpperCase()) {
         return true;
     } else {
@@ -1857,8 +1709,11 @@ function ownsRights(contractOwnerInt) {
 }
 
 function createButton (contractString, beginningString, endString, buttonId, divId) {
+    console.log(beginningString);
     var occ = occurrences(beginningString, "give ", false);
+    console.log(occ);
     var contractOwnerInt = occ % 2 === 0 ? 0 : 1;
+    console.log(contractOwnerInt);
     var button = document.createElement("button");
     button.id = "choices_button_" + buttonId;
     button.className = "choices_button";
@@ -1875,30 +1730,6 @@ function createButton (contractString, beginningString, endString, buttonId, div
             processContract(finalContractString, false);
         }
     });
-}
-
-/*
-* @author Vitim.us https://gist.github.com/victornpb/7736865
-* @see http://stackoverflow.com/questions/4009756/how-to-count-string-occurrence-in-string/7924240#7924240
-*/
-function occurrences(string, subString, allowOverlapping) {
-
-   string += "";
-   subString += "";
-   if (subString.length <= 0) return (string.length + 1);
-
-   var n = 0,
-       pos = 0,
-       step = allowOverlapping ? 1 : subString.length;
-
-   while (true) {
-       pos = string.indexOf(subString, pos);
-       if (pos >= 0) {
-           ++n;
-           pos += step;
-       } else break;
-   }
-   return n;
 }
 
 function createSection(divId) {
@@ -1929,54 +1760,3 @@ function removeChildren(containerString) {
         child = e.lastElementChild;
     }
 }
-
-function isDate(stringInput) {
-    if (stringInput === undefined) {
-        return false;
-    }
-    var matches = stringInput.match(/^((0?[1-9])|([12][0-9])|(3[01]))\/((0?[1-9])|(1[0-2]))\/(\d\d\d\d)-((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$/);
-    if (matches === null) {
-        return false;
-    } else if (matches[0] === stringInput) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-global.testReachability = function() {
-    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero and truncate \"26/12/2019-23:33:33\" ( give zero ) )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or ( zero or truncate \"26/12/2019-23:33:33\" ( give zero ) )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give one ) ) ) ) or zero");
-    removeChildren("button_choices_container");
-    decomposeOrs("zero or give one");
-    removeChildren("button_choices_container");
-    decomposeOrs("( ( zero or give one ) or scaleK 10 ( one ) ) or zero");
-    removeChildren("button_choices_container");
-    decomposeOrs("( zero or give one ) or ( scaleK 10 one or zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( zero or one ) or scaleK 10 ( one )");
-    removeChildren("button_choices_container");
-    decomposeOrs("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) and give zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( zero or give one ) or ( ( scaleK 10 one ) or zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("give one or ( ( truncate \"24/12/2019-23:33:33\" ( give zero ) ) or give zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("truncate \"24/12/2019-23:33:33\" ( one or give zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("truncate \"24/12/2019-23:33:33\" ( one ) or truncate \"24/12/2019-23:33:33\" ( zero )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give one ) ) ) ) or ( ( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give one ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give one ) ) ) ) )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( scaleK 100 one and scaleK 101 one ) or ( ( scaleK 102 one and scaleK 103 one ) or ( scaleK 104 one and scaleK 105 one ) )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( one and give one ) or ( ( zero and give zero ) or ( give one and give zero ) )");
-    removeChildren("button_choices_container");
-    decomposeOrs("( zero or give one ) or ( scaleK 10 ( one ) or zero )");
-    removeChildren("button_choices_container");
-};
