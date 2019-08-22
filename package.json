@@ -5,7 +5,11 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "mocha -r jsdom-global/register --require @babel/register --require babel-polyfill"
+    "start" : "npm run test-js && npm run test-rust && npm run build && npm run start-server",
+    "test-js": "mocha -r jsdom-global/register --require @babel/register --require babel-polyfill",
+    "test-rust": "cargo test --features std",
+    "build": "./build.sh && ./generate.sh",
+    "start-server": "gulp"
   },
   "dependencies": {
     "browser-resolve": "^1.11.3",
