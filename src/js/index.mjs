@@ -454,10 +454,6 @@ export function evaluateConditionals(inputString) {
                 document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                 return "error";
             }
-            if (ifsToBeMatched > 0 && ifCondition !== "") {
-                ifStack.push(ifCondition);
-                ifCondition = "";
-            }
             noOfOpeningParensStack.push(openingParens - closingParens);
             ++ifsToBeMatched;
             insideCondition = true;
@@ -512,10 +508,6 @@ export function evaluateConditionals(inputString) {
                             if (ifStack.length > 0) {
                                 ifCondition = ifStack.pop();
                                 var slicedCond = ifCondition.slice(-3);
-                                if (slicedCond === "and" || slicedCond === " or") { // check if last term was a connective
-                                    var lastIndex = ifCondition.lastIndexOf(" ");
-                                    ifCondition = ifCondition.slice(0, lastIndex);
-                                }
                                 // check if last term was a comp op
                                 var slicedCompOp1 = ifCondition.slice(-4); // when compOp is 4 symbols long
                                 var slicedCompOp2 = ifCondition.slice(-2); // when compOp is 2 symbols long
@@ -564,9 +556,7 @@ export function evaluateConditionals(inputString) {
                 }
                 --ifsToBeMatched;
                 noOfOpeningParensStack.pop();
-            } else if (ifsToBeMatched > 0 || insideCondition) { // we are inside ifCondition and do not want to add to final string
-                //ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
-            } else { // we are not inside ifCondition and can append to contractString
+            } else if (ifsToBeMatched <= 0 && !insideCondition) { // we are not inside ifCondition and can append to contractString
                 contractString = contractString === "" ? term : contractString + " " + term;
             }
         } else if (term === "(") {
@@ -581,16 +571,12 @@ export function evaluateConditionals(inputString) {
             }
             ++openingParens;
             if (termArr[i - 1] !== "if") {
-                if (ifsToBeMatched > 0 || insideCondition) { // we are inside ifCondition and do not want to add to final string
-                    //ifCondition = ifCondition === "" ? term : ifCondition + " " + term;
-                } else { // we are not inside ifCondition and can append to contractString
+                if (ifsToBeMatched <= 0 && !insideCondition) { // we are not inside ifCondition and can append to contractString
                     contractString = contractString === "" ? term : contractString + " " + term;
                 }
             }
         } else if (COMPARISONOPERATOR(term)) {
-            if (firstPartStack.length > 0 && firstPartStack.length === ifsToBeMatched) {
-                firstPartStack.push(firstPartStack.pop() + " " + compOpStack.pop() + " " + ifCondition);
-            } else {
+            if (firstPartStack.length === 0 || firstPartStack.length !== ifsToBeMatched) {
                 firstPartStack.push(ifCondition);
             }
             compOpStack.push(term);
@@ -604,7 +590,6 @@ export function evaluateConditionals(inputString) {
                 compOp = compOpStack.pop(),
                 secondPart = ifCondition,
                 ifConditionVal = evaluate(firstPart, compOp, secondPart);
-                //ifConditionVal = evaluate(lTrimParen(rTrimParen(firstPart)), compOp, secondPart);
                 if (ifConditionVal === undefined) {
                     document.getElementById("transaction_status").innerHTML = "Conditional statement syntax error.";
                     return "error";
