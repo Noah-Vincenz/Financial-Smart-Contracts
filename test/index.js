@@ -715,18 +715,190 @@ describe('testing index.mjs...', function() {
     })
 
     describe('decompose()', function() {
+        // Output format: [first part, second part, most balanced conj, stringToAddToBeginning, stringToAddToEnd]
 
         context('with a non-empty contract string as argument', function() {
-
             it('1', function() {
+                var res = decompose("one or zero".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "zero", "or", "", ""]);
+            })
+
+            it('2', function() {
+                var res = decompose("one and zero".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "zero", "and", "", ""]);
+            })
+
+            it('3', function() {
+                var res = decompose("one and ( zero or one )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "( zero or one )", "and", "", ""]);
+            })
+
+            it('4', function() {
+                var res = decompose("( one and zero ) or one".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["( one and zero )", "one", "or", "", ""]);
+            })
+
+            it('5', function() {
+                var res = decompose("give ( one and zero )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( one )", "give ( zero )", "and", "", ""]);
+            })
+
+            it('6', function() {
+                var res = decompose("give ( one and zero ) and one".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( one and zero )", "one", "and", "", ""]);
+            })
+
+            it('7', function() {
+                var res = decompose("give ( one and zero ) or one".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( one and zero )", "one", "or", "", ""]);
+            })
+
+            it('8', function() {
+                var res = decompose("( truncate \"24/12/2019-23:33:33\" ( give one and ( one and zero ) ) ) and one".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["( truncate \"24/12/2019-23:33:33\" ( give one and ( one and zero ) ) )", "one", "and", "", ""]);
+            })
+
+            it('9', function() {
+                var res = decompose("( truncate \"24/12/2019-23:33:33\" ( give one and ( one and zero ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["truncate \"24/12/2019-23:33:33\" ( give one )", "truncate \"24/12/2019-23:33:33\" ( one and zero )", "and", "", ""]);
+            })
+
+            it('10', function() {
+                var res = decompose("truncate \"24/12/2019-23:33:33\" ( one and zero )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["truncate \"24/12/2019-23:33:33\" ( one )", "truncate \"24/12/2019-23:33:33\" ( zero )", "and", "", ""]);
+            })
+
+            it('11', function() {
+                var res = decompose("( truncate \"24/12/2019-23:33:33\" ( give ( one ) and ( one and zero ) ) ) and ( one and scaleK 10 ( one and zero ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["truncate \"24/12/2019-23:33:33\" ( give ( one ) and ( one and zero ) )", "one and scaleK 10 ( one and zero )", "and", "", ""]);
+            })
+
+            it('12', function() {
+                var res = decompose("( truncate \"24/12/2019-23:33:33\" ( give ( one ) and ( one and zero ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["truncate \"24/12/2019-23:33:33\" ( give ( one ) )", "truncate \"24/12/2019-23:33:33\" ( one and zero )", "and", "", ""]);
+            })
+
+            it('13', function() {
+                var res = decompose("( one and scaleK 10 ( one and zero ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "scaleK 10 ( one and zero )", "and", "", ""]);
+            })
+
+            it('14', function() {
+                var res = decompose("scaleK 10 ( one and zero )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["scaleK 10 ( one )", "scaleK 10 ( zero )", "and", "", ""]);
+            })
+
+            it('15', function() {
+                var res = decompose("truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( one ) and ( scaleK 7 ( one and zero ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( one ) )", "truncate \"24/12/2019-23:33:33\" ( scaleK 7 ( one and zero ) )", "and", "", ""]);
+            })
+
+            it('16', function() {
+                var res = decompose("( give ( zero ) or give ( one ) ) and one".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["( give ( zero ) or give ( one ) )", "one", "and", "", ""]);
+            })
+
+            it('17', function() {
+                var res = decompose("( give ( zero ) or give ( one ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( zero )", "give ( one )", "or", "", ""]);
+            })
+
+            it('18', function() {
                 var res = decompose("truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( one or zero ) )".split(" "));
                 assert.isArray(res);
-                assert.lengthOf(res, 4);
-                assert.include(res, "one");
-                assert.notInclude(res, "zero");
-                assert.sameMembers(res, ["one", "scaleK 10 ( zero )", "scaleK 10 ( give ( scaleK 5 ( one ) ) )", "scaleK 10 ( give ( zero ) )"]);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "zero", "or", "truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( ", " ) )"]);
+            })
+
+            it('19', function() {
+                var res = decompose("give ( one and scaleK 5 ( one or zero ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( one )", "give ( scaleK 5 ( one or zero ) )", "and", "", ""]);
+            })
+
+            it('20', function() {
+                var res = decompose("( give ( zero ) or give ( one ) ) and ( one or zero )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( zero ) or give ( one )", "one or zero", "and", "", ""]);
+            })
+
+            it('21', function() {
+                var res = decompose("( one or zero )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["one", "zero", "or", "", ""]);
+            })
+
+            it('22', function() {
+                var res = decompose("( give ( zero ) or give ( one ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["give ( zero )", "give ( one )", "or", "", ""]);
+            })
+
+            it('23', function() {
+                var res = decompose("( scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give ( one ) ) ) ) ) or ( zero or truncate \"11/07/2019-23:53:00\" ( give ( one ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["scaleK 50 ( get ( truncate \"24/12/2019-23:33:33\" ( give ( one ) ) ) )", "zero or truncate \"11/07/2019-23:53:00\" ( give ( one ) )", "or", "", ""]);
+            })
+
+            it('24', function() {
+                var res = decompose("( zero or truncate \"11/07/2019-23:53:00\" ( give ( one ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["zero", "truncate \"11/07/2019-23:53:00\" ( give ( one ) )", "or", "", ""]);
+            })
+
+            it('25', function() {
+                var res = decompose("( scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give ( one ) ) ) ) ) or ( ( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give ( one ) ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give ( one ) ) ) ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["scaleK 101 ( get ( truncate \"24/01/2019-23:33:33\" ( one ) ) ) and scaleK 102 ( get ( truncate \"24/02/2019-23:33:33\" ( give ( one ) ) ) )", "( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give ( one ) ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give ( one ) ) ) ) )", "or", "", ""]);
+            })
+
+            it('26', function() {
+                var res = decompose("( scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give ( one ) ) ) ) ) or ( scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give ( one ) ) ) ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 5);
+                assert.sameMembers(res, ["scaleK 103 ( get ( truncate \"24/03/2019-23:33:33\" ( one ) ) ) and scaleK 104 ( get ( truncate \"24/04/2019-23:33:33\" ( give ( one ) ) ) )", "scaleK 105 ( get ( truncate \"24/05/2019-23:33:33\" ( one ) ) ) and scaleK 106 ( get ( truncate \"24/06/2019-23:33:33\" ( give ( one ) ) ) )", "or", "", ""]);
             })
         })
     })
-
 })
