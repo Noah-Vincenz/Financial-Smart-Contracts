@@ -97,12 +97,6 @@ window.addEventListener('load', function() {  // commented for testing purposes
     // start timer
     update();
     runClock();
-    //var res = decompose("give ( one and zero )".split(" "));
-    //var res = decompose("( truncate \"24/12/2019-23:33:33\" ( give ( one ) and ( one and zero ) ) )".split(" ")); // 12
-    var res = decompose("truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( one or zero ) )".split(" ")); // 18
-
-    //var res = decompose("( one and scaleK 10 ( one and zero ) )".split(" ")); // 13
-    console.log(res);
 });
 
 function addDepositSelectOptions() {
@@ -698,10 +692,8 @@ export function evaluate(part1, comparisonOperator, part2) {
                 return evaluate(part1, "<=", part2) && !evaluate(part1, "==", part2);
             case "==":
                 if (equalDates(horizon2, horizon1)) {
-                    console.log("Both have equal dates");
                     var horizonsSet = extractAllSubHorizons(part1, part2, comparisonOperator);
                     for (let hor of horizonsSet) {
-                        console.log("hor: " + hor);
                         var value1 = getValue(part1, hor),
                             value2 = getValue(part2, hor);
                         if (value1 !== value2) {
@@ -988,7 +980,6 @@ function getLowestLevelContractValue(contractString, horizonToCheck) {
 }
 
 global.processContract = function(inputString, initialDecomposition, firstOrHasBeenDecomposed, contractOwner) {
-    console.log("calling processContract on " + inputString);
     ++uniqueID;
     if (initialDecomposition) {
         // This is the case only when this function is triggered by the 'make transaction' button
@@ -1007,34 +998,24 @@ global.processContract = function(inputString, initialDecomposition, firstOrHasB
     var orMatches = inputString.match(/^(.*)\sor\s(.*)$/);
     if (orMatches !== null) {
         // keep track of the current most balanced conj AND its external combinators
-        console.log("or is included - calling decompose");
         var decomposedResult = decompose(termArr),
             part1 = decomposedResult[0],
             part2 = decomposedResult[1],
             mostBalancedConj = decomposedResult[2];
-
-            console.log("part1: " + part1);
-            console.log("part2: " + part2);
-            console.log(mostBalancedConj);
         if (mostBalancedConj === "and") {
             ++contractsBeingDecomposed;
             processContract(part1, false, firstOrHasBeenDecomposed, contractOwner);
             processContract(part2, false, firstOrHasBeenDecomposed, contractOwner);
         } else { // conn is "or"
-            console.log(decomposedResult);
             if (!firstOrHasBeenDecomposed) {
-                console.log("initial or decomp");
                 var occ = occurrences(decomposedResult[3], "give ", false);
-                console.log(occ);
                 contractOwner = occ % 2 === 0 ? 0 : 1; // setting the owner for all future contract choices
-                console.log("set the contract owner to: " + contractOwner + " for all future choices.");
             }
             firstOrHasBeenDecomposed = true;
             addChoices([part1, part2], decomposedResult[3], decomposedResult[4], uniqueID, contractOwner);
         }
     }
     else { // input does not contain 'or'
-        console.log("contract does not contain any more or's");
         var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
         contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
         createContractEntries(contractsArr);
@@ -1247,8 +1228,6 @@ function addChoices(contractsStack, beginningStr, endStr, divId, owner) {
 
 function createContractEntries(contractsArr) {
     // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
-    console.log("creating contract entries for");
-    console.log(contractsArr);
     for (var i = 0; i < contractsArr.length; ++i) {
         var conString = cleanParens(lTrimWhiteSpace(rTrimWhiteSpace(contractsArr[i])));
         if (!conString.includes("get")) { // at least one contract is not acquired at its horizon
@@ -1357,7 +1336,6 @@ function parsesSuccessfullyForSyntax(contractString) {
                 if ((i > 0 && prevTerm !== ")" && prevTerm !== "one" && prevTerm !== "zero")
                   || nextTerm === ")" || nextTerm === "and" || nextTerm === "or" || isDate(lTrimDoubleQuotes(rTrimDoubleQuotes(nextTerm)))
                   || isNumeric(nextTerm) || observablesArr.includes(nextTerm)) {
-                    console.log("HERRRE");
                     document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
                     return false;
                 }
@@ -1425,7 +1403,6 @@ function parsesSuccessfullyForSyntax(contractString) {
 
 function createContractObject(inputString) {
     // this is a lowest-level subcontract, ie. it contains only 1 occurrence zero/one
-    console.log("creating contrcact object for " + inputString);
     var giveOccurrences = 0,
         getOccurrences = 0,
         getHasAppeared = false, // to make sure gets are followed by a truncate
@@ -1468,17 +1445,12 @@ function createContractObject(inputString) {
        translateContract(recipient, amount, contractObsArr, horizonDate, acquireAtHorizon),
        horizonDate, acquireAtHorizon, "waiting to be executed");
 
-    console.log(contract);
     var balanceLabel = recipient === 1 ? document.getElementById("holder_balance_p").innerHTML.split() : document.getElementById("counter_party_balance_p").innerHTML;
     const regex = new RegExp("(Balance:\\s)(.+)(ETH)");
     var matchObj = regex.exec(balanceLabel); // cannot check Rust balance as this will cause a delay. However, this is fine since label balance gets updated directly after transfer
     var balance = parseFloat(matchObj[2]);
     // uncomment this for testing, comment below - > there will be no super contract row
     // createTableRow(contract); // TESTING
-    console.log(balance);
-    console.log(amount);
-    console.log(balance >= parseFloat(amount));
-    console.log(enoughBalanceForCapacity(contract, balance));
     if (balance >= parseFloat(amount) && enoughBalanceForCapacity(contract, balance)) {
         createTableRow(contract);
         ++numberOfSubContracts;
@@ -1491,7 +1463,6 @@ function createContractObject(inputString) {
         }
         addSuperContractRow();
     } else {
-        console.log("not creating table row");
         document.getElementById("transaction_status").innerHTML = "Insufficient funds. The sending party does not have enough Ether in their account. Please deposit before adding additional contracts.";
         addSuperContractRow();
     }
@@ -1685,7 +1656,6 @@ function retrieveBalances() {
 }
 
 function createTableRow(contract) {
-    console.log("creating table row");
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
     tr.className = "standard_row";
@@ -1707,8 +1677,6 @@ function createTableRow(contract) {
 
 function ownsRights(contractOwnerInt) {
     var ownerAddress = contractOwnerInt === 0 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
-    console.log(getSelectedMetaMaskAccount());
-    console.log(ownerAddress);
     if (getSelectedMetaMaskAccount().toUpperCase() === ownerAddress.toUpperCase()) {
         return true;
     } else {
@@ -1731,7 +1699,6 @@ function createButton (contractString, beginningString, endString, buttonId, div
         if (ownsRights(owner)) { // party must own the rights of the contract to make choice
             removeChildren("section_" + divId);
             container.remove();
-            console.log("button pressed: " + finalContractString);
             processContract(finalContractString, false, true, owner); // firstOrHasBeenDecomposed is true because this is a choice button
         }
     });
