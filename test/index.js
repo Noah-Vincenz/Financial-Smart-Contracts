@@ -8,7 +8,8 @@ import {
     getValue,
     decomposeAnds,
     cleanUpBeforeDecomp,
-    extractAllSubHorizons
+    extractAllSubHorizons,
+    decompose
 } from "../src/js/index.mjs";
 
 import {
@@ -709,6 +710,21 @@ describe('testing index.mjs...', function() {
                 assert.include(res, "24/01/2019-23:33:33");
                 assert.include(res, "25/01/2019-23:33:33");
                 assert.notInclude(res, "26/01/2019-23:33:33");
+            })
+        })
+    })
+
+    describe('decompose()', function() {
+
+        context('with a non-empty contract string as argument', function() {
+
+            it('1', function() {
+                var res = decompose("truncate \"24/12/2019-23:33:33\" ( scaleK 10 ( one or zero ) )".split(" "));
+                assert.isArray(res);
+                assert.lengthOf(res, 4);
+                assert.include(res, "one");
+                assert.notInclude(res, "zero");
+                assert.sameMembers(res, ["one", "scaleK 10 ( zero )", "scaleK 10 ( give ( scaleK 5 ( one ) ) )", "scaleK 10 ( give ( zero ) )"]);
             })
         })
     })

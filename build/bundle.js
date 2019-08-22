@@ -525,6 +525,7 @@ exports.extractAllSubHorizons = extractAllSubHorizons;
 exports.evaluateConditionals = evaluateConditionals;
 exports.evaluate = evaluate;
 exports.getHorizon = getHorizon;
+exports.decompose = decompose;
 exports.getValue = getValue;
 exports.decomposeAnds = decomposeAnds;
 
@@ -577,7 +578,6 @@ window.addEventListener('load', function () {
 
   update();
   runClock();
-  var res = evaluate("( truncate \"23/12/2017-23:33:33\" ( one ) and truncate \"26/12/2017-23:33:33\" ( one ) )", ">", "truncate \"24/12/2017-23:33:33\" ( one )");
 });
 
 function addDepositSelectOptions() {
@@ -1501,7 +1501,8 @@ function getHorizon(contractString) {
   }
 
   return maxHorizon;
-} // TODO: do add to parseStack if conjWaitingToBeMatched = true.. BUT MORE IMPORTANTLY simply add to current string and add to clising parensStack
+} // TODO: can also use this to keep track of mostBalanced or conj and then check the owner from its stringToAddToBeginning
+// do this by whenever we have new mostBalanced or we store combinatorStack.top
 
 
 function decompose(termArr) {
@@ -1521,6 +1522,8 @@ function decompose(termArr) {
       mostBalancedConj = "",
       mostBalancedConjBalance = termArr.length - 1,
       secondPartString = "",
+      stringToAddToBeginning = "",
+      stringToAddToEnd = "",
       conjWaitingToBeMatched = false; // set to true when reading conjunction and then set to false when reading another conjunction or reaching end
 
   for (var i = 0; i < termArr.length; ++i) {
@@ -1529,6 +1532,8 @@ function decompose(termArr) {
     console.log(" ");
     console.log("term: " + term);
     console.log("contractString: " + contractString);
+    console.log("stringToAddToBeginning: " + stringToAddToBeginning);
+    console.log("secondPartString: " + secondPartString);
     console.log(closingParensStack);
     console.log(parseStack);
     console.log(contractsStack);
@@ -1542,12 +1547,21 @@ function decompose(termArr) {
         contractsStack[1] = termArr.slice(i + 1).join(' ');
         stringToAddToBeginning = "";
         stringToAddToEnd = "";
-        return [contractsStack[0], contractsStack[1], mostBalancedConj];
+        return [contractsStack[0], contractsStack[1], mostBalancedConj, "", ""];
       } else if (openingParens - closingParens < mostBalancedConjBalance) {
         // found a new most balanced connective
         console.log("found new balanced connective");
         mostBalancedConjBalance = openingParens - closingParens;
         mostBalancedConj = term;
+
+        if (conjWaitingToBeMatched) {
+          contractString = contractString === "" ? term : contractString + " " + term;
+        }
+
+        if (conjWaitingToBeMatched) {
+          var combinatorString = parseStack[parseStack.length - 1];
+        }
+
         var combinatorString = parseStack[parseStack.length - 1];
         var closingParensString = closingParensStack[closingParensStack.length - 1];
 
@@ -1576,6 +1590,10 @@ function decompose(termArr) {
       } else {
         // ie conjWaitingToBeMatched
         secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
+
+        if (conjWaitingToBeMatched) {
+          contractString = contractString === "" ? term : contractString + " " + term;
+        }
       }
     } else if (term === "zero" || term === "one") {
       //contractString = contractString === "" ? term : contractString + " " + term;
@@ -1584,31 +1602,42 @@ function decompose(termArr) {
 
       if (conjWaitingToBeMatched) {
         secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-      } else {
-        contractString = contractString === "" ? term : contractString + " " + term;
-      }
+      } //else {
+
+
+      contractString = contractString === "" ? term : contractString + " " + term; //}
     } else if (term === ")") {
-      // as soon as closing paren is read we have found a contract
-      if (conjWaitingToBeMatched) {
-        secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-      } else {
-        contractString = contractString === "" ? term : contractString + " " + term;
-      }
-
       var combinatorString = parseStack.pop();
-      var closingParensString = closingParensStack.pop();
+      var closingParensString = closingParensStack.pop(); // as soon as closing paren is read we have found a contract
+      //else {
+      //contractString = contractString === "" ? term : contractString + " " + term;
+      //}
 
-      if (conjWaitingToBeMatched && openingParens - closingParens === mostBalancedConjBalance) {
-        console.log("yessss");
+      if (secondPartString !== "" && conjWaitingToBeMatched && (openingParens - closingParens === mostBalancedConjBalance || openingParens - closingParens === mostBalancedConjBalance + 1 && termArr[0] === "(")) {
+        console.log("YAS");
+        secondPartString = closingParensString !== undefined ? secondPartString + " " + term + closingParensString : secondPartString + " " + term; //secondPartString = secondPartString === "" ? combinatorString + " ( " + term : combinatorString + " ( " + secondPartString + " " + term;
+
+        console.log("new second part string: " + secondPartString);
 
         if (mostBalancedConj === "or") {
-          contractsStack[1] = secondPartString;
+          contractsStack[1] = secondPartString; //contractsStack[1] = contractString; // stringToAddToBeginning and stringToAddToEnd are still present from first part
         } else {
-          contractsStack[1] = stringToAddToBeginning + " ( " + secondPartString + closingParensString;
+          // connective is "and"
+          if (combinatorString !== undefined) {
+            contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " ( " + combinatorString + " ( " + secondPartString + closingParensString : combinatorString + " ( " + secondPartString + closingParensString;
+          } else if (closingParensString !== undefined) {
+            console.log("IN HEREE");
+            console.log(stringToAddToBeginning);
+            contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " ( " + secondPartString + closingParensString : "( " + secondPartString + closingParensString;
+          } else {
+            contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " " + secondPartString : secondPartString;
+          }
         }
 
         secondPartString = "";
       }
+
+      contractString = ""; // ---
 
       ++closingParens;
     } else if (term === "(") {
@@ -1639,9 +1668,10 @@ function decompose(termArr) {
     } else {
       if (conjWaitingToBeMatched) {
         secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-      } else {
-        contractString = contractString === "" ? term : contractString + " " + term;
-      }
+      } //else {
+
+
+      contractString = contractString === "" ? term : contractString + " " + term; //}
     }
 
     contractParsed = contractParsed === "" ? term : contractParsed + " " + term;
@@ -1652,8 +1682,18 @@ function decompose(termArr) {
     contractsStack.push(contractString);
   }
 
+  console.log(" ");
+  console.log(" ");
+  console.log("END");
+  console.log("contractString: " + contractString);
+  console.log("stringToAddToBeginning: " + stringToAddToBeginning);
+  console.log("secondPartString: " + secondPartString);
+  console.log(closingParensStack);
+  console.log(parseStack);
+  console.log(contractsStack);
   console.log("stringToAddToBeginning after decomposing: " + stringToAddToBeginning);
-  return [contractsStack[0], contractsStack[1], mostBalancedConj];
+  console.log("stringToAddToEnd after decomposing: " + stringToAddToEnd);
+  return [contractsStack[0], (0, _stringmanipulation.cleanParens)(contractsStack[1]), mostBalancedConj, stringToAddToBeginning, stringToAddToEnd];
 }
 
 function getValue(contractString, horizonToCheck) {
@@ -1771,8 +1811,8 @@ function getLowestLevelContractValue(contractString, horizonToCheck) {
   }
 }
 
-global.processContract = function (inputString, initialDecomposition) {
-  console.log("calling processContract");
+global.processContract = function (inputString, initialDecomposition, firstOrHasBeenDecomposed, contractOwner) {
+  console.log("calling processContract on " + inputString);
   ++uniqueID;
 
   if (initialDecomposition) {
@@ -1782,9 +1822,9 @@ global.processContract = function (inputString, initialDecomposition) {
 
     acquireBtnToBeDisabled1 = true;
     acquireBtnToBeDisabled2 = true;
+    document.getElementById("transaction_status").innerHTML = "";
   }
 
-  document.getElementById("transaction_status").innerHTML = "";
   inputString = cleanUpBeforeDecomp(inputString);
 
   if (inputString === "error" || !parsesSuccessfullyForSyntax(inputString)) {
@@ -1808,13 +1848,27 @@ global.processContract = function (inputString, initialDecomposition) {
 
     if (mostBalancedConj === "and") {
       ++contractsBeingDecomposed;
-      processContract(part1, false);
-      processContract(part2, false);
+      processContract(part1, false, firstOrHasBeenDecomposed, contractOwner);
+      processContract(part2, false, firstOrHasBeenDecomposed, contractOwner);
     } else {
-      addChoices([part1, part2], uniqueID);
+      // conn is "or"
+      console.log(decomposedResult);
+
+      if (!firstOrHasBeenDecomposed) {
+        console.log("initial or decomp");
+        var occ = (0, _generalfunctions.occurrences)(decomposedResult[3], "give ", false);
+        console.log(occ);
+        contractOwner = occ % 2 === 0 ? 0 : 1; // setting the owner for all future contract choices
+
+        console.log("set the contract owner to: " + contractOwner + " for all future choices.");
+      }
+
+      firstOrHasBeenDecomposed = true;
+      addChoices([part1, part2], decomposedResult[3], decomposedResult[4], uniqueID, contractOwner);
     }
   } else {
     // input does not contain 'or'
+    console.log("contract does not contain any more or's");
     var contractsArr = decomposeAnds(inputString); // calling this for performance reasons - decomposeAnds will not recursively call itself
 
     contractsBeingDecomposed = contractsBeingDecomposed + contractsArr.length - 1;
@@ -2082,19 +2136,22 @@ function createAcquireButton(tr, id) {
   }
 }
 
-function addChoices(contractsStack, divId) {
+function addChoices(contractsStack, beginningStr, endStr, divId, owner) {
   var contract2 = contractsStack.pop();
   var contract1 = contractsStack.pop();
   createSection(divId);
-  createButton((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(contract1)), stringToAddToBeginning, stringToAddToEnd, 1, divId);
+  createButton((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(contract1)), beginningStr, endStr, 1, divId, owner);
   createOrLabel(divId);
-  createButton((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(contract2)), stringToAddToBeginning, stringToAddToEnd, 2, divId);
+  createButton((0, _stringmanipulation.rTrimWhiteSpace)((0, _stringmanipulation.lTrimWhiteSpace)(contract2)), beginningStr, endStr, 2, divId, owner);
   stringToAddToBeginning = "";
   stringToAddToEnd = "";
 }
 
 function createContractEntries(contractsArr) {
   // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
+  console.log("creating contract entries for");
+  console.log(contractsArr);
+
   for (var i = 0; i < contractsArr.length; ++i) {
     var conString = (0, _stringmanipulation.cleanParens)((0, _stringmanipulation.lTrimWhiteSpace)((0, _stringmanipulation.rTrimWhiteSpace)(contractsArr[i])));
 
@@ -2222,6 +2279,7 @@ function parsesSuccessfullyForSyntax(contractString) {
 
       case "or":
         if (i > 0 && prevTerm !== ")" && prevTerm !== "one" && prevTerm !== "zero" || nextTerm === ")" || nextTerm === "and" || nextTerm === "or" || (0, _stringmanipulation.isDate)((0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(nextTerm))) || (0, _generalfunctions.isNumeric)(nextTerm) || observablesArr.includes(nextTerm)) {
+          console.log("HERRRE");
           document.getElementById("transaction_status").innerHTML = "Syntax error at term " + i.toString() + ": " + term;
           return false;
         }
@@ -2300,6 +2358,7 @@ function parsesSuccessfullyForSyntax(contractString) {
 
 function createContractObject(inputString) {
   // this is a lowest-level subcontract, ie. it contains only 1 occurrence zero/one
+  console.log("creating contrcact object for " + inputString);
   var giveOccurrences = 0,
       getOccurrences = 0,
       getHasAppeared = false,
@@ -2348,12 +2407,18 @@ function createContractObject(inputString) {
       acquireAtHorizon = getOccurrences % 2 === 0 ? "no" : "yes",
       contractString = (0, _contract.createNewContractString)(amount, contractObsArr, recipient, horizonDate, acquireAtHorizon);
   var contract = new _contract.Contract(numberOfContracts.toString() + "." + numberOfSubContracts.toString(), amount, contractObsArr, recipient, contractString, (0, _contract.translateContract)(recipient, amount, contractObsArr, horizonDate, acquireAtHorizon), horizonDate, acquireAtHorizon, "waiting to be executed");
+  console.log(contract);
   var balanceLabel = recipient === 1 ? document.getElementById("holder_balance_p").innerHTML.split() : document.getElementById("counter_party_balance_p").innerHTML;
   var regex = new RegExp("(Balance:\\s)(.+)(ETH)");
   var matchObj = regex.exec(balanceLabel); // cannot check Rust balance as this will cause a delay. However, this is fine since label balance gets updated directly after transfer
 
   var balance = parseFloat(matchObj[2]); // uncomment this for testing, comment below - > there will be no super contract row
   // createTableRow(contract); // TESTING
+
+  console.log(balance);
+  console.log(amount);
+  console.log(balance >= parseFloat(amount));
+  console.log(enoughBalanceForCapacity(contract, balance));
 
   if (balance >= parseFloat(amount) && enoughBalanceForCapacity(contract, balance)) {
     createTableRow(contract);
@@ -2370,6 +2435,7 @@ function createContractObject(inputString) {
 
     addSuperContractRow();
   } else {
+    console.log("not creating table row");
     document.getElementById("transaction_status").innerHTML = "Insufficient funds. The sending party does not have enough Ether in their account. Please deposit before adding additional contracts.";
     addSuperContractRow();
   }
@@ -2697,6 +2763,7 @@ function retrieveBalances() {
 }
 
 function createTableRow(contract) {
+  console.log("creating table row");
   var table = document.getElementById("my_table");
   var tr = table.insertRow(1);
   tr.className = "standard_row";
@@ -2729,12 +2796,7 @@ function ownsRights(contractOwnerInt) {
   }
 }
 
-function createButton(contractString, beginningString, endString, buttonId, divId) {
-  console.log(beginningString);
-  var occ = (0, _generalfunctions.occurrences)(beginningString, "give ", false);
-  console.log(occ);
-  var contractOwnerInt = occ % 2 === 0 ? 0 : 1;
-  console.log(contractOwnerInt);
+function createButton(contractString, beginningString, endString, buttonId, divId, owner) {
   var button = document.createElement("button");
   button.id = "choices_button_" + buttonId;
   button.className = "choices_button";
@@ -2745,12 +2807,12 @@ function createButton(contractString, beginningString, endString, buttonId, divI
   container.appendChild(button); // 3. Add event handler
 
   button.addEventListener("click", function () {
-    if (ownsRights(contractOwnerInt)) {
+    if (ownsRights(owner)) {
       // party must own the rights of the contract to make choice
       removeChildren("section_" + divId);
       container.remove();
       console.log("button pressed: " + finalContractString);
-      processContract(finalContractString, false);
+      processContract(finalContractString, false, true, owner); // firstOrHasBeenDecomposed is true because this is a choice button
     }
   });
 }
