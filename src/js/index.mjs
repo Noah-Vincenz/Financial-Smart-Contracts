@@ -776,11 +776,7 @@ export function getHorizon(contractString) {
     return maxHorizon;
 }
 
-// TODO: can also use this to keep track of mostBalanced or conj and then check the owner from its stringToAddToBeginning
-// do this by whenever we have new mostBalanced or we store combinatorStack.top
 export function decompose(termArr) { // decomposes contract by most external connective
-    console.log("calling decompose on: ");
-    console.log(termArr);
     stringToAddToBeginning = "";
     stringToAddToEnd = "";
     var openingParens = 0,
@@ -789,7 +785,6 @@ export function decompose(termArr) { // decomposes contract by most external con
         contractParsed = "",
         parseStack = [],
         contractsStack = [],
-        //connectiveStack = [], //---
         closingParensStack = [],
         mostBalancedConj = "",
         mostBalancedConjBalance = termArr.length - 1,
@@ -800,15 +795,6 @@ export function decompose(termArr) { // decomposes contract by most external con
 
     for (var i = 0; i < termArr.length; ++i) {
         var term = termArr[i];
-        console.log(" ");
-        console.log(" ");
-        console.log("term: " + term);
-        console.log("contractString: " + contractString);
-        console.log("stringToAddToBeginning: " + stringToAddToBeginning);
-        console.log("secondPartString: " + secondPartString);
-        console.log(closingParensStack);
-        console.log(parseStack);
-        console.log(contractsStack);
         if (term === "and" || term === "or") { // we have reached the end of a subcontract whenever 'and' is read
             if (openingParens === closingParens) { // found outer most conjunct
                 mostBalancedConj = term;
@@ -822,28 +808,14 @@ export function decompose(termArr) { // decomposes contract by most external con
                 }
                 return [contractsStack[0], contractsStack[1], mostBalancedConj, "" , ""];
             } else if (openingParens - closingParens < mostBalancedConjBalance) { // found a new most balanced connective
-                console.log("found new balanced connective");
                 mostBalancedConjBalance = openingParens - closingParens;
                 mostBalancedConj = term;
-                if (conjWaitingToBeMatched) {
-                    contractString = contractString === "" ? term : contractString + " " + term;
-                }
-                if (conjWaitingToBeMatched) {
-                    var combinatorString = parseStack[parseStack.length - 1];
-                }
                 var combinatorString = parseStack[parseStack.length - 1];
                 var closingParensString = closingParensStack[closingParensStack.length - 1];
                 if (combinatorString !== undefined) {
                     if (mostBalancedConj === "or") {
-                        contractsStack[0] = contractString; // is contractString ever 0 ??? ===
-                        stringToAddToBeginning = combinatorString + " ( ";
-                        stringToAddToEnd = closingParensString;
-                    } else {
-                        contractsStack[0] = contractParsed + closingParensString;
-                    }
-                } else if (closingParensString !== undefined){
-                    if (mostBalancedConj === "or") {
                         contractsStack[0] = contractString;
+                        stringToAddToBeginning = combinatorString + " ( ";
                         stringToAddToEnd = closingParensString;
                     } else {
                         contractsStack[0] = contractParsed + closingParensString;
@@ -860,15 +832,12 @@ export function decompose(termArr) { // decomposes contract by most external con
                 }
             }
         } else if (term === "zero" || term === "one") {
-            //contractString = contractString === "" ? term : contractString + " " + term;
-
             var combinatorString = parseStack[parseStack.length - 1];
             var closingParensString = closingParensStack[closingParensStack.length - 1];
             if (conjWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-            } //else {
+            }
             contractString = contractString === "" ? term : contractString + " " + term;
-            //}
         } else if (term === ")") {
             var combinatorString;
             var closingParensString;
@@ -876,23 +845,13 @@ export function decompose(termArr) { // decomposes contract by most external con
                 combinatorString = parseStack.pop();
                 closingParensString = closingParensStack.pop();
             }
-            //var closingParensString = closingParensStack.pop();
-            // as soon as closing paren is read we have found a contract
-            //else {
-            //contractString = contractString === "" ? term : contractString + " " + term;
-            //}
 
             if (secondPartString !== "" && conjWaitingToBeMatched && (openingParens - closingParens === mostBalancedConjBalance || ( openingParens - closingParens === mostBalancedConjBalance + 1 && termArr[0] === "("))) {
-                console.log("YAS");
                 secondPartString = closingParensString !== undefined ? secondPartString + closingParensString : secondPartString + " " + term;
-                //secondPartString = secondPartString === "" ? combinatorString + " ( " + term : combinatorString + " ( " + secondPartString + " " + term;
-                console.log("new second part string: " + secondPartString);
                 if (mostBalancedConj === "or") {
                     contractsStack[1] = secondPartString;
-                    //contractsStack[1] = contractString; // stringToAddToBeginning and stringToAddToEnd are still present from first part
                 } else { // connective is "and"
                     if (combinatorString !== undefined) {
-                        console.log("IN HEREE0");
                         if (secondPartString[0] !== "(") {
                             contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " ( " + combinatorString + " ( " + secondPartString : combinatorString + " ( " + secondPartString;
                         } else {
@@ -900,21 +859,18 @@ export function decompose(termArr) { // decomposes contract by most external con
                         }
                     }
                     else if (closingParensString !== undefined) {
-                      console.log("IN HEREE1");
-                      console.log(stringToAddToBeginning);
                         contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " ( " + secondPartString : "( " + secondPartString;
                     } else {
-                      console.log("IN HEREE2");
                         contractsStack[1] = stringToAddToBeginning !== "" ? stringToAddToBeginning + " " + secondPartString : secondPartString;
                     }
                 }
                 secondPartString = "";
             }
-            contractString = ""; // ---
+            contractString = "";
             ++closingParens;
         } else if (term === "(") {
             ++openingParens;
-            if (contractString !== "" && openingParens - closingParens < mostBalancedConjBalance) { //---
+            if (contractString !== "" && openingParens - closingParens < mostBalancedConjBalance) {
                 if (parseStack.length > 0) {
                     parseStack.push(parseStack[parseStack.length - 1] + " ( " + contractString);
                 } else {
@@ -929,7 +885,7 @@ export function decompose(termArr) { // decomposes contract by most external con
                 }
             }
 
-            if (conjWaitingToBeMatched) { // ---
+            if (conjWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
             }
 
@@ -937,27 +893,12 @@ export function decompose(termArr) { // decomposes contract by most external con
         } else {
             if (conjWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-            } //else {
+            }
             contractString = contractString === "" ? term : contractString + " " + term;
-            //}
         }
         contractParsed = contractParsed === "" ? term : contractParsed + " " + term;
     }
     // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
-    if (contractString !== "") {
-        contractsStack.push(contractString);
-    }
-    console.log(" ");
-    console.log(" ");
-    console.log("END");
-    console.log("contractString: " + contractString);
-    console.log("stringToAddToBeginning: " + stringToAddToBeginning);
-    console.log("secondPartString: " + secondPartString);
-    console.log(closingParensStack);
-    console.log(parseStack);
-    console.log(contractsStack);
-    console.log("stringToAddToBeginning after decomposing: " + stringToAddToBeginning);
-    console.log("stringToAddToEnd after decomposing: " + stringToAddToEnd);
     return [cleanParens(contractsStack[0]), cleanParens(contractsStack[1]), mostBalancedConj, stringToAddToBeginning, stringToAddToEnd];
 }
 
