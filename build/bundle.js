@@ -578,6 +578,8 @@ window.addEventListener('load', function () {
 
   update();
   runClock();
+  var res = evaluateConditionals("one and if ( ( ( if ( zero [>] one ) { zero } else { one } ) [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }");
+  console.log(res);
 });
 
 function addDepositSelectOptions() {
@@ -1024,7 +1026,6 @@ function evaluateConditionals(inputString) {
       closingParens = 0,
       contractString = "",
       ifCondition = "",
-      ifStack = [],
       noOfOpeningParensStack = [],
       firstPartStack = [],
       compOpStack = [],
@@ -1035,6 +1036,17 @@ function evaluateConditionals(inputString) {
         nextTerm = termArr[i + 1],
         // for syntax checking
     prevTerm = termArr[i - 1]; // for syntax checking
+
+    console.log("");
+    console.log("");
+    console.log("term: " + term);
+    console.log("====");
+    console.log("Step: " + i);
+    console.log("ifCondition: " + ifCondition);
+    console.log("contractString: " + contractString);
+    console.log(noOfOpeningParensStack);
+    console.log(firstPartStack);
+    console.log(compOpStack);
 
     if (term === "if") {
       if (i > termArr.length - 9 || nextTerm !== "(" || i > 0 && prevTerm !== "(" && prevTerm !== "{" && prevTerm !== "and" && prevTerm !== "or" && !COMPARISONOPERATOR(prevTerm)) {
@@ -1064,8 +1076,7 @@ function evaluateConditionals(inputString) {
             // consequence
         alt = "",
             // alternative
-        stringToEval = firstPart + " " + compOp + " " + ifCondition,
-            bool = evaluate(firstPart, compOp, ifCondition);
+        bool = evaluate(firstPart, compOp, ifCondition);
 
         if (bool === undefined) {
           document.getElementById("transaction_status").innerHTML = "Conditional statement syntax error.";
@@ -1073,60 +1084,37 @@ function evaluateConditionals(inputString) {
         }
 
         ifCondition = "";
+        var findConsequentResult1 = (0, _stringmanipulation.findConsequent)(termArr, i + 2); // +2 to skip {
+
+        cons = findConsequentResult1[0];
+        var lengthOfCons = findConsequentResult1[1];
 
         if (bool) {
-          var findConsequentResult1 = (0, _stringmanipulation.findConsequent)(termArr, i + 2); // +2 to skip {
-
-          cons = findConsequentResult1[0];
-          var lengthOfCons = findConsequentResult1[1];
-
           if (ifsToBeMatched > 1) {
-            ifCondition = ifStack.length > 0 ? ifStack.pop() + " " + cons : cons;
+            ifCondition = cons;
           } else {
             contractString = contractString === "" ? cons : contractString + " " + cons;
           } // now need to fast forward in string ie skip indices
 
 
           if (termArr[i + lengthOfCons + 2] !== "else") {
-            i = i + lengthOfCons + 1; // +1 to skip {}
+            i += lengthOfCons + 1; // +1 to skip {}
           } else {
             var findConsequentResult2 = (0, _stringmanipulation.findConsequent)(termArr, i + findConsequentResult1[1] + 4); // +4 because of 'else' + {
 
             alt = findConsequentResult2[0];
             var lengthOfAlt = findConsequentResult2[1];
-            i = i + lengthOfCons + lengthOfAlt + 3; // +3 to skip {}{}
+            i += lengthOfCons + lengthOfAlt + 3; // +3 to skip {}{}
           }
         } else {
           // boolean returns false
-          var findConsequentResult1 = (0, _stringmanipulation.findConsequent)(termArr, i + 2); // +2 to skip {
-
-          cons = findConsequentResult1[0];
-          var lengthOfCons = findConsequentResult1[1];
-
           if (termArr[i + lengthOfCons + 2] !== "else") {
             // if no 'else' given
-            i = i + lengthOfCons + 1; // +1 to skip {}
+            i += lengthOfCons + 1; // +1 to skip {}
 
             if (ifsToBeMatched > 1) {
               // append result (nothing) to ifCondition
-              if (ifStack.length > 0) {
-                ifCondition = ifStack.pop();
-                var slicedCond = ifCondition.slice(-3); // check if last term was a comp op
-
-                var slicedCompOp1 = ifCondition.slice(-4); // when compOp is 4 symbols long
-
-                var slicedCompOp2 = ifCondition.slice(-2); // when compOp is 2 symbols long
-
-                var slicedCompOp3 = ifCondition.slice(-1); // when compOp is 1 symbol long
-
-                if (COMPARISONOPERATOR(slicedCond) || COMPARISONOPERATOR(slicedCompOp1) || COMPARISONOPERATOR(slicedCompOp2) || COMPARISONOPERATOR(slicedCompOp3)) {
-                  // check if last term was a connective
-                  document.getElementById("transaction_status").innerHTML = "Comparison operator error: Please provide an alternative to your conditional statement.";
-                  return "error";
-                }
-              } else {
-                ifCondition = "";
-              }
+              ifCondition = "";
             } else {
               // append result (nothing) to contractString
               var slicedCond = contractString.slice(-3);
@@ -1168,10 +1156,10 @@ function evaluateConditionals(inputString) {
 
             alt = findConsequentResult2[0];
             var lengthOfAlt = findConsequentResult2[1];
-            i = i + lengthOfCons + lengthOfAlt + 3; // +4 to skip {}{}
+            i += lengthOfCons + lengthOfAlt + 3; // +4 to skip {}{}
 
             if (ifsToBeMatched > 1) {
-              ifCondition = ifStack.length > 0 ? ifStack.pop() + " " + alt : alt;
+              ifCondition = alt;
             } else {
               contractString = contractString === "" ? alt : contractString + " " + alt;
             }
@@ -1449,12 +1437,11 @@ function getHorizon(contractString) {
   for (var i = 0; i < strArr.length; ++i) {
     if (strArr[i] === "truncate") {
       // obtain c from 'truncate t c'
-      var truncDate = strArr[i + 1],
-          oscs = obtainSubContractString(strArr, i + 2),
+      var oscs = obtainSubContractString(strArr, i + 2),
           c = oscs[0],
           prevHorizon = getHorizon(c),
           // obtain c's previous horizon
-      currentHor = (0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(truncDate)); // compare previous horizon with new horizon t and get min
+      currentHor = (0, _stringmanipulation.lTrimDoubleQuotes)((0, _stringmanipulation.rTrimDoubleQuotes)(strArr[i + 1])); // compare previous horizon with new horizon t and get min
 
       if ((0, _stringmanipulation.greaterDate)(currentHor, prevHorizon)) {
         currentHor = prevHorizon;
@@ -1635,9 +1622,7 @@ function getValue(contractString, horizonToCheck) {
   var termArr = contractString.split(" "),
       currentString = "",
       combinatorStack = [],
-      valuesStack = [],
-      currentVal,
-      horizonsStack = []; // pushes horizons of each c whenever we push combinators
+      currentVal;
 
   for (var i = 0; i < termArr.length; ++i) {
     var term = termArr[i];

@@ -136,9 +136,9 @@ describe('testing index.mjs...', function() {
                 expect(res).to.equal("zero and ( one or one )")
             })
             it('9', function() {
-                var res = evaluateConditionals("if ( ( ( if ( zero [>] one ) { zero } else { one } ) [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }");
+                var res = evaluateConditionals("one and if ( ( ( if ( zero [>] one ) { zero } else { one } ) [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }");
                 assert.isString(res);
-                expect(res).to.equal("zero")
+                expect(res).to.equal("one and zero")
             })
             it('10', function() {
                 var res = evaluateConditionals("if ( ( if ( zero [>] one ) { zero } else { one } [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }");
