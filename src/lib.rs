@@ -47,13 +47,9 @@ pub mod smart_contract {
 		#[constant]
 		fn counterPartyBalance(&mut self) -> U256;
 		#[constant]
-		fn callerBalance(&mut self) -> U256;
-		#[constant]
 		fn holderAddress(&mut self) -> H256;
 		#[constant]
 		fn counterPartyAddress(&mut self) -> H256;
-		#[constant]
-		fn callerAddress(&mut self) -> H256;
 		/// Transfer between two accounts
         fn transfer(&mut self, _from: Address, _to: Address, _amount: U256);
 		#[payable]
@@ -83,9 +79,6 @@ pub mod smart_contract {
 			read_balance(&address_of(&counter_party_key())).into()
 	    }
 
-		fn callerBalance(&mut self) -> U256 {
-			read_balance(&sender())
-	    }
 		// does not work if address starts with 0x00... as 0s will be get rid of
 		fn holderAddress(&mut self) -> H256 {
 			read(&holder_key()).into()
@@ -94,10 +87,6 @@ pub mod smart_contract {
 		fn counterPartyAddress(&mut self) -> H256 {
 			read(&counter_party_key()).into()
 	    }
-
-		fn callerAddress(&mut self) -> H256 {
-			H256::from(sender())
-		}
 
 		fn transfer(&mut self, from: Address, to: Address, amount: U256) {
             let senderBalance = read_balance(&from);
@@ -142,76 +131,5 @@ pub mod smart_contract {
 		let mut key = H256::from(*address);
 		key.as_bytes_mut()[0] = 1; // just a naive "namespace";
 		key
-	}
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod tests {
-	extern crate pwasm_test;
-	extern crate pwasm_std;
-	extern crate pwasm_ethereum;
-	extern crate std;
-	use super::*;
-	use self::pwasm_test::{ext_reset, ext_update, ext_get};
-	use smart_contract::SmartContract;
-	use pwasm_std::types::{Address, U256};
-	#[test]
-	fn check_balance() {
-		/*
-		ext_reset(|e| {
-			e.balance_of(
-				Address::from([
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-				]),
-				100000.into(),
-			)
-		});
-		assert_eq!(
-			U256::from(100000),
-			pwasm_ethereum::balance(&Address::from([
-				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-			]))
-		);
-		*/
-		let sender_one = Address::from([
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-		]);
-		assert_eq!(sender_one, sender_one);
-	}
-	#[test]
-	fn give_and_update() {
-		/*
-		let mut contract = smart_contract::SmartContractInstance{};
-		let sender_one = Address::from([
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-		]);
-		let sender_two = Address::from([
-			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21
-		]);
-		// Here we're creating an External context using ExternalBuilder and set the `sender` to the `owner_address`
-		// so `pwasm_ethereum::sender()` in DonationContract::constructor() will return that `owner_address`
-		ext_update(|e| e
-			.sender(sender_one.clone())
-			.value(300.into())
-		);
-		contract.constructor();
-		assert_eq!(contract.balance(), 0.into());
-		contract.give();
-		assert_eq!(contract.balance(), 300.into());
-		ext_update(|e| e
-			.sender(sender_two.clone())
-			.value(250.into())
-		);
-		contract.give();
-		assert_eq!(contract.balance(), 550.into());
-		// 2 log entries should be created
-		assert_eq!(ext_get().logs().len(), 2);
-		*/
-		let sender_one = Address::from([
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-		]);
-		assert_eq!(sender_one, sender_one);
-
 	}
 }

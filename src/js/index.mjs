@@ -444,17 +444,6 @@ export function evaluateConditionals(inputString) {
         var term = termArr[i],
             nextTerm = termArr[i + 1], // for syntax checking
             prevTerm = termArr[i - 1]; // for syntax checking
-
-            console.log("");
-            console.log("");
-            console.log("term: " + term);
-            console.log("====");
-            console.log("Step: " + i);
-            console.log("ifCondition: " + ifCondition);
-            console.log("contractString: " + contractString);
-            console.log(noOfOpeningParensStack);
-            console.log(firstPartStack);
-            console.log(compOpStack);
         if (term === "if") {
             if (i > termArr.length - 9 || nextTerm !== "("
               || (i > 0 && prevTerm !== "(" && prevTerm !== "{" && prevTerm !== "and" && prevTerm !== "or" && !COMPARISONOPERATOR(prevTerm)) ) {
@@ -765,15 +754,6 @@ export function decompose(termArr) { // decomposes contract by most external con
 
     for (var i = 0; i < termArr.length; ++i) {
         var term = termArr[i];
-        console.log("")
-        console.log("------")
-        console.log("contractString: " + contractString);
-        console.log("contractParsed: " + contractParsed);
-        console.log(parseStack);
-        console.log(contractsStack);
-        console.log(closingParensStack);
-        console.log("------")
-        console.log("")
         if (term === "and" || term === "or") { // we have reached the end of a subcontract whenever 'and' is read
             if (openingParens === closingParens) { // found outer most conjunct
                 mostBalancedCon = term;

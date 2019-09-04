@@ -45,19 +45,6 @@
   },
   {
     "type": "function",
-    "name": "callerBalance",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "returnValue0",
-        "type": "uint256"
-      }
-    ],
-    "constant": true,
-    "payable": false
-  },
-  {
-    "type": "function",
     "name": "holderAddress",
     "inputs": [],
     "outputs": [
@@ -72,19 +59,6 @@
   {
     "type": "function",
     "name": "counterPartyAddress",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "returnValue0",
-        "type": "uint256"
-      }
-    ],
-    "constant": true,
-    "payable": false
-  },
-  {
-    "type": "function",
-    "name": "callerAddress",
     "inputs": [],
     "outputs": [
       {
