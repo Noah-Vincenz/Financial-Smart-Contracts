@@ -12,17 +12,34 @@ var smartContract;
 var smartContractInstance;
 
 window.addEventListener('load', function () {
-    if (typeof web3 !== 'undefined') {
 
-        console.log('Web3 Detected! ' + web3.currentProvider.constructor.name);
-        console.log("Web3 Version: " + web3.version.api);
+    // Modern DApp Browsers
+    if (window.ethereum) {
+       web3 = new Web3(window.ethereum);
+       try {
+          window.ethereum.enable().then(function() {
+              // User has allowed account access to DApp...
+              console.log("user has allowed account access to DApp");
+              abi = ABI;
+              codeHex = web3.toHex(CODE_HEX);
+              smartContract = web3.eth.contract(abi);
+          });
+       } catch(e) {
+          // User has denied account access to DApp...
+          console.log("user has denied account access to DApp");
+       }
+    }
+    // Legacy DApp Browsers
+    else if (window.web3) {
+        web3 = new Web3(web3.currentProvider);
         abi = ABI;
         codeHex = web3.toHex(CODE_HEX);
         smartContract = web3.eth.contract(abi);
-
-    } else {
+    }
+    // Non-DApp Browsers
+    else {
         console.log('No Web3 Detected... using HTTP Provider')
-        window.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
     }
 });
 
@@ -43,7 +60,7 @@ export function setSmartContractInstance(contractAddress) {
 }
 
 // this does not exist for Kovan chain
-function unlockAccount(address) {
+export function unlockAccount(address) {
     return new Promise (function (resolve, reject) {
         web3.personal.unlockAccount(address, "user", web3.toHex(0), function(err, result) {
             if (err) {
@@ -68,6 +85,18 @@ export function instantiateNew (holderAddress, counterPartyAddress) {
                 resolve(transactionHash);
             }
         });
+    });
+}
+
+function transferEtherExternally(fromAddress, toAddress, amount) {
+    web3.eth.sendTransaction({
+        from: fromAddress,
+        to: toAddress,
+        value: web3.toWei(amount, "ether")
+    }, function(error, hash) {
+        if (error) {
+            console.log(error);
+        }
     });
 }
 

@@ -2,7 +2,7 @@
 
 # Runs the parity node
 start-node () {
-    parity --chain ./wasm-dev-chain.json --jsonrpc-apis=all --jsonrpc-cors=all --geth --password=/Users/noah-vincenznoeh/Library/Application\ Support/io.parity.ethereum/pass.txt
+    parity --chain ./wasm-dev-chain.json --jsonrpc-apis=all --jsonrpc-cors=all --geth
 }
 
 # Initialises an admin account on the blockchain after a delay

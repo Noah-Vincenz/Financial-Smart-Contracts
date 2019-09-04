@@ -53,7 +53,8 @@ import {
   setDefaultAccount,
   setSmartContractInstance,
   instantiateNew,
-  watchTransferEvent
+  watchTransferEvent,
+  unlockAccount
 } from "./deploy/deploy.mjs"
 
 import {
@@ -97,9 +98,6 @@ window.addEventListener('load', function() {  // commented for testing purposes
     // start timer
     update();
     runClock();
-    var res = evaluateConditionals("one and if ( ( ( if ( zero [>] one ) { zero } else { one } ) [<] truncate \"24/03/2019-23:33:33\" ( one ) ) || ( zero [<=] one ) ) { zero } else { give ( one ) }");
-
-    console.log(res);
 });
 
 function addDepositSelectOptions() {
@@ -385,33 +383,36 @@ global.createContractFunction = function() {
         document.getElementById("create_contract_status").innerHTML = "Holder address and counter party address cannot be the same";
         return;
     }
+
     // check if getSelectedMetaMaskAccount returns valid result, if not log error telling user to log in
-    if(getSelectedMetaMaskAccount() === undefined) {
+    if (getSelectedMetaMaskAccount() === undefined) {
         document.getElementById("create_contract_status").innerHTML = "Please log into MetaMask.";
         return;
-    }
-    // check if the parity dev net is selected
-    if (getSelectedNetwork() !== "17") {
-        document.getElementById("create_contract_status").innerHTML = "Please select the Parity development chain network.";
-        return;
-    }
-    if (getSelectedMetaMaskAccount().toUpperCase() === localHolderAddress.toUpperCase()) {
-        setDefaultAccount(localHolderAddress);
-        instantiateNew(localHolderAddress, localCounterPartyAddress).then(instantiationTxHash => {
-            waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
-                setSmartContractInstance(instantiationReceipt.contractAddress);
-                document.getElementById("create_contract_button").disabled = true;
-                document.getElementById("select_oracle").disabled = true;
-                document.getElementById("holder_address").disabled = true;
-                document.getElementById("counter_party_address").disabled = true;
-                document.getElementById("deposit_button1").disabled = false;
-                document.getElementById("deposit_button2").disabled = false;
-                document.getElementById("select_deposit").disabled = false;
-                agreedOracleAddress = getSelectedOracle();
-            });
-        });
     } else {
-        document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the contract holder account.";
+        // check if the parity dev net is selected
+        if (getSelectedNetwork() !== "17") {
+            document.getElementById("create_contract_status").innerHTML = "Please select the Parity development chain network.";
+            return;
+        }
+
+        if (getSelectedMetaMaskAccount().toUpperCase() === localHolderAddress.toUpperCase()) {
+            setDefaultAccount(localHolderAddress);
+            instantiateNew(localHolderAddress, localCounterPartyAddress).then(instantiationTxHash => {
+                waitForReceipt(instantiationTxHash).then(instantiationReceipt => {
+                    setSmartContractInstance(instantiationReceipt.contractAddress);
+                    document.getElementById("create_contract_button").disabled = true;
+                    document.getElementById("select_oracle").disabled = true;
+                    document.getElementById("holder_address").disabled = true;
+                    document.getElementById("counter_party_address").disabled = true;
+                    document.getElementById("deposit_button1").disabled = false;
+                    document.getElementById("deposit_button2").disabled = false;
+                    document.getElementById("select_deposit").disabled = false;
+                    agreedOracleAddress = getSelectedOracle();
+                });
+            });
+        } else {
+            document.getElementById("create_contract_status").innerHTML = "Please change the currently selected MetaMask account to the contract holder account.";
+        }
     }
 }
 
@@ -748,8 +749,6 @@ export function getHorizon(contractString) {
 }
 
 export function decompose(termArr) { // decomposes contract by most external connective
-    stringToAddToBeginning = "";
-    stringToAddToEnd = "";
     var openingParens = 0,
         closingParens = 0,
         contractString = "",
@@ -757,18 +756,27 @@ export function decompose(termArr) { // decomposes contract by most external con
         parseStack = [],
         contractsStack = [],
         closingParensStack = [],
-        mostBalancedConj = "",
-        mostBalancedConjBalance = termArr.length - 1,
+        mostBalancedCon = "",
+        mostBalancedConBalance = termArr.length - 1,
         secondPartString = "",
         stringToAddToBeginning = "",
         stringToAddToEnd = "",
-        conjWaitingToBeMatched = false; // set to true when reading conjunction and then set to false when reading another conjunction or reaching end
+        conWaitingToBeMatched = false; // set to true when reading conjunction and then set to false when reading another conjunction or reaching end
 
     for (var i = 0; i < termArr.length; ++i) {
         var term = termArr[i];
+        console.log("")
+        console.log("------")
+        console.log("contractString: " + contractString);
+        console.log("contractParsed: " + contractParsed);
+        console.log(parseStack);
+        console.log(contractsStack);
+        console.log(closingParensStack);
+        console.log("------")
+        console.log("")
         if (term === "and" || term === "or") { // we have reached the end of a subcontract whenever 'and' is read
             if (openingParens === closingParens) { // found outer most conjunct
-                mostBalancedConj = term;
+                mostBalancedCon = term;
                 contractsStack[0] = contractParsed;
                 contractsStack[1] = termArr.slice(i + 1).join(' ');
                 stringToAddToBeginning = "";
@@ -777,14 +785,14 @@ export function decompose(termArr) { // decomposes contract by most external con
                     contractsStack[0] = lTrimParen(rTrimParen(contractsStack[0]));
                     contractsStack[1] = lTrimParen(rTrimParen(contractsStack[1]));
                 }
-                return [contractsStack[0], contractsStack[1], mostBalancedConj, "" , ""];
-            } else if (openingParens - closingParens < mostBalancedConjBalance) { // found a new most balanced connective
-                mostBalancedConjBalance = openingParens - closingParens;
-                mostBalancedConj = term;
+                return [contractsStack[0], contractsStack[1], mostBalancedCon, "" , ""];
+            } else if (openingParens - closingParens < mostBalancedConBalance) { // found a new most balanced connective
+                mostBalancedConBalance = openingParens - closingParens;
+                mostBalancedCon = term;
                 var combinatorString = parseStack[parseStack.length - 1];
                 var closingParensString = closingParensStack[closingParensStack.length - 1];
                 if (combinatorString !== undefined) {
-                    if (mostBalancedConj === "or") {
+                    if (mostBalancedCon === "or") {
                         contractsStack[0] = contractString;
                         stringToAddToBeginning = combinatorString + " ( ";
                         stringToAddToEnd = closingParensString;
@@ -795,31 +803,34 @@ export function decompose(termArr) { // decomposes contract by most external con
                     contractsStack[0] = contractParsed;
                 }
                 contractString = "";
-                conjWaitingToBeMatched = true;
+                conWaitingToBeMatched = true;
             } else { // ie conjWaitingToBeMatched
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
-                if (conjWaitingToBeMatched) {
+                if (conWaitingToBeMatched) {
                     contractString = contractString === "" ? term : contractString + " " + term;
                 }
             }
         } else if (term === "zero" || term === "one") {
             var combinatorString = parseStack[parseStack.length - 1];
             var closingParensString = closingParensStack[closingParensStack.length - 1];
-            if (conjWaitingToBeMatched) {
+            if (conWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
             }
             contractString = contractString === "" ? term : contractString + " " + term;
         } else if (term === ")") {
             var combinatorString;
             var closingParensString;
-            if (!conjWaitingToBeMatched) {
+            if (!conWaitingToBeMatched) {
                 combinatorString = parseStack.pop();
                 closingParensString = closingParensStack.pop();
             }
 
-            if (secondPartString !== "" && conjWaitingToBeMatched && (openingParens - closingParens === mostBalancedConjBalance || ( openingParens - closingParens === mostBalancedConjBalance + 1 && termArr[0] === "("))) {
+            var bool1 = openingParens - closingParens === mostBalancedConBalance;
+            var bool2 = openingParens - closingParens === mostBalancedConBalance + 1 && termArr[0] === "(";
+            var bool = bool1 || bool2;
+            if (secondPartString !== "" && conWaitingToBeMatched && bool) {
                 secondPartString = closingParensString !== undefined ? secondPartString + closingParensString : secondPartString + " " + term;
-                if (mostBalancedConj === "or") {
+                if (mostBalancedCon === "or") {
                     contractsStack[1] = secondPartString;
                 } else { // connective is "and"
                     if (combinatorString !== undefined) {
@@ -841,7 +852,7 @@ export function decompose(termArr) { // decomposes contract by most external con
             ++closingParens;
         } else if (term === "(") {
             ++openingParens;
-            if (contractString !== "" && openingParens - closingParens < mostBalancedConjBalance) {
+            if (contractString !== "" && openingParens - closingParens < mostBalancedConBalance) {
                 if (parseStack.length > 0) {
                     parseStack.push(parseStack[parseStack.length - 1] + " ( " + contractString);
                 } else {
@@ -856,13 +867,13 @@ export function decompose(termArr) { // decomposes contract by most external con
                 }
             }
 
-            if (conjWaitingToBeMatched) {
+            if (conWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
             }
 
             contractString = "";
         } else {
-            if (conjWaitingToBeMatched) {
+            if (conWaitingToBeMatched) {
                 secondPartString = secondPartString === "" ? term : secondPartString + " " + term;
             }
             contractString = contractString === "" ? term : contractString + " " + term;
@@ -870,7 +881,7 @@ export function decompose(termArr) { // decomposes contract by most external con
         contractParsed = contractParsed === "" ? term : contractParsed + " " + term;
     }
     // this happens if there is a balanced or conjunction at the end and the second part still needs to be added
-    return [cleanParens(contractsStack[0]), cleanParens(contractsStack[1]), mostBalancedConj, stringToAddToBeginning, stringToAddToEnd];
+    return [cleanParens(contractsStack[0]), cleanParens(contractsStack[1]), mostBalancedCon, stringToAddToBeginning, stringToAddToEnd];
 }
 
 export function getValue(contractString, horizonToCheck) {
@@ -988,6 +999,8 @@ global.processContract = function(inputString, initialDecomposition, firstOrHasB
     var termArr = inputString.split(" ");
     // check if inputstring contains 'or' else execute right away
     var orMatches = inputString.match(/^(.*)\sor\s(.*)$/);
+
+
     if (orMatches !== null) {
         // keep track of the current most balanced conj AND its external combinators
         var decomposedResult = decompose(termArr),
@@ -1634,7 +1647,7 @@ function createMoveFile(sender_address, recipient_address, amount) {
         downloadLink.style.display = "none";
         document.body.appendChild(downloadLink);
     }
-    //downloadLink.click(); // commented for testing purposes
+    downloadLink.click(); // commented for testing purposes
     console.log("Created and downloaded .mvir file.");
 }
 

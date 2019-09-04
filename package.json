@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start" : "npm run test-js && npm run test-rust && npm run build && npm run start-server",
+    "start": "npm run test-js && npm run test-rust && npm run build && npm run start-server",
     "test-js": "mocha -r jsdom-global/register --require @babel/register --require babel-polyfill",
     "test-rust": "cargo test --features std",
     "build": "./build.sh && ./generate.sh",
@@ -18,25 +18,25 @@
     "gulp": "^4.0.2",
     "gulp-connect": "^5.7.0",
     "preset-react": "^1.0.0",
-    "react": "^16.8.6"
+    "react": "^16.9.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.5.5",
     "@babel/core": "^7.5.5",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
-    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/plugin-transform-runtime": "^7.5.5",
     "@babel/preset-env": "^7.5.5",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.5.5",
     "babel-loader": "^8.0.6",
     "babel-polyfill": "^6.26.0",
     "babelify": "^10.0.0",
-    "browserify": "^16.3.0",
+    "browserify": "^16.5.0",
     "chai": "^4.2.0",
     "jsdom": "15.1.1",
     "jsdom-global": "3.0.2",
     "mocha": "^6.2.0",
     "vinyl-source-stream": "^2.0.0",
-    "web3": "1.0.0-beta.46"
+    "web3": "1.0.0-beta.37"
   }
 }
