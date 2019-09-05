@@ -133,3 +133,97 @@ pub mod smart_contract {
 		key
 	}
 }
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod tests {
+	extern crate pwasm_test;
+	extern crate pwasm_std;
+	extern crate pwasm_ethereum;
+	extern crate std;
+	use super::*;
+	use self::pwasm_test::{ext_reset, ext_update, ext_get};
+	use smart_contract::SmartContract;
+	use pwasm_std::types::{Address, U256, H160, H256};
+	#[test]
+	fn check_balance() {
+		/*
+		ext_reset(|e| {
+			e.balance_of(
+				Address::from([
+					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+				]),
+				100000.into(),
+			)
+		});
+		assert_eq!(
+			U256::from(100000),
+			pwasm_ethereum::balance(&Address::from([
+				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+			]))
+		);
+		*/
+		let sender_one = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		assert_eq!(sender_one, sender_one);
+	}
+
+	#[test]
+	fn store_address() {
+		let mut contract = smart_contract::SmartContractInstance{};
+		contract.constructor(Address::from([
+			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]), Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]));
+
+		assert_eq!(contract.holderAddress(), H256::from(Address::from([
+			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		])));
+		assert_eq!(contract.counterPartyAddress(), H256::from(Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		])));
+	}
+
+	#[test]
+	fn transfer_and_update() {
+
+		let mut contract = smart_contract::SmartContractInstance{};
+		let holder = Address::from([
+			0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		let counterParty = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		contract.constructor(holder, counterParty);
+		// both balances should be 0
+		assert_eq!(contract.holderBalance(), 0.into());
+		assert_eq!(contract.counterPartyBalance(), 0.into());
+
+		// Here we're creating an External context using ExternalBuilder
+		// and set the `sender` to the `holder` address
+		ext_update(|e| e.sender(holder.clone()));
+		contract.depositCollateral(300.into());
+		// holderBalance should be 300
+		assert_eq!(contract.holderBalance(), 300.into());
+		assert_eq!(contract.counterPartyBalance(), 0.into());
+
+		contract.transfer(holder, counterParty, 200.into());
+		// both balances should be updated
+		assert_eq!(contract.holderBalance(), 100.into());
+		assert_eq!(contract.counterPartyBalance(), 200.into());
+
+		/*
+		let owner_address = Address::from("0xea674fdde714fd979de3edf0f56aa9716b898ec8");
+        let sam_address = Address::from("0xdb6fd484cfa46eeeb73c71edee823e4812f9e2e1");
+		let sender_one = Address::from([
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+		]);
+		assert_eq!(sender_one, sender_one);
+		// 2 log entries should be created
+		assert_eq!(ext_get().logs().len(), 2);
+		*/
+
+	}
+}

@@ -4,6 +4,9 @@
 
 /* jshint esversion: 6 */
 
+/**
+ * This represents a contract object that is used as an intermediated representation to be stored and processed when acquired.
+ */
 export class Contract {
     constructor(id, amount, observablesArr, recipient, contractString, meaningOfContractString, horizonDate, toBeExecutedAtHorizon, status) {
         this.id = id;
@@ -18,6 +21,15 @@ export class Contract {
     }
 }
 
+/**
+ * Translates a contract into a human-readable format using the contract's attributes
+ * @param {string} recipient - The contract recipient.
+ * @param {string} amount - The amount to be transferred.
+ * @param {array} observablesArr - The array that is used to translate optional observables that the contract may contain.
+ * @param {string} horizonDate - The horizon of the contract.
+ * @param {string} acquireAtHorizon - A string that specifies whether the contract should be acquired at its horizon ("yes").
+ * @returns {string} The human-readable meaning of the contract.
+ */
 export function translateContract(recipient, amount, observablesArr, horizonDate, acquireAtHorizon) {
     var to = "holder";
     var from = "counter-party";
@@ -50,6 +62,15 @@ export function translateContract(recipient, amount, observablesArr, horizonDate
     return amount + " Ether" + adj + " transferred from the " + from + " address to the " + to + " address" + hDate + ".";
 }
 
+/**
+ * Creates a standardised contract string that acts as an intermediated representation of our language using the contract's attributes
+ * @param {string} amount - The amount to be transferred.
+ * @param {array} obsArr - The array that is used to translate optional observables that the contract may contain.
+ * @param {string} recipient - The contract recipient.
+ * @param {string} horizonDate - The horizon of the contract.
+ * @param {string} acquireAtHorizon - A string that specifies whether the contract should be acquired at its horizon ("yes").
+ * @returns {string} The human-readable meaning of the contract.
+ */
 export function createNewContractString(amount, obsArr, recipient, horizonDate, acquireAtHorizon) {
     var stringToReturn = "";
     if (amount === "0") {

@@ -85,21 +85,82 @@ var numberOfSubContracts = 0,
     stringToAddToBeginning = "",
     stringToAddToEnd = "";
 
-window.addEventListener('load', function() {  // commented for testing purposes
-    /*
+/**
+ * This is called when the web page is loaded and is used for initialising UI elements as well as initialising other important system components.
+ */
+window.addEventListener('load', function() {  // commented for testing purposes /**/
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
     document.getElementById("select_deposit").disabled = true;
     document.getElementById("transaction_input_textarea").disabled = true;
-    */
+    /**/
     addDepositSelectOptions();
     createOracles();
     // start timer
     update();
-    runClock();
+    runTimer();
+    //testPerformance();
 });
 
+/**
+ * Tests the runtime taken to execute the evaluateConditionals or processContract function
+ */
+function testPerformance() {
+
+    // evaluateConditionals -- "if ( one [>] zero ) { zero } else { one }" then replace one in condition by entire contract
+    /*
+    var firstPart = "if ( ";
+    var secondPart = " [>] zero ) { zero } else { one }";
+    var tobeadded = "if ( one [>] zero ) { zero } else { one }";
+    runPerformanceTests(i, tobeadded);
+    for (var i = 1; i < 200; ++i) {
+        var newtest = firstPart + tobeadded + secondPart;
+        runPerformanceTests(i, newtest);
+        firstPart = firstPart + "if ( ";
+        secondPart = secondPart + " [>] zero ) { zero } else { one }";
+    }
+    */
+    // processContract without evaluateConditionals need -- "zero or one" then replace one by scaleK 5 ( zero and one )
+    /*
+    var firstPart = "zero or ";
+    var secondPart = "one"
+    var tobeadded = "scaleK 5 ( zero or ";
+    for (var i = 0; i < 200; ++i) {
+        var newtest = firstPart + secondPart;
+        runPerformanceTests(i, newtest);
+        firstPart += tobeadded;
+        secondPart += " )";
+    }
+    */
+}
+
+/**
+ * Used to test the performance of the evaluateConditionals or processContract function.
+ * @param {number} index - The index passed in from the loop inside the testPerformance function.
+ * @param {string} contractString - The contract string used as input.
+ */
+function runPerformanceTests(index, contractString) {
+    console.log("");
+    //console.log(contractString);
+    console.log((index) + "-nested");
+    var sum = 0;
+    for (var i = 0; i < 10; ++i) {
+        var t0 = performance.now();
+
+        //evaluateConditionals(contractString);
+        processContract(contractString, true, false, 0);
+
+        var t1 = performance.now();
+        sum += (t1 - t0);
+    }
+    console.log((sum / 10).toFixed(2) + " milliseconds.");
+    console.log("");
+}
+
+/**
+ * This adds elements to the select item in our UI.
+ */
 function addDepositSelectOptions() {
     var $select = $(".custom_select");
     for (var i = 1; i <= 100; ++i) {
@@ -107,6 +168,10 @@ function addDepositSelectOptions() {
     }
 }
 
+/**
+ * This is called when the user presses the button to add a custom-defined definition in the UI.
+ * @param {string} inputString - The input string specifying the definition to be added.
+ */
 global.addDefinition = function(inputString) {
     try {
         document.getElementById("add_definitions_status").innerHTML = "";
@@ -151,6 +216,11 @@ global.addDefinition = function(inputString) {
     }
 };
 
+/**
+ * This checks if the given term is not part of our language.
+ * @param {string} term - The term to be checked.
+ * @returns {boolean} Boolean specifying whether the given term is part of our language.
+ */
 export function nonExistingTerm(term) {
     if (term !== "give" && term !== "truncate" && term !== "get" && term !== "one"
     && term !== "zero" && term !== "scaleK" && term !== "one" && !COMPARISONOPERATOR(term)
@@ -162,10 +232,16 @@ export function nonExistingTerm(term) {
     return false;
 }
 
+/**
+ * This is called when processing a contract in order to replace any contained custom-defined user definitions.
+ * @param {string} inputString - The contract string to be checked for custom-defined definitions.
+ * @param {map} mapOfDefinitions - The map to be checked for custom-defined definitions.
+ * @returns {string} The modified input string.
+ */
 export function replaceUserDefinitions(inputString, mapOfDefinitions) {
     var strSplit = inputString.split(" "),
         keys = Array.from(mapOfDefinitions.keys()),
-        intersection = strSplit.filter(value => keys.includes(value));     // check if any definition appears in inputString
+        intersection = strSplit.filter(value => keys.includes(value)); // check if any definition appears in inputString
 
     while(intersection.length !== 0) {
         for(var i = 0; i < intersection.length; ++i) {
@@ -201,7 +277,11 @@ export function replaceUserDefinitions(inputString, mapOfDefinitions) {
     return inputString;
 }
 
-
+/**
+ * This is called to check whether a given contract is well-formed.
+ * @param {string} inputString - The contract string to be checked.
+ * @returns {boolean} The boolean value specifying whether the given contract is correct.
+ */
 function correctConstruct(inputString) {
     if (inputString === "") {
         document.getElementById("transaction_status").innerHTML = "Please provide some contract input.";
@@ -222,6 +302,12 @@ function correctConstruct(inputString) {
     return true;
 }
 
+/**
+ * This is called to obtain a subcontract string from a given array.
+ * @param {array} array - The array to be iterated through.
+ * @param {number} indexToStartFrom - The index from which iterations should begin.
+ * @returns {array} A pair containing the extracted subcontract string as well as its length.
+ */
 function obtainSubContractString(array, indexToStartFrom) {
     // returns subcontractString and the number of items in the string
     var stringToReturn = "";
@@ -252,6 +338,11 @@ function obtainSubContractString(array, indexToStartFrom) {
     }
 }
 
+/**
+ * This is called to clean up a contract string prior to processing.
+ * @param {string} inputString - The contract string to be checked.
+ * @returns {string} The 'cleaned' contract string.
+ */
 export function cleanUpBeforeDecomp(inputString) {
     // add dash between date day and time for processing purposes
     inputString = changeDateFormat(inputString);
@@ -267,16 +358,26 @@ export function cleanUpBeforeDecomp(inputString) {
     // evaluate & replace if clauses
     var ifMatches = inputString.match(/^(.*\sif\s.*)|(if\s.*)$/);
     if (ifMatches !== null) {
-        inputString = rTrimWhiteSpace(lTrimWhiteSpace(evaluateConditionals(inputString))); // may return "error"
+        inputString = rTrimWhiteSpace(lTrimWhiteSpace(evaluateConditionals(inputString)));
     }
     return inputString;
 }
 
+/**
+ * This function returns the input of the definitions text area.
+ * @returns {string} The value of the definitions text area.
+ */
 global.getDefinitionsText = function() {
     return document.getElementById("add_input_textarea").value;
 }
 
-
+/**
+ * This is called to extract all subhorizons from two given contracts.
+ * @param {string} contract1 - The string representation of the first contract.
+ * @param {string} contract2 - The string representation of the second contract.
+ * @param {string} comparisonOperator - The comparison operator to be applied.
+ * @returns {set} The set of subhorizons.
+ */
 export function extractAllSubHorizons(contract1, contract2, comparisonOperator) {
     var setOfDates = new Set();
     // whenever we reach one or zero we need to find their horizon ie we need to get the horizons of all lowest level subcontracts
@@ -314,10 +415,14 @@ export function extractAllSubHorizons(contract1, contract2, comparisonOperator) 
     return setOfDates;
 }
 
+/**
+ * This is called to check for expired contracts in the superContractsMap.
+ */
 function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
+    console.log("update");
     for (var [superContractId, contractsSet] of superContractsMap) {
         for (let contract of contractsSet) {
             if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
@@ -332,16 +437,23 @@ function update() {
     }
 }
 
-function runClock() { // every 60 seconds we check for expired contracts
+/**
+ * This is called to start a timer that is used for the update function.
+ */
+function runTimer() { // every 15 seconds we check for expired contracts
     var now = new Date(),
-        timeToNextTick = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+        timeToNextTick = 15000;
 
     setTimeout(function() {
         update();
-        runClock();
+        runTimer();
     }, timeToNextTick);
 }
 
+/**
+ * This is called to deposit Ether into the specified account.
+ * @param {number} id - Specifies whether the holder or the counter-party is depositing.
+ */
 global.callDepositFunction = function(id) {
     document.getElementById("create_contract_status").innerHTML = "";
     var addr = "";
@@ -365,6 +477,7 @@ global.callDepositFunction = function(id) {
                 }
                 if (account1Deposited && account2Deposited) {
                     document.getElementById("make_transaction_button").disabled = false;
+                    document.getElementById("transaction_input_textarea").disabled = false;
                 }
                 retrieveBalances();
             });
@@ -374,6 +487,9 @@ global.callDepositFunction = function(id) {
     }
 }
 
+/**
+ * This is called to create a smart contract on the blockchain.
+ */
 global.createContractFunction = function() {
     document.getElementById("create_contract_status").innerHTML = "";
     var localHolderAddress = document.getElementById("holder_address").value,
@@ -416,18 +532,32 @@ global.createContractFunction = function() {
     }
 }
 
+/**
+ * This is used to return the value of the "select_deposit" element
+ */
 function getSelectedDeposit() {
     return document.getElementById("select_deposit").value;
 }
 
+/**
+ * This is used to return the value of the "select_oracle" element
+ */
 function getSelectedOracle() {
     return document.getElementById("select_oracle").value;
 }
 
+/**
+ * This is used to return the value of the "transaction_input_textarea" element
+ */
 global.getInputString = function() {
     return document.getElementById("transaction_input_textarea").value;
 };
 
+/**
+ * This is called to evaluate conditional statements contained within a contract string.
+ * @param {string} inputString - The contract input string to be modified.
+ * @returns {string} The modified contract string with conditional statements evaluated and removed.
+ */
 export function evaluateConditionals(inputString) {
     var termArr = inputString.split(" "),
         ifsToBeMatched = 0,
@@ -595,6 +725,13 @@ export function evaluateConditionals(inputString) {
     return contractString;
 }
 
+/**
+ * This is called to evaluate a conditional.
+ * @param {string} part1 - The first part of the conditional.
+ * @param {string} comparisonOperator - The comparison operator that is applied to the two parts.
+ * @param {string} part2 - The second part of the conditional.
+ * @returns {boolean} The boolean value of the conditional.
+ */
 export function evaluate(part1, comparisonOperator, part2) {
     if (comparisonOperator === "{>}" || comparisonOperator === "{<}" || comparisonOperator === "{==}" || comparisonOperator === "{>=}" || comparisonOperator === "{<=}") {
         // Horizon Comparison
@@ -695,6 +832,11 @@ export function evaluate(part1, comparisonOperator, part2) {
     }
 }
 
+/**
+ * This is called to check whether a given string is a comparison operator.
+ * @param {string} string - The string to be checked.
+ * @returns {boolean} The boolean value specifying whether the string is a conditional or not.
+ */
 function COMPARISONOPERATOR(string) {
     if (string === "{>}" || string === "{<}" || string === "{==}" || string === "{>=}" || string === "{<=}"
       || string === "[>]" || string === "[<]" || string === "[==]" || string === "[>=]" || string === "[<=]"
@@ -704,6 +846,11 @@ function COMPARISONOPERATOR(string) {
     return false;
 }
 
+/**
+ * This is called to retrieve the horizon of a given contract string.
+ * @param {string} contractString - The contract string of which the horizon should be returned.
+ * @returns {string} The horizon of the contract.
+ */
 export function getHorizon(contractString) {
     // Loops through the whole contract once to find the largest horizon
     // Find minimum horizon, but beforeCurrentDate() must return false
@@ -737,6 +884,12 @@ export function getHorizon(contractString) {
     return maxHorizon;
 }
 
+/**
+ * This is called to decompose a given contract string.
+ * @param {array} termArr - The contract string to decompose split by whitespaces.
+ * @returns {array} An array containing the first and second subcontract, the type of the most balanced connective,
+ * the string to be added to the beginning, as well as the string to be added to the end of the following contract.
+ */
 export function decompose(termArr) { // decomposes contract by most external connective
     var openingParens = 0,
         closingParens = 0,
@@ -864,6 +1017,12 @@ export function decompose(termArr) { // decomposes contract by most external con
     return [cleanParens(contractsStack[0]), cleanParens(contractsStack[1]), mostBalancedCon, stringToAddToBeginning, stringToAddToEnd];
 }
 
+/**
+ * This is called to retrieve the value of a given contract string.
+ * @param {string} contractString - The contract string of which the value should be returned.
+ * @param {string} horizonToCheck - The horizon against which the value should be checked.
+ * @returns {number} The value of the contract.
+ */
 export function getValue(contractString, horizonToCheck) {
     var termArr = contractString.split(" "),
         currentString = "",
@@ -907,6 +1066,12 @@ export function getValue(contractString, horizonToCheck) {
     return currentVal;
 }
 
+/**
+ * This is called by the getValue function to retrieve the value of a contract consisting of two combined subcontracts.
+ * @param {string} contractString - The contract string of which the value should be returned.
+ * @param {string} horizonToCheck - The horizon against which the value should be checked.
+ * @returns {number} The value of the contract.
+ */
 function getLowestLevelContractValue(contractString, horizonToCheck) {
     if (contractString.includes(" or ")) { // it will only contain one or the other, not both
         var arr = contractString.split(" or ");
@@ -962,12 +1127,19 @@ function getLowestLevelContractValue(contractString, horizonToCheck) {
     }
 }
 
+/**
+ * This is called to process a contract provided by the end user.
+ * @param {string} inputString - The contract string provided by the end user.
+ * @param {boolean} initialDecomposition - A boolean specifying whether this is an initial decomposition called from pressing the 'make transaction' button.
+ * @param {boolean} firstOrHasBeenDecomposed - A boolean specifying whether the first 'or' connective has been decomposed yet.
+ * @param {number} contractOwner - This specifies whether the holder is paying or receiving the specified amount in the contract.
+ */
 global.processContract = function(inputString, initialDecomposition, firstOrHasBeenDecomposed, contractOwner) {
     ++uniqueID;
     if (initialDecomposition) {
         // This is the case only when this function is triggered by the 'make transaction' button
         contractsBeingDecomposed = 1;
-        removeChildren("button_choices_container"); // NEEDED?
+        removeChildren("button_choices_container");
         acquireBtnToBeDisabled1 = true;
         acquireBtnToBeDisabled2 = true;
         document.getElementById("transaction_status").innerHTML = "";
@@ -980,7 +1152,6 @@ global.processContract = function(inputString, initialDecomposition, firstOrHasB
     // check if inputstring contains 'or' else execute right away
     var orMatches = inputString.match(/^(.*)\sor\s(.*)$/);
 
-
     if (orMatches !== null) {
         // keep track of the current most balanced conj AND its external combinators
         var decomposedResult = decompose(termArr),
@@ -992,12 +1163,21 @@ global.processContract = function(inputString, initialDecomposition, firstOrHasB
             processContract(part1, false, firstOrHasBeenDecomposed, contractOwner);
             processContract(part2, false, firstOrHasBeenDecomposed, contractOwner);
         } else { // conn is "or"
+            // uncomment for testing performance
+            /*
+            ++contractsBeingDecomposed;
+            processContract(part1, false, firstOrHasBeenDecomposed, contractOwner);
+            processContract(part2, false, firstOrHasBeenDecomposed, contractOwner);
+            */
+            // comment for testing performance
+            /**/
             if (!firstOrHasBeenDecomposed) {
                 var occ = occurrences(decomposedResult[3], "give ", false);
                 contractOwner = occ % 2 === 0 ? 0 : 1; // setting the owner for all future contract choices
             }
             firstOrHasBeenDecomposed = true;
             addChoices([part1, part2], decomposedResult[3], decomposedResult[4], uniqueID, contractOwner);
+            /**/
         }
     }
     else { // input does not contain 'or'
@@ -1007,6 +1187,11 @@ global.processContract = function(inputString, initialDecomposition, firstOrHasB
     }
 };
 
+/**
+ * This is called to create a select item in the UI allowing users to evaluate supercontracts.
+ * @param {tr} tr - The table row element to be used.
+ * @param {string} id - The contract id.
+ */
 function createValuationSelect(tr, id) {
     var td;
     tr.appendChild(td = document.createElement("td"));
@@ -1075,6 +1260,10 @@ function createValuationSelect(tr, id) {
     updateValuationValue(id);
 }
 
+/**
+ * This is called to update the value in the valuation select item.
+ * @param {string} id - The contract id.
+ */
 function updateValuationValue(id) {
     var day = padNumber(document.getElementById("day_select_" + id).value),
         month = padNumber(document.getElementById("month_select_" + id).value),
@@ -1083,6 +1272,11 @@ function updateValuationValue(id) {
     document.getElementById("p_value_" + id).innerHTML = getValue(c, day + "/" + month + "/" + year + "-" + "12:00:00").toString() + "ETH";
 }
 
+/**
+ * This is called to retrieve all subcontracts from a given super contract using superContractsMap.
+ * @param {string} superKey - The key of the super contract used to look up the subcontracts.
+ * @returns {string} The contract string containing all subcontracts combined with the 'and' connective
+ */
 function getAllSubcontracts(superKey) {
     var finalContractString = "";
     if (superContractsMap.has(superKey)) {
@@ -1099,6 +1293,11 @@ function getAllSubcontracts(superKey) {
     }
 }
 
+/**
+ * This is called to retrieve all subcontracts from a given super contract using superContractsMap.
+ * @param {string} superKey - The key of the super contract used to look up the subcontracts.
+ * @returns {string} The contract string containing all subcontracts combined with the 'and' connective
+ */
 function updateSelectableDaysFromMonth(selectedMonth, id) {
     var selectDay = document.getElementById("day_select_" + id);
     var selectYear = document.getElementById("year_select_" + id);
@@ -1152,6 +1351,12 @@ function updateSelectableDaysFromMonth(selectedMonth, id) {
     }
 }
 
+/**
+ * This is called to update the values in the valuation select item. This is to prevent
+ * impossible dates like 31/02/2019 from being displayed
+ * @param {string} selectedYear - The year that has been selected.
+ * @param {string} id - The contract id.
+ */
 function updateSelectableDaysFromYear(selectedYear, id) {
     var selectDay = document.getElementById("day_select_" + id);
     var selectMonth = document.getElementById("month_select_" + id);
@@ -1181,6 +1386,11 @@ function updateSelectableDaysFromYear(selectedYear, id) {
     }
 }
 
+/**
+ * This is called to create the acquire button in the table of pending contracts.
+ * @param {tr} tr - The table row element to be used.
+ * @param {string} id - The contract id.
+ */
 function createAcquireButton(tr, id) {
     var td;
     tr.appendChild(td = document.createElement("td"));
@@ -1200,6 +1410,14 @@ function createAcquireButton(tr, id) {
     }
 }
 
+/**
+ * This is called to present the user with disjunct contract choices in the UI.
+ * @param {array} contractsStack - The array of contracts to be displayed.
+ * @param {string} beginningStr - The string to be added to the beginning after a contract choice has been made.
+ * @param {string} endStr - The string to be appended after a contract choice has been made.
+ * @param {number} divId - An integer identifying the div of the choice.
+ * @param {number} owner = Specifies whether the holder or the counter-party owns the contract.
+ */
 function addChoices(contractsStack, beginningStr, endStr, divId, owner) {
     var contract2 = contractsStack.pop();
     var contract1 = contractsStack.pop();
@@ -1211,6 +1429,10 @@ function addChoices(contractsStack, beginningStr, endStr, divId, owner) {
     stringToAddToEnd = "";
 }
 
+/**
+ * This is called to create contract entries in the UI from a given array of contracts.
+ * @param {array} contractsArr - The array of contracts to be displayed.
+ */
 function createContractEntries(contractsArr) {
     // acquire button should be disabled if either all contracts are expired or all contracts are to be acquired at horizon ie 'get'
     for (var i = 0; i < contractsArr.length; ++i) {
@@ -1225,6 +1447,11 @@ function createContractEntries(contractsArr) {
     }
 }
 
+/**
+ * This is called when decomposing a contract and the contract itself contains no more 'or' connectives
+ * @param {string} contractString - The contract string to be decomposed.
+ * @returns {array} The array containing all subcontracts in the given contract string.
+ */
 export function decomposeAnds(contractString) {
     // keep two stacks: one for combinators and one for closing parenthesis to be added
     var termArr = contractString.split(" "),
@@ -1290,6 +1517,11 @@ export function decomposeAnds(contractString) {
     return finalContractsArr;
 }
 
+/**
+ * This is called to check the syntax of a contract string.
+ * @param {string} contractString - The contract string to be decomposed.
+ * @returns {boolean} A boolean value specifying whether the given contract is correct.
+ */
 function parsesSuccessfullyForSyntax(contractString) {
     var strArr = contractString.split(" ");
     for (var i = 0; i < strArr.length; ++i) {
@@ -1386,6 +1618,10 @@ function parsesSuccessfullyForSyntax(contractString) {
     return true;
 }
 
+/**
+ * This is called to create a single Contract object from a given contract string.
+ * @param {string} inputString - The contract string to be used.
+ */
 function createContractObject(inputString) {
     // this is a lowest-level subcontract, ie. it contains only 1 occurrence zero/one
     var giveOccurrences = 0,
@@ -1453,6 +1689,9 @@ function createContractObject(inputString) {
     }
 }
 
+/**
+ * This is called to add a supercontract row to the table of pending contracts in the case where all subcontracts have been added.
+ */
 function addSuperContractRow() {
     --contractsBeingDecomposed;
     if (!document.getElementById("button_choices_container").hasChildNodes() && contractsBeingDecomposed === 0 && numberOfSubContracts !== 0) {
@@ -1473,6 +1712,12 @@ function addSuperContractRow() {
     }
 }
 
+/**
+ * This is called to add a contract to our map of supercontracts.
+ * @param {map} map - The supercontractsMap to be used.
+ * @param {string} superKey - The key of the supercontract.
+ * @param {string} contract - The input string defining the contract.
+ */
 function addToSuperContracts(map, superKey, contract) {
     if (map.has(superKey)) {
         for (var [superContractId, contractsSet] of map) {
@@ -1488,10 +1733,18 @@ function addToSuperContracts(map, superKey, contract) {
         newSet.add(contract);
         map.set(superKey, newSet);
     }
+    /*
     console.log("SupercontractsMap after adding a contract");
     console.log(map);
+    */
 }
 
+/**
+ * This is called to remove a contract from our map of supercontracts.
+ * @param {map} map - The supercontractsMap to be used.
+ * @param {string} superKey - The key of the supercontract.
+ * @param {string} contract - The input string defining the contract.
+ */
 function deleteFromSuperContracts(map, superKey, contract) {
     for (var [superContractId, contractsSet] of map) {
         if (superContractId === superKey) {
@@ -1505,10 +1758,16 @@ function deleteFromSuperContracts(map, superKey, contract) {
             break;
         }
     }
+    /*
     console.log("SupercontractsMap after deleting a contract");
     console.log(map);
+    */
 }
 
+/**
+ * This is called to execute a given super contract specified by the provided key
+ * @param {string} superKey - The key of the supercontract.
+ */
 function executeSuperContract(superKey) {
     for (var [superContractId, contractsSet] of superContractsMap) {
         if (superContractId === superKey) {
@@ -1521,6 +1780,10 @@ function executeSuperContract(superKey) {
     }
 }
 
+/**
+ * This is called to execute a single lowest-level contract.
+ * @param {string} contract - The input string defining the contract.
+ */
 function executeSingleContract(contract) {
     var obsArr = contract.observablesArr;
     if (obsArr.length > 0) {
@@ -1549,6 +1812,12 @@ function executeSingleContract(contract) {
     });
 }
 
+/**
+ * This is called to transfer Ether between to accounts.
+ * @param {Contract} contract - The Contract object to be used.
+ * @param {string} fromAddress - The address to use as sender address.
+ * @param {string} toAddress - The address to use as recipient address.
+ */
 function callTransferFunction(contract, fromAddress, toAddress) {
     balanceOfAddress(fromAddress).then(balance => {
         if (balance >= parseFloat(contract.amount)) {
@@ -1571,6 +1840,12 @@ function callTransferFunction(contract, fromAddress, toAddress) {
     });
 }
 
+/**
+ * This is called to check whether a transactor has sufficient amounts of Ether to execute all pending contracts as well as a newly added contract.
+ * @param {Contract} contract - The Contract object to be used.
+ * @param {number} balance - The transactor's balance in Ether.
+ * @returns {boolean} The boolean specifying whether the transactor has sufficient amounts of Ether.
+ */
 function enoughBalanceForCapacity(contract, balance) {
     // compute sum of transactions in Map
     var sum = 0;
@@ -1590,6 +1865,12 @@ function enoughBalanceForCapacity(contract, balance) {
     }
 }
 
+/**
+ * This is called to create a Move IR source code file corresponding to our smart contract transaction.
+ * @param {string} sender_address - The address of the sender.
+ * @param {string} recipient_address - The address of the recipient.
+ * @param {string} amount - The amount to be transferred.
+ */
 function createMoveFile(sender_address, recipient_address, amount) {
     var textToWrite = "//! no-execute\n" +
     "import 0x0.LibraAccount;\n" +
@@ -1631,6 +1912,9 @@ function createMoveFile(sender_address, recipient_address, amount) {
     console.log("Created and downloaded .mvir file.");
 }
 
+/**
+ * This is called to retrieve the parties' balances in Ether.
+ */
 function retrieveBalances() {
     holderBalance().then(function(hBalance) {
         document.getElementById("holder_balance_p").innerHTML = "Balance: " + hBalance + "ETH";
@@ -1640,6 +1924,10 @@ function retrieveBalances() {
     });
 }
 
+/**
+ * This is called to create a table row inside the table used to present pending contracts.
+ * @param {Contract} contract - The contract to be displayed.
+ */
 function createTableRow(contract) {
     var table = document.getElementById("my_table");
     let tr = table.insertRow(1);
@@ -1660,6 +1948,11 @@ function createTableRow(contract) {
     td.innerHTML = contract.status;
 }
 
+/**
+ * This is called to check whether a given transactor owns the rights to make a choice on a disjunct contract.
+ * @param {number} contractOwnerInt - A number identifying who the owner of the contract is.
+ * @returns {boolean} A boolean value specifying whether the given transactor owns these rights.
+ */
 function ownsRights(contractOwnerInt) {
     var ownerAddress = contractOwnerInt === 0 ? document.getElementById("holder_address").value : document.getElementById("counter_party_address").value;
     if (getSelectedMetaMaskAccount().toUpperCase() === ownerAddress.toUpperCase()) {
@@ -1670,6 +1963,15 @@ function ownsRights(contractOwnerInt) {
     }
 }
 
+/**
+ * This is called to create a disjunct contract choice button in the UI.
+ * @param {string} contractString - The contractString to be used for the button.
+ * @param {string} beginningString - The string that will be added to the beginning after a choice has been made.
+ * @param {string} endString - The string that will be appended after a choice has been made.
+ * @param {number} buttonId - A number identifying the button.
+ * @param {number} divId - A number identifying the div element in which the button should be contained.
+ * @param {number} owner - A number identifying who the owner of the contract is.
+ */
 function createButton (contractString, beginningString, endString, buttonId, divId, owner) {
     var button = document.createElement("button");
     button.id = "choices_button_" + buttonId;
@@ -1689,6 +1991,10 @@ function createButton (contractString, beginningString, endString, buttonId, div
     });
 }
 
+/**
+ * This is called to create a new section inside a given div.
+ * @param {number} divId - A number identifying the div element.
+ */
 function createSection(divId) {
     var div = document.createElement("div");
     div.id = "section_" + divId.toString();
@@ -1700,6 +2006,10 @@ function createSection(divId) {
     bottomContainer.appendChild(div);
 }
 
+/**
+ * This is called to create an 'or' label inside a given div.
+ * @param {number} divId - A number identifying the div element.
+ */
 function createOrLabel(divId) {
     var para = document.createElement("p");
     para.className = "p_small";
@@ -1709,6 +2019,10 @@ function createOrLabel(divId) {
     container.appendChild(para);
 }
 
+/**
+ * This is called to remove all children elements of a given container.
+ * @param {string} containerString - The container to be used.
+ */
 function removeChildren(containerString) {
     var e = document.getElementById(containerString);
     var child = e.lastElementChild;

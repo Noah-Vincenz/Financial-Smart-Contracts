@@ -4,6 +4,9 @@
 
 /* jshint esversion: 6 */
 
+/**
+ * Used to add a sleep() break to JavaScript code execution.
+ */
 function sleep(ms) {
     var start = new Date().getTime();
     for (var i = 0; i < 1e7; i++) {
@@ -37,11 +40,20 @@ export function occurrences(string, subString, allowOverlapping) {
    return n;
 }
 
+/**
+ * Checks whether a given string is a number.
+ * @param {string} num - The string to be checked.
+ * @returns {boolean} The boolean value specifying whether the given string is a number.
+ */
 export function isNumeric(num){
     return !isNaN(num);
 }
 
-// for debugging
+/**
+ * Useful debugging function for printing stacks.
+ * @param {array} stack - The stack to be printed.
+ * @param {string} name - The name given to the stack.
+ */
 function printStack(stack, name) {
     console.log(name + ": " + stack.length);
     var x;

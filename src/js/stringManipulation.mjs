@@ -263,6 +263,11 @@ export function trimSemiColon(str) {
     return str.replace(/;$/g, '');
 }
 
+/**
+ * Pads a given number of length 1 with a zero at the beginning.
+ * @param {string} number - The number to be padded.
+ * @returns {string} The modified number.
+ */
 export function padNumber(number) {
     if (number.length === 1) {
         return "0" + number;
@@ -270,6 +275,12 @@ export function padNumber(number) {
     return number;
 }
 
+/**
+ * Used to find the next closest connective inside a given contract string.
+ * @param {array} contractStringArr - The given contract string separated by whitespaces.
+ * @param {number} indexToStartFrom - The index to start iterating from.
+ * @returns {string} The type of the next connective.
+ */
 export function findNextConnective(contractStringArr, indexToStartFrom) {
     for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
         var term = contractStringArr[i];
@@ -280,6 +291,12 @@ export function findNextConnective(contractStringArr, indexToStartFrom) {
     return "";
 }
 
+/**
+ * Used to find the next closest consequent inside a given contract string.
+ * @param {array} contractStringArr - The given contract string separated by whitespaces.
+ * @param {number} indexToStartFrom - The index to start iterating from.
+ * @returns {array} A pair array containing the consequent string and its size.
+ */
 export function findConsequent(contractStringArr, indexToStartFrom) {
     var returnString = "";
     for (var i = indexToStartFrom; i < contractStringArr.length; ++i) {
@@ -293,7 +310,13 @@ export function findConsequent(contractStringArr, indexToStartFrom) {
     return ["", 0];
 }
 
-export function isDate(stringInput) {function obtainSubContractString(array, indexToStartFrom) {
+/**
+ * Used to obtain the next following subcontract string from a given input contract string.
+ * @param {array} array - The given contract string separated by whitespaces.
+ * @param {number} indexToStartFrom - The index to start iterating from.
+ * @returns {array} A pair array containing the subcontract string and its size.
+ */
+function obtainSubContractString(array, indexToStartFrom) {
     // returns subcontractString and the number of items in the string
     var stringToReturn = "";
     if (array[indexToStartFrom] === "(") {
@@ -322,6 +345,14 @@ export function isDate(stringInput) {function obtainSubContractString(array, ind
         }
     }
 }
+
+/**
+ * Used to check whether a given string input is a date
+ * @param {string} stringInput - The given string to be checked.
+ * @returns {boolean} A boolean value specifying whether the input string corresponds to a date.
+ */
+export function isDate(stringInput) {
+
     if (stringInput === undefined) {
         return false;
     }
@@ -335,6 +366,12 @@ export function isDate(stringInput) {function obtainSubContractString(array, ind
     }
 }
 
+/**
+ * Used to check whether a given date is the same day as the current date.
+ * @param {string} contractHorizon - The given contract horizon date to be checked.
+ * @param {string} horizonToCheck - A date to be compared against instead of the current date (if given).
+ * @returns {boolean} A boolean value specifying whether the two dates are the same day.
+ */
 export function sameDayAsCurrentDate(contractHorizon, horizonToCheck) {
     var contractDay = contractHorizon.split("-")[0].split("/")[0],
         contractMonth = contractHorizon.split("-")[0].split("/")[1],
@@ -358,6 +395,12 @@ export function sameDayAsCurrentDate(contractHorizon, horizonToCheck) {
     }
 }
 
+/**
+ * Used to check whether a given date is after another given date.
+ * @param {string} dateString1 - The first given contract horizon date.
+ * @param {string} dateString2 - The second given contract horizon date.
+ * @returns {boolean} A boolean value specifying whether the first date is after the second.
+ */
 export function greaterDate(dateString1, dateString2) {
     // returns true if dateString1 > dateString2
     if (dateString1 === "infinite" || dateString2 === "infinite") {
@@ -380,6 +423,12 @@ export function greaterDate(dateString1, dateString2) {
     }
 }
 
+/**
+ * Used to check whether a two given dates are equivalent.
+ * @param {string} dateString1 - The first given contract horizon date.
+ * @param {string} dateString2 - The second given contract horizon date.
+ * @returns {boolean} A boolean value specifying whether the two dates are the same.
+ */
 export function equalDates(dateString1, dateString2) {
     // for first date
     if (dateString1 === "infinite" || dateString2 === "infinite") {
@@ -400,6 +449,12 @@ export function equalDates(dateString1, dateString2) {
     }
 }
 
+/**
+ * Used to check whether a given date is before the current date.
+ * @param {string} contractDate - The given contract horizon date to be checked.
+ * @param {string} horizonToCheck - A date to be compared against instead of the current date (if given).
+ * @returns {boolean} A boolean value specifying whether the first date is before the current date.
+ */
 export function beforeCurrentDate(contractDate, horizonToCheck) {
   if (horizonToCheck === "") { // we want to compare against the current date - so it is valid even if it is equal to
       if (contractDate === "infinite") {
@@ -432,6 +487,11 @@ export function beforeCurrentDate(contractDate, horizonToCheck) {
   }
 }
 
+/**
+ * Used to compute a date string in a specified format.
+ * @param {string} dateString - The date string to be formatted.
+ * @returns {string} The final date string in our desired format.
+ */
 export function computeDateString(dateString) {
     var horizonArr = dateString.split("-"),
         dateArr = horizonArr[0].split("/"),
@@ -442,6 +502,12 @@ export function computeDateString(dateString) {
     return finalDateString;
 }
 
+/**
+ * Used to concatenate two arrays.
+ * @param {array} arr1 - The first array used for the concatenation.
+ * @param {array} arr2 - The second array used for the concatenation.
+ * @returns {array} Our final array.
+ */
 export function concatenate(arr1, arr2) {
     for (var i = 0; i < arr2.length; ++i) {
         arr1.push(arr2[i]);

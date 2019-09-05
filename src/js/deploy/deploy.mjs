@@ -11,6 +11,9 @@ var codeHex;
 var smartContract;
 var smartContractInstance;
 
+/**
+ * This is called when the web page is loaded and is used for initialising important system components.
+ */
 window.addEventListener('load', function () {
 
     // Modern DApp Browsers
@@ -43,24 +46,39 @@ window.addEventListener('load', function () {
     }
 });
 
+/**
+ * This returns the address of the currently selecte MetaMask account.
+ */
 export function getSelectedMetaMaskAccount() {
     return web3.eth.accounts[0];
 }
 
+/**
+ * This returns the currently selected network.
+ */
 export function getSelectedNetwork() {
     return web3.version.network;
 }
 
+/**
+ * This is used to set the default account of web3.
+ */
 export function setDefaultAccount(address) {
     web3.eth.defaultAccount = address;
 }
 
+/**
+ * This is used to set the smartContractInstance variable.
+ */
 export function setSmartContractInstance(contractAddress) {
     smartContractInstance = smartContract.at(contractAddress);
 }
 
-// this does not exist for Kovan chain
-export function unlockAccount(address) {
+/**
+ * Unlocks accounts.
+ * @param {string} address - The address specifying the account to be unlocked.
+ */
+export function unlockAccount(address) { // this does not exist for Kovan chain
     return new Promise (function (resolve, reject) {
         web3.personal.unlockAccount(address, "user", web3.toHex(0), function(err, result) {
             if (err) {
@@ -73,6 +91,11 @@ export function unlockAccount(address) {
     });
 }
 
+/**
+ * Instantiates a new Rust smart contract instance.
+ * @param {string} holderAddress - The address specifying the contract holder.
+ * @param {string} counterPartyAddress - The address specifying the contract counter-party.
+ */
 export function instantiateNew (holderAddress, counterPartyAddress) {
     return new Promise (function (resolve, reject) {
         smartContract.new(holderAddress, counterPartyAddress, {data: codeHex, from: web3.eth.defaultAccount}, function (err, contractInstance) {
@@ -88,6 +111,12 @@ export function instantiateNew (holderAddress, counterPartyAddress) {
     });
 }
 
+/**
+ * This transfers Ether between two addresses outside of our Rust contract.
+ * @param {string} fromAddress - The address specifying the sender.
+ * @param {string} toAddress - The address specifying the recipient.
+ * @param {number} amount - The amount to be transferred.
+ */
 function transferEtherExternally(fromAddress, toAddress, amount) {
     web3.eth.sendTransaction({
         from: fromAddress,
@@ -100,6 +129,11 @@ function transferEtherExternally(fromAddress, toAddress, amount) {
     });
 }
 
+/**
+ * Deposits a given amount of Ether into a given account.
+ * @param {string} senderAddress - The address specifying the account to be used for the deposit.
+ * @param {number} amount - The amount to be deposited.
+ */
 export function depositCollateral(senderAddress, amount) {
     return new Promise (function (resolve, reject) {
         smartContractInstance.depositCollateral(amount, {from: senderAddress, value: web3.toWei(amount, "ether")}, function (err, result) {
@@ -112,6 +146,9 @@ export function depositCollateral(senderAddress, amount) {
     });
 }
 
+/**
+ * Used to retrieve the balance of the contract holder.
+ */
 export function holderBalance() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderBalance(function (err, result) {
@@ -124,6 +161,9 @@ export function holderBalance() {
     });
 }
 
+/**
+ * Used to retrieve the balance of the contract counter-party.
+ */
 export function counterPartyBalance() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.counterPartyBalance(function (err, result) {
@@ -136,6 +176,9 @@ export function counterPartyBalance() {
     });
 }
 
+/**
+ * Used to retrieve the address of the contract holder.
+ */
 export function holderAddress() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.holderAddress(function (err, result) {
@@ -151,6 +194,9 @@ export function holderAddress() {
     });
 }
 
+/**
+ * Used to retrieve the address of the contract counterparty.
+ */
 export function counterPartyAddress() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.counterPartyAddress(function (err, result) {
@@ -166,6 +212,10 @@ export function counterPartyAddress() {
     });
 }
 
+/**
+ * Used to retrieve the balance of a given address.
+ * @param {string} address - The address specifying the account balanced to be retrieved.
+ */
 export function balanceOfAddress(address) {
     return new Promise (function (resolve, reject) {
         smartContractInstance.balanceOfAddress(web3.toChecksumAddress(address), function (err, result) {
@@ -178,6 +228,9 @@ export function balanceOfAddress(address) {
     });
 }
 
+/**
+ * Used to watch the TransferEvent defined in our Rust smart contract definition.
+ */
 export function watchTransferEvent() {
     return new Promise (function (resolve, reject) {
         smartContractInstance.TransferEvent({}, function (err, event) {
@@ -190,7 +243,12 @@ export function watchTransferEvent() {
     });
 }
 
-
+/**
+ * Used to transfer Ether between two accounts.
+ * @param {string} fromAddress - The address specifying the sender.
+ * @param {string} toAddress - The address specifying the recipient.
+ * @param {string} amount - The amount of Ether to be transferred.
+ */
 export function transfer(fromAddress, toAddress, amount) {
   return new Promise (function (resolve, reject) {
       smartContractInstance.transfer(fromAddress, toAddress, amount, function(err, result) {
@@ -203,6 +261,11 @@ export function transfer(fromAddress, toAddress, amount) {
   });
 }
 
+/**
+ * Used to wait for a transaction's receipt. This is useful when one needs
+ * to respond to a Rust smart contract event and update the UI correspondingly.
+ * @param {string} transactionHash - The hash specifying the transaction to be waited for.
+ */
 export function waitForReceipt(transactionHash) {
   return new Promise (function (resolve, reject) {
       web3.eth.getTransactionReceipt(transactionHash, function (err, receipt) {

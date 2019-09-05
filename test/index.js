@@ -367,6 +367,16 @@ describe('testing index.mjs...', function() {
                 assert.isBoolean(res);
                 expect(res).to.equal(true);
             })
+            it('27', function() {
+                var res = evaluate("zero", "[<=]", "one");
+                assert.isBoolean(res);
+                expect(res).to.equal(true)
+            })
+            it('28', function() {
+                var res = evaluate("zero", "{>=}", "one");
+                assert.isBoolean(res);
+                expect(res).to.equal(true)
+            })
         })
     })
 

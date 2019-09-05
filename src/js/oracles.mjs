@@ -3,14 +3,22 @@
  */
 
 /* jshint esversion: 6 */
+
 var oracleArr = [];
 
+/**
+ * This class defines an Oracle. Every Oracle possesses a unique address and acts as a provider of any observable values for the parties of a contract.
+ */
 export class Oracle {
 
+    // class constructor
     constructor(address) {
         this.address = address;
     }
 
+    /**
+     * Used to return the value of the tempInLondon observable
+     */
     getTempInLondon() {
         switch(this.address) {
             case "0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56":
@@ -33,6 +41,9 @@ export class Oracle {
         }
     }
 
+    /**
+     * Used to return the value of the libor3m observable
+     */
     getLiborSpotRate() {
         switch(this.address) {
             case "0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56":
@@ -56,6 +67,9 @@ export class Oracle {
     }
 }
 
+/**
+ * This is used to create and instantiate a set of Oracle objects.
+ */
 export function createOracles() {
     const o1 = new Oracle("0x8ce40d9956e7b8a89a1d73f4d4850c760ea20a56");
     const o2 = new Oracle("0xc90bc8ff4387fe14cdd0934ef9935be590cb83ca");
@@ -65,6 +79,11 @@ export function createOracles() {
     oracleArr = [o1, o2, o3, o4, o5];
 }
 
+/**
+ * Used to retrieve an Oracle object by address.
+ * @param {string} address - The address of the requested Oracle.
+ * @returns {Oracle} The requested Oracle object.
+ */
 export function getOracleByAddress(address) {
     for (var i = 0; i < oracleArr.length; ++i) {
         if (oracleArr[i].address === address) {
