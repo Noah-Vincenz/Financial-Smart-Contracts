@@ -1169,7 +1169,7 @@ function update() {
 
 
 function runTimer() {
-  // every 60 seconds we check for expired contracts
+  // every 15 seconds we check for expired contracts
   var now = new Date(),
       timeToNextTick = 15000;
   setTimeout(function () {
