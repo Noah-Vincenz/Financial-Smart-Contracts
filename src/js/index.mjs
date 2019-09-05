@@ -88,7 +88,9 @@ var numberOfSubContracts = 0,
 /**
  * This is called when the web page is loaded and is used for initialising UI elements as well as initialising other important system components.
  */
-window.addEventListener('load', function() {  // commented for testing purposes /**/
+window.addEventListener('load', function() {
+    // commented for testing purposes
+    /**/
     document.getElementById("deposit_button1").disabled = true;
     document.getElementById("deposit_button2").disabled = true;
     document.getElementById("make_transaction_button").disabled = true;
@@ -422,7 +424,6 @@ function update() {
     // loop through all contracts and check if their time == current time and if so check if get or not
     // if get: then execute
     // if not get: then disable acquire button
-    console.log("update");
     for (var [superContractId, contractsSet] of superContractsMap) {
         for (let contract of contractsSet) {
             if (contract.horizonDate !== "infinite" && beforeCurrentDate(contract.horizonDate, "")) {
@@ -1733,10 +1734,10 @@ function addToSuperContracts(map, superKey, contract) {
         newSet.add(contract);
         map.set(superKey, newSet);
     }
-    /*
+
     console.log("SupercontractsMap after adding a contract");
     console.log(map);
-    */
+
 }
 
 /**
@@ -1758,10 +1759,10 @@ function deleteFromSuperContracts(map, superKey, contract) {
             break;
         }
     }
-    /*
+
     console.log("SupercontractsMap after deleting a contract");
     console.log(map);
-    */
+
 }
 
 /**
