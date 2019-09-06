@@ -1,0 +1,48 @@
+ONE:
+
+Solidity:
+constructor:
+1094078
+acquire:
+85012
+
+Nexus:
+constructor:
+3439162
+acquire:
+47772, 32772
+
+
+
+
+EUROPEAN: get (truncate "01/01/2020 12:00:00" ( one or zero ))
+
+Solidity:
+constructor:
+1372740
+acquire:
+42980
+
+Nexus:
+constructor:
+3439162
+acquire:
+37115, 47759
+
+
+
+ZCDB: scaleK 100 (get (truncate "01/01/2020 12:00:00" ( one )))
+
+
+Solidity:
+constructor:
+1168697
+acquire:
+42715
+
+Nexus:
+constructor:
+3439162
+acquire:
+47759, 32772
+
