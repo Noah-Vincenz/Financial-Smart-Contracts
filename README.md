@@ -12,33 +12,46 @@ This chapter will walk through the actions that need to be taken in order to run
 
 ### Installation & Setup
 
+#### Prerequisites: Rust, Parity, Wasm-build
+
+The instructions in this guide assume that npm (or yarn on Linux) is installed on the machine being used. If this is not the case, the instructions on the [npm](https://www.npmjs.com/get-npm) (or [yarn](https://yarnpkg.com/lang/en/docs/install/#mac-stable)) website can be followed to to install the missing tools.
+
+Run the following commands in order to install the Rust nightly toolchain as well as wasm32-unknown-unknown to compile Nexus contracts into Wasm.
+```
+$ rustup install nightly-2018-11-12
+$ rustup target add wasm32-unknown-unknown
+```
+Additionally, **wasm-build** needs to be installed to allow compilation from the .wasm binary file into a contract JSON code executable on the Ethereum blockchain.
+```
+$ cargo install pwasm-utils-cli --bin wasm-build
+```
+Follow the [instructions](https://wiki.parity.io/Setup) provided by parity to install Parity version **1.9.5** or greater.
+
 #### Software
 
 Clone the repository onto your machine, head to the root directory of the repository and run
-
 ```
 $ npm install
 ```
-
-This will install all missing npm libraries that are needed to run the software. This assumes that npm is installed on the machine being used. If this is not the case, the instructions on the npm website https://www.npmjs.com/get-npm can be followed to to install the missing tools.
+on Mac or
+```
+$ yarn install
+```
+on Linux. This will install all missing npm libraries that are needed to run the software. 
 
 #### Libra
 
 In order to install Libra, one needs to head to https://github.com/libra/libra and clone the repository. This will download the Libra repository onto the machine that is being used. Once the download has completed, the user can change directory to the root directory of the repository. Following this, one can run Libra locally in the terminal by running
-
 ```
 $ ulimit -n 4096
 $ cargo run -p libra_swarm -- -s
 ```
-
 This will launch a single Libra validator node locally on your own blockchain. The running node, however, is not connected to the Libra testnet. This allows you to play around with Libra accounts and exercise the functionality offered by the Move IR. Furthermore, this can be used to send transactions that publish a module, run the transaction script and so one. As of now, the documentation for this is sparse and the Libra Association are currently working on supplying more functionality.
 
-In addition to the above, one can change directory to `libra/language/functional_tests/tests/testsuite` to verify the semantics and correctness of any given Libra code, allowing you to exercise modules that modify the global blockchain state in the same way you could do on a real blockchain. After the Move IR source code file named script.mvir has been successfully downloaded, this can be located inside the directory above. Running
-
+In addition to the above, one can change directory to `libra/language/functional_tests/tests/testsuite` to verify the semantics and correctness of any given Libra code, allowing you to exercise modules that modify the global blockchain state in the same way you could do on a real blockchain. After the Move IR source code file named *script.mvir* has been successfully downloaded (this happens when a contract is acquired), this can be located inside the directory above. Running
 ```
 $ cargo test script.mvir
 ```
-
 will then execute the transactions in the downloaded module and verify its correctness.
 
 
@@ -72,13 +85,13 @@ to execute all the steps mentioned above in their order given.
 
 ### Using the Web Application
 
-The web application can be accessed at localhost:9001 using Google Chrome. The instructions in this section assume that MetaMask is correctly installed and set up. If this is not the case, you can head to https://metamask.io/ to follow their instructions to install MetaMask, import the parity development blockchain with http://127.0.0.1:8545 as the RPC URL, and import the accounts registered on the local parity development blockchain. When running the application for the first time or on restarting the browser, the user will be presented with a MetaMask window, asking to allow the web ap- plication to access MetaMask. After having confirmed this, the selected network in MetaMask should be switched to the parity development blockchain network and one of the imported blockchain accounts should be selected. Once these instructions have been followed and the web application is up and running, the user will be presented with the following user interface.
+The web application can be accessed at `localhost:9001` using Google Chrome. The instructions in this section assume that MetaMask is correctly installed and set up. If this is not the case, you can head to https://metamask.io/ to follow their instructions to install MetaMask, import the parity development blockchain with http://127.0.0.1:8545 as the RPC URL, and import the accounts registered on the local parity development blockchain. When running the application for the first time or on restarting the browser, the user will be presented with a MetaMask window, asking to allow the web application to access MetaMask. After having confirmed this, the selected network in MetaMask should be switched to the parity development blockchain network and one of the imported blockchain accounts should be selected. Once these instructions have been followed and the web application is up and running, the user will be presented with the following user interface.
 
 <img width="1438" alt="screenshot1" src="https://user-images.githubusercontent.com/16804823/64494004-ae684e00-d287-11e9-8ec1-d0e9aac9eb09.png">
 
 The user can then provide two parity development chain account addresses to be used for the contract and press the Create Contract button to proceed. This will trigger MetaMask showing the window presented below, asking the user to confirm the transaction.
 
-<div style="text-align:center"><img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"/></div>
+<div style="text-align:center"><img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"></div>
 
 Confirming this transaction will enable the deposit buttons in the web user interface, allowing the user to deposit a specified amount of Ether into both accounts. In order to deposit Ether, the account that is placing the deposit must be selected in MetaMask, otherwise the user will be notified with an error message in the user interface. After both accounts have deposited an arbitrary amount of Ether, the input textarea titled Construct Smart Contract Transactions: will be enabled and the user can start composing Nexus contracts by providing a syntactically correct contract from the textarea and then pressing the Make Transaction button. This will add the contract provided by the user to the list of pending contracts and display this in the table presented in the following figure. In the following figure, the most recently added contract corresponds to zero and give (zero), where both subcontracts are displayed as a single combined supercontract.
 
