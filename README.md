@@ -2,19 +2,19 @@
 
 Financial institutions rely more and more on blockchain technology and financial smart contracts are becoming more prominent as time goes by. Financial smart contracts allow for efficient automation of contract execution and their contractual terms, while providing the cost and security benefits of blockchain technology.
 
-The most prominent platform for smart contracts is Ethereum. Ethereum smart con- tracts are implemented in the Solidity programming language. Because of the design and underlying complexity of this high-level language, which allows for many unsafe programming patterns, large amounts of Ether (the cryptocurrency used in Ethereum) have been locked and stolen. Generally speaking, smart contract development in So- lidity is non-trivial and highly prone to a number of security vulnerabilities.
+The most prominent platform for smart contracts is Ethereum. Ethereum smart contracts are implemented in the Solidity programming language. Because of the design and underlying complexity of this high-level language, which allows for many unsafe programming patterns, large amounts of Ether (the cryptocurrency used in Ethereum) have been locked and stolen. Generally speaking, smart contract development in Solidity is non-trivial and highly prone to a number of security vulnerabilities.
 
-As a result of the above, we introduce Nexus: a high-level domain-specific programming language for writing safer financial smart contracts. This language is based on previous work in the financial engineering industry conducted by Simon Peyton Jones, Jean- Marc Eber, and Julian Seward [1]. Nexus is a high-level programming language that is straightforward to use, efficient, and easily portable to any underlying blockchain. We also present an accompanying web application that allows users to easily com- pose smart contracts in Nexus, while handling their compilation in the background. The interface of the web application also enables users to interact with Nexus smart contracts, evaluate these, as well as visualise their evolution. This allows for smart contract transparency, effectively enabling users to reason more easily about financial smart contracts.
+As a result of the above, we introduce Nexus: a high-level domain-specific programming language for writing safer financial smart contracts. This language is based on previous work in the financial engineering industry conducted by Simon Peyton Jones, Jean-Marc Eber, and Julian Seward [1]. Nexus is a high-level programming language that is straightforward to use, efficient, and easily portable to any underlying blockchain. We also present an accompanying web application that allows users to easily compose smart contracts in Nexus, while handling their compilation in the background. The interface of the web application also enables users to interact with Nexus smart contracts, evaluate these, as well as visualise their evolution. This allows for smart contract transparency, effectively enabling users to reason more easily about financial smart contracts.
 
 ## User Manual
 
 This chapter will walk through the actions that need to be taken in order to run the system on a local machine. It is divided into three sections. Firstly, we will explain how to install the software and required libraries. Following this, we will explain how to test, build and run the software on a local server. Lastly, we will go on to elaborate on how to interact with the web application and compose a Nexus smart contract. First of all, the instructions in the tutorial at https://github.com/paritytech/pwasm-tutorial should be followed to set up a small pWasm project, install the libraries and tools that are required for this project, and become familiar with the pWasm and Rust environment.
 
-### C.1 Installation & Setup
+### Installation & Setup
 
 #### Software
 
-In order to download the software locally one can head to the GitHub repository linked above and clone the repository onto the machine that is being used. You can then head to the root directory of the repository and run
+Clone the repository onto your machine, head to the root directory of the repository and run
 
 ```
 $ npm install
@@ -85,3 +85,7 @@ Confirming this transaction will enable the deposit buttons in the web user inte
 <img width="1440" alt="screenshot3" src="https://user-images.githubusercontent.com/16804823/64494006-af997b00-d287-11e9-8714-801122dd6532.png">
 
 Following this, the user can freely use the web application interface to extend the language, add new contracts, evaluate and manage contracts or acquire pending contracts.
+
+## References 
+
+1. S. P. Jones, J.-M. Eber, and J. Seward, “Composing contracts: An adventure in financial engineering,” Lecture notes in computer science., vol. 2021, 2001.
