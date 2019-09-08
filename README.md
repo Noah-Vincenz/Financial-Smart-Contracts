@@ -95,12 +95,7 @@ The web application can be accessed at `localhost:9001` using Google Chrome. The
 
 The user can then provide two parity development chain account addresses to be used for the contract and press the Create Contract button to proceed. This will trigger MetaMask showing the window presented below, asking the user to confirm the transaction.
 
-<div id="container">
-    <img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"/>
-    This is an image
-</div>
-
-<div style="text-align:center"><img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"></div>
+<center><img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"></center>
 
 Confirming this transaction will enable the deposit buttons in the web user interface, allowing the user to deposit a specified amount of Ether into both accounts. In order to deposit Ether, the account that is placing the deposit must be selected in MetaMask, otherwise the user will be notified with an error message in the user interface. After both accounts have deposited an arbitrary amount of Ether, the input textarea titled Construct Smart Contract Transactions: will be enabled and the user can start composing Nexus contracts by providing a syntactically correct contract from the textarea and then pressing the Make Transaction button. This will add the contract provided by the user to the list of pending contracts and display this in the table presented in the following figure. In the following figure, the most recently added contract corresponds to zero and give (zero), where both subcontracts are displayed as a single combined supercontract.
 
@@ -113,14 +108,3 @@ Following this, the user can freely use the web application interface to extend 
 ## References 
 
 1. S. P. Jones, J.-M. Eber, and J. Seward, “Composing contracts: An adventure in financial engineering,” Lecture notes in computer science., vol. 2021, 2001.
-
-
-#container {
-    height:100px;
-    line-height:100px;
-}
-
-#container img {
-    vertical-align:middle;
-    max-height:100%;
-}
