@@ -6,9 +6,12 @@ The most prominent platform for smart contracts is Ethereum. Ethereum smart cont
 
 As a result of the above, we introduce Nexus: a high-level domain-specific programming language for writing safer financial smart contracts. This language is based on previous work in the financial engineering industry conducted by Simon Peyton Jones, Jean-Marc Eber, and Julian Seward [1]. Nexus is a high-level programming language that is straightforward to use, efficient, and easily portable to any underlying blockchain. We also present an accompanying web application that allows users to easily compose smart contracts in Nexus, while handling their compilation in the background. The interface of the web application also enables users to interact with Nexus smart contracts, evaluate these, as well as visualise their evolution. This allows for smart contract transparency, effectively enabling users to reason more easily about financial smart contracts.
 
+
+
 ## User Manual
 
 This chapter will walk through the actions that need to be taken in order to run the system on a local machine. It is divided into three sections. Firstly, we will explain how to install the software and required libraries. Following this, we will explain how to test, build and run the software on a local server. Lastly, we will go on to elaborate on how to interact with the web application and compose a Nexus smart contract. First of all, the instructions in the tutorial at https://github.com/paritytech/pwasm-tutorial should be followed to set up a small pWasm project, install the libraries and tools that are required for this project, and become familiar with the pWasm and Rust environment.
+
 
 ### Installation & Setup
 
@@ -83,6 +86,7 @@ $ npm start
 ```
 to execute all the steps mentioned above in their order given.
 
+
 ### Using the Web Application
 
 The web application can be accessed at `localhost:9001` using Google Chrome. The instructions in this section assume that MetaMask is correctly installed and set up. If this is not the case, you can head to https://metamask.io/ to follow their instructions to install MetaMask, import the parity development blockchain with http://127.0.0.1:8545 as the RPC URL, and import the accounts registered on the local parity development blockchain. When running the application for the first time or on restarting the browser, the user will be presented with a MetaMask window, asking to allow the web application to access MetaMask. After having confirmed this, the selected network in MetaMask should be switched to the parity development blockchain network and one of the imported blockchain accounts should be selected. Once these instructions have been followed and the web application is up and running, the user will be presented with the following user interface.
@@ -90,6 +94,11 @@ The web application can be accessed at `localhost:9001` using Google Chrome. The
 <img width="1438" alt="screenshot1" src="https://user-images.githubusercontent.com/16804823/64494004-ae684e00-d287-11e9-8ec1-d0e9aac9eb09.png">
 
 The user can then provide two parity development chain account addresses to be used for the contract and press the Create Contract button to proceed. This will trigger MetaMask showing the window presented below, asking the user to confirm the transaction.
+
+<div id="container">
+    <img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"/>
+    This is an image
+</div>
 
 <div style="text-align:center"><img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"></div>
 
@@ -99,6 +108,19 @@ Confirming this transaction will enable the deposit buttons in the web user inte
 
 Following this, the user can freely use the web application interface to extend the language, add new contracts, evaluate and manage contracts or acquire pending contracts.
 
+
+
 ## References 
 
 1. S. P. Jones, J.-M. Eber, and J. Seward, “Composing contracts: An adventure in financial engineering,” Lecture notes in computer science., vol. 2021, 2001.
+
+
+#container {
+    height:100px;
+    line-height:100px;
+}
+
+#container img {
+    vertical-align:middle;
+    max-height:100%;
+}
