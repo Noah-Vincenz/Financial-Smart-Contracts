@@ -1,0 +1,148 @@
+( scaleK 50 ( get ( truncate "24/12/2019-23:33:33" ( give one ) ) ) ) or ( zero and truncate "11/07/2019-22:48:00" ( give zero ) )
+
+( scaleK 50 ( get ( truncate "24/12/2019-23:33:33" ( give ( one ) ) ) ) ) or ( zero or truncate "11/07/2019-23:53:00" ( give ( one ) ) )
+
+( scaleK 50 ( get ( truncate "24/12/2019-23:33:33" ( give one ) ) ) ) or zero
+
+get ( truncate "11/07/2019-23:55:00" ( give one ) )
+
+zero or give one
+
+( ( zero or give one ) or scaleK 10 ( one ) ) or zero
+
+( zero or give one ) or ( scaleK 10 one or zero )
+
+( zero or one ) or scaleK 10 ( one )
+
+give one or ( ( truncate "24/12/2019-23:33:33" ( give zero ) ) and give zero )
+
+( zero or give one ) or ( ( scaleK 10 one ) or zero )
+
+( zero or give one ) or ( ( scaleK 10 ( one ) ) or zero )
+
+give one or ( ( truncate "24/12/2019-23:33:33" ( give zero ) ) or give zero )
+
+truncate "24/12/2019-23:33:33" ( one or give zero )
+
+truncate "24/12/2019-23:33:33" ( one ) or truncate "24/12/2019-23:33:33" ( zero )
+
+
+
+
+( scaleK 101 ( get ( truncate "24/01/2019-23:33:33" ( one ) ) ) and scaleK 102 ( get ( truncate "24/02/2019-23:33:33" ( give ( one ) ) ) ) ) 
+or
+(
+  ( scaleK 103 ( get ( truncate "24/03/2019-23:33:33" ( one ) ) ) and scaleK 104 ( get ( truncate "24/04/2019-23:33:33" ( give ( one ) ) ) ) ) 
+  or
+  ( scaleK 105 ( get ( truncate "24/05/2019-23:33:33" ( one ) ) ) and scaleK 106 ( get ( truncate "24/06/2019-23:33:33" ( give ( one ) ) ) ) )
+)
+
+
+
+
+
+
+
+//======
+
+
+(
+  ( scaleK 103 ( get ( truncate "24/03/2019-23:33:33" ( one ) ) ) and scaleK 104 ( get ( truncate "24/04/2019-23:33:33" ( give ( one ) ) ) ) ) 
+  or
+  ( scaleK 105 ( get ( truncate "24/05/2019-23:33:33" ( one ) ) ) and scaleK 106 ( get ( truncate "24/06/2019-23:33:33" ( give ( one ) ) ) ) )
+)
+
+
+//======
+
+
+
+
+( scaleK 100 one and scaleK 101 one ) 
+or
+(
+  ( scaleK 102 one and scaleK 103 one ) 
+  or
+  ( scaleK 104 one and scaleK 105 one )
+)
+
+
+
+
+( one and give one ) 
+or
+(
+  ( zero and give zero ) 
+  or
+  ( give one and give zero )
+)
+
+
+( zero or give one ) or ( scaleK 10 ( one ) or zero )
+
+
+
+
+
+
+
+
+
+
+
+
+
+truncate "24/12/2019-23:33:33" ( give one ) and zero
+
+get ( truncate "24/12/2019-23:33:33" ( give one ) ) and zero
+
+truncate "24/12/2019-23:33:33" ( give one and zero ) and one
+
+truncate "24/12/2019-23:33:33" ( one and scaleK 10 one ) and one
+
+truncate "24/12/2019-23:33:33" ( give one and ( one and zero ) )
+
+( truncate "24/12/2019-23:33:33" ( give one and ( one and zero ) ) ) and one
+
+( truncate "24/12/2019-23:33:33" ( give one and ( one and zero ) ) ) and ( one and scaleK 10 ( one and zero ) )
+
+
+
+
+
+
+truncate "24/12/2019-23:33:33" ( scaleK 10 ( one ) and ( scaleK 7 ( one and zero ) ) )
+
+
+( give ( zero ) or give ( one ) ) and one
+
+
+truncate "24/12/2019-23:33:33" ( scaleK 10 ( one or zero ) ) and one
+
+
+give ( one and scaleK 5 ( one or zero ) )
+
+
+
+( give ( zero ) or give ( one ) ) and ( one or zero )
+
+
+( scaleK 50 ( get ( truncate "24/12/2019-23:33:33" ( give ( one ) ) ) ) ) or ( zero or truncate "11/07/2019-23:53:00" ( give ( one ) ) )
+
+
+( zero or truncate "11/07/2019-23:53:00" ( give ( one ) ) )
+
+
+truncate "24/12/2019-23:33:33" ( scaleK 10 ( one or zero ) )
+
+
+give ( scaleK 5 ( one or zero ) )
+
+give ( zero ) and ( one or zero )
+
+give ( zero ) and give ( one or zero )
+
+give ( zero and zero ) and ( one or zero )
+
+give ( zero and ( zero or one ) )
+
