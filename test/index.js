@@ -343,7 +343,7 @@ describe('testing index.mjs...', function() {
                 expect(res).to.equal(true)
             })
             it('22', function() {
-                var res = evaluate("( truncate \"20/12/2017-23:33:33\" ( one ) and truncate \"24/12/2017-23:33:33\" ( one ) )", ">", "truncate \"24/12/2017-23:33:33\" ( one )");
+                var res = evaluate("( truncate \"20/12/2019-23:33:33\" ( one ) and truncate \"24/12/2019-23:33:33\" ( zero ) )", ">", "truncate \"24/12/2019-23:33:33\" ( one )");
                 assert.isBoolean(res);
                 expect(res).to.equal(false);
             })
@@ -353,7 +353,7 @@ describe('testing index.mjs...', function() {
                 expect(res).to.equal(true);
             })
             it('24', function() {
-                var res = evaluate("( truncate \"24/12/2017-23:33:33\" ( one ) and truncate \"26/12/2017-23:33:33\" ( one ) )", ">", "truncate \"24/12/2017-23:33:33\" ( one )");
+                var res = evaluate("( truncate \"24/12/2019-23:33:33\" ( one ) and truncate \"26/12/2019-23:33:33\" ( one ) )", ">", "truncate \"24/12/2019-23:33:33\" ( one )");
                 assert.isBoolean(res);
                 expect(res).to.equal(true);
             })
