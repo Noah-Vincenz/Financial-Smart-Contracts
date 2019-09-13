@@ -8,6 +8,25 @@ As a result of the above, we introduce Nexus: a high-level domain-specific progr
 
 
 
+## System Architecture
+
+<p align="center">
+  <img width="859" alt="Screenshot 2019-09-10 at 21 55 08" src="https://user-images.githubusercontent.com/16804823/64649851-b1914480-d415-11e9-978d-cabfc0dfd5f7.png"
+</p>
+
+
+
+## Nexus Grammar (inspired by [1])
+
+Contracts composed in Nexus will be of the following syntax (note that Nexus enforces parentheses):
+<p align="center">
+  <img width="587" alt="Screenshot 2019-09-10 at 21 50 36" src="https://user-images.githubusercontent.com/16804823/64649580-139d7a00-d415-11e9-96a1-70501723ec80.png"
+</p>
+  
+In addition to the above, Nexus allows conditional statements of the form *if (condition) {consequence} else {alternative}*, where the *else* and *alternative* are optional (both together). A *condition* is of the form *c1 compOp c2*, where *compOp* is one of: >,<,>=,<=,==,[>],[<],[>=],[<=],[==],{>},{<},{>=},{<=},{==}.
+  
+  
+
 ## User Manual
 
 This chapter will walk through the actions that need to be taken in order to run the system on a local machine. It is divided into three sections. Firstly, we will explain how to install the software and required libraries. Following this, we will explain how to test, build and run the software on a local server. Lastly, we will go on to elaborate on how to interact with the web application and compose a Nexus smart contract. First of all, the instructions in the tutorial at https://github.com/paritytech/pwasm-tutorial should be followed to set up a small pWasm project, install the libraries and tools that are required for this project, and become familiar with the pWasm and Rust environment.
@@ -99,7 +118,7 @@ The user can then provide two parity development chain account addresses to be u
   <img width="359" alt="screenshot2" src="https://user-images.githubusercontent.com/16804823/64494005-af00e480-d287-11e9-9750-8c5e9cfcc112.png"
 </p>
 
-Confirming this transaction will enable the deposit buttons in the web user interface, allowing the user to deposit a specified amount of Ether into both accounts. In order to deposit Ether, the account that is placing the deposit must be selected in MetaMask, otherwise the user will be notified with an error message in the user interface. After both accounts have deposited an arbitrary amount of Ether, the input textarea titled Construct Smart Contract Transactions: will be enabled and the user can start composing Nexus contracts by providing a syntactically correct contract from the textarea and then pressing the Make Transaction button. This will add the contract provided by the user to the list of pending contracts and display this in the table presented in the following figure. In the following figure, the most recently added contract corresponds to zero and give (zero), where both subcontracts are displayed as a single combined supercontract.
+Confirming this transaction will enable the deposit buttons in the web user interface, allowing the user to deposit a specified amount of Ether into both accounts. In order to deposit Ether, the account that is placing the deposit must be selected in MetaMask, otherwise the user will be notified with an error message in the user interface. After both accounts have deposited an arbitrary amount of Ether, the input textarea titled Construct Smart Contract Transactions: will be enabled and the user can start composing Nexus contracts by providing a syntactically correct contract from the textarea and then pressing the Make Transaction button. This will add the contract provided by the user to the list of pending contracts and display this in the table presented in the following figure. In the following figure, the most recently added contract corresponds to *zero and give (zero)*, where both subcontracts are displayed as a single combined supercontract.
 
 <img width="1440" alt="screenshot3" src="https://user-images.githubusercontent.com/16804823/64494006-af997b00-d287-11e9-8714-801122dd6532.png">
 
